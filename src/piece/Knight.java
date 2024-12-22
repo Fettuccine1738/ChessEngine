@@ -21,6 +21,35 @@ public class Knight implements Piece {
     public final static byte[] VECTOR_COORDINATE        = { -17, -15, -10, -6,  6, 10, 15, 17};
 
 
+    private final static int[][] ATTACK_MAP = new int[BOARD_SIZE][];
+    private final static int SIZE = 8; // direction size
+
+    static {
+        for (int sq = 0; sq < BOARD_SIZE; sq++) {
+            ATTACK_MAP[sq] = computeKnightAttacks(sq);
+        }
+    }
+
+    private static int[] computeKnightAttacks(int sq) {
+        int rank = sq / RANK_8;
+        int file = sq % RANK_8;
+
+        List<Integer> attacks = new ArrayList<>();
+        int mailbox;
+        for (int i = 0; i < SIZE; i++) {
+            int target = sq + VECTOR_COORDINATE[i];
+            int targetRank = target / RANK_8;
+            int targetFile = target % RANK_8;
+
+            mailbox = getMailbox120Number(sq + OFFSET_VECTOR_COORDINATE[i]);
+
+            if (mailbox != OFF_BOARD) {
+                attacks.add(target);
+            }
+        }
+        return attacks.stream().mapToInt(i -> i).toArray();
+    }
+
     @Override
     public Collection<Move> possibleMoves(int file, int rank, Board p) {
         return List.of();

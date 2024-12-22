@@ -4,9 +4,11 @@ import board.Board;
 import board.Move;
 import board.PieceType;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static board.Board.getMailbox120Number;
 import static board.BoardUtilities.*;
 import static board.PieceType.BLACK_KING;
 import static board.PieceType.WHITE_KING;
@@ -20,6 +22,36 @@ public class King implements Piece {
     public final static byte[] OFFSET_VECTOR_COORDINATE = { 11, 10, 9, 1, -1, -9, -10, -11 };
     //public final static byte[] OFFSET_VECTOR_COORDINATE = { 11, 10, 9, 1, 0, -1, -9, -10, -11 };
     // public final static byte[] OFFSET_VECTOR_COORDINATE = { -11, -10, -9, -1, 1,  9, 10, 11 };
+
+
+    private final static int[][] ATTACK_MAP = new int[BOARD_SIZE][];
+    private final static int SIZE = 8; // direction size
+
+    static {
+        for (int sq = 0; sq < BOARD_SIZE; sq++) {
+            ATTACK_MAP[sq] = computeKingAttacks(sq);
+        }
+    }
+
+    private static int[] computeKingAttacks(int sq) {
+        int rank = sq / RANK_8;
+        int file = sq % RANK_8;
+
+        List<Integer> attacks = new ArrayList<>();
+        int mailbox;
+        for (int i = 0; i < SIZE; i++) {
+            int target = sq + VECTOR_COORDINATE[i];
+            int targetRank = target / RANK_8;
+            int targetFile = target % RANK_8;
+
+            mailbox = getMailbox120Number(sq + OFFSET_VECTOR_COORDINATE[i]);
+            if (mailbox != OFF_BOARD) {
+                attacks.add(target);
+            }
+        }
+        return attacks.stream().mapToInt(i -> i).toArray();
+    }
+
 
     @Override
     public Collection<Move> possibleMoves(int file, int rank, Board p) {

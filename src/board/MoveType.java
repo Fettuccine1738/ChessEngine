@@ -6,9 +6,10 @@ public enum MoveType {
     CAPTURE(2),
     CASTLE(3),
     PROMOTION(4),
-    PROMOTION_CAPTURE(5);
+    PROMOTION_CAPTURE(5),
+    ENPASSANT(6);
 
-    private int value;
+    private final int value;
 
     MoveType(int value) {
         this.value = value;

@@ -60,4 +60,12 @@ public class BoardUtilities {
             default ->  throw new IllegalArgumentException("Invalid piece type");
         }
     }
+
+    public static boolean isOnSecondRank(byte square) {
+        return square >= FILE_H && square <= 15;
+    }
+
+    public static boolean isOnSeventhRank(byte square) {
+        return square >= 48 && square <= 55;
+    }
 }

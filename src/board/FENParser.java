@@ -8,7 +8,10 @@ import static board.PieceType.EMPTY;
 
 public class FENParser {
 
-    // returns Forsyth-Edward Notation of the board
+    /**
+     * @param board board to scan for piece and corresponding position
+     * @return a string that is the Forsyth Edward Notation of the board
+     */
     public static String getFENotation(Board board) {
         StringBuilder notation;
         int emptyCount = 0; // counts empty cells
@@ -66,7 +69,8 @@ public class FENParser {
         if (!castlingRigts) notation.append('-');
         return notation.toString();
     }
-    // get EnPassant
+
+
     private static String getEnPassantFENotation(Board board) {
         if (board == null) throw new IllegalArgumentException("Enpassant invoked with null board");
         StringBuilder notation = new StringBuilder();
@@ -92,7 +96,10 @@ public class FENParser {
         else return 'b';
     }
 
-    // returns a board object from an fen String
+    /**
+     * @param fenotation FEN Notation of a chess position
+     * @return Board instance of exact position from a FEN string
+     */
     public static Board parseFENotation(String fenotation) {
         if (fenotation == null) throw new IllegalArgumentException("Null string in FEN" + fenotation);
         PieceType[] pieces;

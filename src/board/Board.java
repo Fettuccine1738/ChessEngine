@@ -13,6 +13,7 @@
 package board;
 
 import piece.Bishop;
+import piece.Pawn;
 import piece.Queen;
 import piece.Rook;
 
@@ -26,6 +27,7 @@ import static board.PieceType.*;
 
 public class Board {
 
+    // tests functions
     public  ArrayList<PieceType> blackListe = new ArrayList<>();
     public  ArrayList<PieceType> whiteListe = new ArrayList<>();
     // test strings for FEN Notation
@@ -38,7 +40,8 @@ public class Board {
     static String FEN_7 =  "8/8/3p4/2p1B3/3b1P2/4P3/8/8 w - - 0 1"; // bishop off board test
     static String FEN_8 =  "8/8/8/3p4/2r1R3/4P3/8/8 w - - 0 1"; // rook move generation test
     static String FEN_9 =  "8/8/8/3p1q2/2Q3P1/4P3/8/8 w - - 0 1"; // queen move generation test
-//
+    static String FEN_10 =  "8/8/3p4/2P1p3/8/3P4/4P3/8 w - - 0 1"; // pawn move testing
+
 
     // sentinel and blocking piece
     private final static byte OFF_BOARD = -1;
@@ -76,7 +79,6 @@ public class Board {
                 //81, 82, 83, 84, 85, 86, 87, 88,
                 //91, 92, 93, 94, 95, 96, 97, 98
     //};
-    private byte[] board120; // 10 x 12 with sentinel values for off the board move generation
     private final PieceType[] board64; // 8x8
     private boolean sideToMove; // white or black's turn
     private int fullMoveCounter; // full move counter begins at 1 incremented after black's turn
@@ -97,7 +99,7 @@ public class Board {
         sideToMove = WHITE;
         fullMoveCounter = 1;
         halfMoveClock = 0;
-        enPassant = 0; // modifiable
+        enPassant = OFF_BOARD; // modifiable
         castlingRights = encodeCastlingRigts(true, true, true, true);
         whitePieceList = new int[MAX_MAX];
         blackPieceList = new int[MAX_MAX];
@@ -265,23 +267,20 @@ public class Board {
     }
 
 
-    public void make(Collection<Move> moves) {
-        if (moves == null) throw new IllegalArgumentException("moves must not be null");
-        for (Move move : moves) {
-           make(move);
-        }
-    }
-
-
     private void make(Move move) {
         if (move == null) throw new IllegalArgumentException("moves must not be null");
         switch (move.getMoveType()) {
-            case NULLMOVE ->
-                System.out.println(move.getPieceType() + " moves " + move.getFrom() + " to " + move.getTo());
             case NORMAL -> {
                 board64[move.getFrom()] = EMPTY;
                 board64[move.getTo()]   = move.getPieceType();
                 System.out.println(move.getPieceType() + " moves to empty " + move.getFrom() + " to " + move.getTo());
+                if (Math.abs(move.getPieceType().getValue()) == 1) {
+                    // record en Passant for double push
+                    if (Math.abs(move.getFrom() - move.getTo()) == 16)
+                        setEnPassant((byte) (move.getTo() - RANK_8));
+                    else
+                        setEnPassant(OFF_BOARD);
+                }
             }
             case CAPTURE -> updatePieceLists(move, move.getSideToPlay());
         }
@@ -457,15 +456,15 @@ public class Board {
         StringBuilder board = new StringBuilder();
         int rank; int file;
 
-        for (rank = BoardUtilities.RANK_8; rank > BoardUtilities.RANK_1; rank--) {
+        for (rank = RANK_8; rank > RANK_1; rank--) {
             board.append(rank).append('\t');
-            for (file = BoardUtilities.FILE_A; file < BoardUtilities.FILE_H; file++) {
-                board.append(board64[(rank - 1) * 8 + file].getName()).append('\t');
+            for (file = FILE_A; file < FILE_H; file++) {
+                board.append(board64[(rank - 1) * RANK_8 + file].getName()).append('\t');
             }
             board.append('\n');
         }
         board.append('\t');
-        for (file = 0; file < BoardUtilities.FILE_H; file++) board.append((char) ('a' + file)).append('\t');
+        for (file = 0; file < FILE_H; file++) board.append((char) ('a' + file)).append('\t');
 
         return board.toString();
     }
@@ -515,21 +514,22 @@ public class Board {
         //System.out.println(board.blackListe.size());
 //
         Board board;
-        board = FENParser.parseFENotation(FEN_9);
+        board = FENParser.parseFENotation(FEN_10);
         System.out.println(board);
         // move testing
         System.out.println("MOVE GENERATION TEST");
+        System.out.println(FENParser.getFENotation(board));
         //int count = 0;
-        for (Move m : Queen.possibleMoves(board, BLACK)) {
+        for (Move m : Pawn.possibleMoves(board, WHITE)) {
             // if (count++ != 9) continue;
             board.make(m);
             System.out.println(board);
+            System.out.println("ENpanssant " + board.getEnPassant());
             board.unmake(m);
             System.out.println("\n");
             System.out.println(board);
             System.out.println("\n");
         }
-
     }
 
 

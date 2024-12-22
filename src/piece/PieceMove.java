@@ -6,7 +6,7 @@ import board.MoveType;
 import board.PieceType;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 import static board.Board.getMailbox120Number;
@@ -38,8 +38,18 @@ public class PieceMove {
             {  -9,  -8, -7, -1,  1,  7,  8,   9}, /* QUEEN */
             {  -9,  -8, -7, -1, 1,  7,  8,   9 } /* KING */  };
 
-     public static Collection<Move> possibleMoves(Board board, boolean sideToPlay) {
-        Collection<Move> moves = new ArrayList<>();
+    final static int SINGLE_PUSH64 = 8; // single push
+    final static int SINGLE_PUSH = 10; // single push
+    final static int DOUBLE_PUSH = 20; // valid on the second rank only
+    final static int DOUBLE_PUSH64 = 16; // single push
+    final static int LEFTCAP_64 = 9;
+    final static int LEFTCAP = 11;
+    final static int RIGHTCAP_64 = 7;
+    final static int RIGHTCAP = 9;
+
+
+     public static List<Integer> possibleMoves(Board board, boolean sideToPlay) {
+        List<Integer> moves = new ArrayList<>();
         if (board == null) throw new IllegalArgumentException("possible King moves invoked with null");
         PieceType[] pieces;
         int floor, ceiling;
@@ -65,8 +75,14 @@ public class PieceMove {
     // !side remove move.
 
     // castling ??
-    public static Collection<Move> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
-        Collection<Move> moves = new ArrayList<>();
+    public static List<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
+        if (board == null) throw new IllegalArgumentException("possible moves invoked with null board");
+        if (piece == null) throw new IllegalArgumentException("pseudolega genearate with null piece");
+
+        List<Integer> moves = new ArrayList<>();
+        // generate pawn moves separately
+        if (Math.abs(piece.getValue()) == 1) moves.addAll(generatePseudoPawnMoves(board, sideToPlay, floor, ceiling, piece, moves));
+
         int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
         // use piece value to index into offset vector
         int x = Math.abs(piece.getValue()) - 1;
@@ -82,10 +98,8 @@ public class PieceMove {
             if (encoding != empty) {
                 pos    = encoding >> 8; // equivalent to from PieceType.Piece.getValue()
                 square = encoding & 0xff;
-                moves.add(new Move((byte) (square), (byte) square, sideToPlay, piece, MoveType.NULLMOVE));
                 if (sideToPlay) assert(pos > empty);
                 else assert(pos < empty);
-
 
                 int from = square;
                 // what is the square mailbox 64's number
@@ -101,28 +115,258 @@ public class PieceMove {
                         if (pieceOnBoard != EMPTY) {
                             boolean sameSide = pieceOnBoard.isWhite();
                             if (sameSide != sideToPlay) {
-                                moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay,
-                                        piece, MoveType.CAPTURE));
+                                moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_NONE));
+                                //moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay,
+                                        // piece, MoveType.CAPTURE));
                                 break;
                             }
                             else break;
                         }
                         else {
-                            moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay, piece, MoveType.NORMAL));
+                            // moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay, piece, MoveType.NORMAL));
+                            moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_NONE));
                         }
-                        //moves.add(new Move((byte) (square), (byte) (square + vectorCoordinate64[i]), sideToPlay,
-                        //piece, MoveType.NORMAL)); // quiet move
                         if(!slides) break;
                         square = newSquare; // advance square
                     }
                 }
             }
-
         }
-        System.out.println(moves.size());
+        // System.out.println(moves.size());
         return moves;
     }
 
+
+    public static List<Integer> generatePseudoPawnMoves(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece, List<Integer> moves) {
+        if (board == null) throw new IllegalArgumentException("possible pawn moves invoked with null board");
+        if (piece == null) throw new IllegalArgumentException("pawn pseudolegal invoked with null piece");
+
+        int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
+        int from, to;
+        int captureLeft = 0;
+        int captureRight = 0;
+        boolean whitePush = false;
+        boolean blackPush = false;
+
+        for (int index = floor; index < ceiling; index++) {
+            if (piecelist[index] == RANK_1) continue; // skip if there is no piece in index
+            from = piecelist[index] & 0xff; // get current square
+            assert(board.getPieceOnBoard(from) != EMPTY);
+            generateAllPawnMoves(board, from, sideToPlay, moves);
+        }
+        return moves;
+    }
+
+
+    private static void generateAllPawnMoves(Board board, int from, boolean side, List<Integer> moves) {
+         if (WHITE) {
+             generateWhitePawnCaptures(board, from, side, moves);
+             generateWhitePawnCaptures(board, from, side, moves);
+             generateEnPassant(board, from, WHITE, moves);
+         }
+         else {
+             generateBlackPawnCaptures(board, from, side, moves);
+             generateBlackPawnCaptures(board, from, side, moves);
+             generateEnPassant(board, from, BLACK, moves);
+         }
+    }
+
+    private static void generateEnPassant(Board b, int from, boolean side, List<Integer> moves) {
+         int enPassant = b.getEnPassant();
+         if (WHITE) {
+             if (enPassant != OFF_BOARD && (from + LEFTCAP_64) == enPassant) {
+                 // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.ENPASSANT));
+                 moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+             }
+             if (enPassant != OFF_BOARD && (from + (byte) (from +  RIGHTCAP_64) == enPassant)) {
+                 // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.ENPASSANT));
+                 moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+             }
+         } else {
+             if (enPassant != OFF_BOARD && (from - LEFTCAP_64) == enPassant) {
+                 // moves.add(new Move((byte) from, (byte) (from - LEFTCAP_64), BLACK, WHITE_PAWN, MoveType.ENPASSANT));
+                 moves.add(Move.encodeMove(from, from - LEFTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+             }
+             if (enPassant != OFF_BOARD && (from + (byte) (from - RIGHTCAP_64) == enPassant)) {
+                 // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), BLACK, WHITE_PAWN, MoveType.ENPASSANT));
+                 moves.add(Move.encodeMove(from, from - RIGHTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+             }
+         }
+    }
+
+    private static void generateQuietWPawnMoves(Board b, int from, boolean side, List<Integer> moves) {
+         // add enpassant
+        int offset = getMailbox120Number(from + SINGLE_PUSH);
+        if (offset != OFF_BOARD) {
+            PieceType p = b.getPieceOnBoard(from + SINGLE_PUSH64);
+            int to = from + SINGLE_PUSH64;
+            // if immediate square isn't empty none of these should be possible
+            if (p == EMPTY) {
+                // double pawn push from second rank
+                if (isOnSecondRank((byte) from) && b.getPieceOnBoard(from + DOUBLE_PUSH64) == EMPTY) {
+                    to = from + DOUBLE_PUSH64;
+                    // moves.add(new Move((byte) from, (byte) to, WHITE, WHITE_PAWN, MoveType.NORMAL));
+                    moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_DOUBLE_PAWN_PUSH));
+                }
+                else if (isOnSeventhRank((byte) from)) { // if on 7th rank move to 8th for promotion
+                    // moves.add(new Move((byte) from, (byte) to, WHITE, WHITE_PAWN, MoveType.PROMOTION));
+                    // promote to major white pieces
+                    moves.add(Move.encodeMove(from, to, 0, WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, 0, WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, 0, WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, 0, WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
+                    return;
+                }
+                // moves.add(new Move((byte) from, (byte) to, WHITE, WHITE_PAWN, MoveType.NORMAL));
+                moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_NONE));
+            }
+        }
+    }
+
+    private static void getPromotions(Board b, int from, boolean side, List<Integer> moves) {
+         if (side == WHITE) {
+             // if ((from + )
+         }
+    }
+
+
+    private static void generateQuietBPawnMoves(Board b, int from, boolean side, List<Integer> moves) {
+        int offset = getMailbox120Number(from - SINGLE_PUSH);
+        if (offset != OFF_BOARD) {
+            PieceType p = b.getPieceOnBoard(from - SINGLE_PUSH64);
+            int to = from - SINGLE_PUSH64;
+            if (p == EMPTY) {
+                if (isOnSeventhRank((byte) from) && b.getPieceOnBoard(from - DOUBLE_PUSH64) == EMPTY) {
+                    to = from - DOUBLE_PUSH64;
+                    // moves.add(new Move((byte) from, (byte) to, BLACK, BLACK_PAWN, MoveType.NORMAL));
+                    moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_DOUBLE_PAWN_PUSH));
+                }
+                else if (isOnSecondRank((byte) from)) {
+                    // moves.add(new Move((byte) from, (byte) to, BLACK, BLACK_PAWN, MoveType.PROMOTION));
+                    // promote to major black pieces
+                    moves.add(Move.encodeMove(from, to, 0, BLACK_QUEEN.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, 0, BLACK_ROOK.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, 0, BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, 0, BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
+                    return;
+                }
+                // moves.add(new Move((byte) from, (byte) to, BLACK, BLACK_PAWN, MoveType.NORMAL));
+                moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_NONE));
+            }
+        }
+    }
+
+    private static void generateWhitePawnCaptures(Board b, int from, boolean side, List<Integer> moves) {
+         if (moves == null) throw new IllegalArgumentException("Generate WPawn invoked with null list");
+         int left = getMailbox120Number(from + LEFTCAP);
+         int right = getMailbox120Number(from + RIGHTCAP);
+         PieceType p;
+         if (left != OFF_BOARD) {
+             p = b.getPieceOnBoard(left + LEFTCAP_64);
+             if (p.isBlack()) {
+                 if (isOnSeventhRank((byte) from)) {
+                     int to = left + LEFTCAP_64;
+                     // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.PROMOTION_CAPTURE));
+                     // moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_NONE));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
+                 }
+                 else {
+                     // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.CAPTURE));
+                     moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_NONE));
+                 }
+             }
+         }
+
+         if (right != OFF_BOARD) {
+             p = b.getPieceOnBoard(left + RIGHTCAP_64);
+             if (p.isBlack()) {
+                 if (isOnSeventhRank((byte) from)) {
+                     int to = from + RIGHTCAP_64;
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
+                     moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
+                 } else {
+                     // moves.add(new Move((byte) from, (byte) (from + RIGHTCAP_64), WHITE, WHITE_PAWN, MoveType.CAPTURE));
+                     moves.add(Move.encodeMove(from, from + RIGHTCAP_64, p.getValue(), 0, Move.FLAG_NONE));
+                 }
+             }
+         }
+    }
+
+    private static void generateBlackPawnCaptures(Board b, int from, boolean side, List<Integer> moves) {
+        if (moves == null) throw new IllegalArgumentException("Generate WPawn invoked with null list");
+        int left = getMailbox120Number(from - LEFTCAP);
+        int right = getMailbox120Number(from - RIGHTCAP);
+        PieceType p;
+        if (left != OFF_BOARD) {
+            p = b.getPieceOnBoard(left - LEFTCAP_64);
+            if (p.isWhite()) {
+                if (isOnSecondRank((byte) from)) {// promote to a capture
+                    // moves.add(new Move((byte) from, (byte) (from - LEFTCAP_64), BLACK, BLACK_PAWN, MoveType.PROMOTION_CAPTURE));
+                    int to = from - LEFTCAP_64;
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_QUEEN.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_ROOK.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
+                }
+                else {
+                    // moves.add(new Move((byte) from, (byte) (from - LEFTCAP_64), BLACK, BLACK_PAWN, MoveType.CAPTURE));
+                    moves.add(Move.encodeMove(from, from - LEFTCAP_64, p.getValue(),0, Move.FLAG_NONE));
+                }
+            }
+        }
+
+        if (right != OFF_BOARD) {
+            p = b.getPieceOnBoard(left - RIGHTCAP_64);
+            if (p.isWhite()) {
+                if (isOnSecondRank((byte) from)) {
+                    // moves.add(new Move((byte) from, (byte) (from - RIGHTCAP_64), WHITE, WHITE_PAWN, MoveType.PROMOTION_CAPTURE));
+                    int to = from - RIGHTCAP_64;
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_QUEEN.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_ROOK.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
+                    moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
+                } else {
+                    // moves.add(new Move((byte) from, (byte) (from - RIGHTCAP_64), WHITE, WHITE_PAWN, MoveType.CAPTURE));
+                    moves.add(Move.encodeMove(from, from - RIGHTCAP_64, p.getValue(),0, Move.FLAG_NONE));
+                }
+            }
+        }
+    }
+
+    // generate pawn moves that can capture and promote with the capture
+    private static Move generatePawnPromotions(Board board, int from, int to, boolean side) {
+         if (side == BLACK) {
+             if (to >= 0 && to < 8) {
+                 if (board.getPieceOnBoard(to) == EMPTY) { // promote
+                     return new Move((byte) from, (byte) to, BLACK, BLACK_PAWN,
+                             MoveType.PROMOTION);
+                 }
+                 else if (board.getPieceOnBoard(to).isWhite()) { // can capture and promote
+                     return new Move((byte) from, (byte) to, BLACK, BLACK_PAWN,
+                             MoveType.PROMOTION_CAPTURE);
+                 }
+             }
+         }
+         if (side == WHITE) {
+             if (to > 55 && to < 63) {
+                 if (board.getPieceOnBoard(to) == EMPTY) { // promote
+                     return new Move((byte) from, (byte) to, WHITE, WHITE_PAWN,
+                             MoveType.PROMOTION);
+                 }
+                 else if (board.getPieceOnBoard(to).isBlack()) { // can capture and promote
+                     return new Move((byte) from, (byte) to, WHITE, WHITE_PAWN,
+                             MoveType.PROMOTION_CAPTURE);
+                 }
+             }
+         }
+         return null;
+    }
 }
+
 
 
