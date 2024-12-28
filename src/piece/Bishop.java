@@ -11,7 +11,7 @@ import static board.BoardUtilities.*;
 import static board.PieceType.BLACK_BISHOP;
 import static board.PieceType.WHITE_BISHOP;
 
-public class Bishop implements Piece {
+public class Bishop {
 
     public static final boolean  IS_SLIDING = true;
 
@@ -20,13 +20,9 @@ public class Bishop implements Piece {
     // bishop coordinates on board 10 x 12
     public final static byte[] OFFSET_VECTOR_COORDINATE = { -11,  -9,  9, 11, 0,  0,  0,  0 };
 
-    @Override
-    public Collection<Move> possibleMoves(int file, int rank, Board p) {
-        return List.of();
-    }
 
     // iterate through disjoint list of board and generat possible moves
-    public static Collection<Move> possibleMoves(Board board,  boolean sideToPlay) {
+    public static Collection<Integer> possibleMoves(Board board,  boolean sideToPlay) {
         if (board == null) throw new IllegalArgumentException("possible Knigt moves invoked with null");
         int floor   = getPieceListFloor(WHITE_BISHOP);
         int ceiling = getPieceListSize(BLACK_BISHOP);
@@ -38,7 +34,7 @@ public class Bishop implements Piece {
         }
     }
 
-    private static Collection<Move> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
+    private static Collection<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
         return PieceMove.generatePseudoLegal(board, sideToPlay, floor, ceiling, piece);
     }
 

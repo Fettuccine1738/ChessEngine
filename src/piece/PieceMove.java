@@ -106,7 +106,7 @@ public class PieceMove {
                 int newSquare = 0;
                 int N = DIRECTIONS[x]; // number of ray / knight possible directions
                 for (int i = 0; i < N; i++) {
-                    square = from;
+                    square = from; // save copy to reset to every iteration
                     // if it is a sliding piece
                     while (true) {
                         newSquare = getMailbox120Number(getMailbox64Number(square) + vectorCoordinate120[i]);
@@ -115,7 +115,7 @@ public class PieceMove {
                         if (pieceOnBoard != EMPTY) {
                             boolean sameSide = pieceOnBoard.isWhite();
                             if (sameSide != sideToPlay) {
-                                moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_NONE));
+                                moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
                                 //moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay,
                                         // piece, MoveType.CAPTURE));
                                 break;
@@ -124,7 +124,7 @@ public class PieceMove {
                         }
                         else {
                             // moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay, piece, MoveType.NORMAL));
-                            moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_NONE));
+                            moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
                         }
                         if(!slides) break;
                         square = newSquare; // advance square
@@ -149,7 +149,7 @@ public class PieceMove {
         boolean blackPush = false;
 
         for (int index = floor; index < ceiling; index++) {
-            if (piecelist[index] == RANK_1) continue; // skip if there is no piece in index
+            if (piecelist[index] == EMPTY.getValue()) continue; // skip if there is no piece in index
             from = piecelist[index] & 0xff; // get current square
             assert(board.getPieceOnBoard(from) != EMPTY);
             generateAllPawnMoves(board, from, sideToPlay, moves);
@@ -161,35 +161,37 @@ public class PieceMove {
     private static void generateAllPawnMoves(Board board, int from, boolean side, List<Integer> moves) {
          if (WHITE) {
              generateWhitePawnCaptures(board, from, side, moves);
-             generateWhitePawnCaptures(board, from, side, moves);
+             generateQuietWPawnMoves(board, from, side, moves);
              generateEnPassant(board, from, WHITE, moves);
          }
          else {
              generateBlackPawnCaptures(board, from, side, moves);
-             generateBlackPawnCaptures(board, from, side, moves);
+             generateQuietBPawnMoves(board, from, side, moves);
              generateEnPassant(board, from, BLACK, moves);
          }
     }
 
     private static void generateEnPassant(Board b, int from, boolean side, List<Integer> moves) {
          int enPassant = b.getEnPassant();
+         int wP = WHITE_PAWN.getValue();
+         int bP = BLACK_PAWN.getValue();
          if (WHITE) {
              if (enPassant != OFF_BOARD && (from + LEFTCAP_64) == enPassant) {
                  // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.ENPASSANT));
-                 moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+                 moves.add(Move.encodeMove(from, from + LEFTCAP_64, bP , 0, Move.FLAG_EN_PASSANT));
              }
              if (enPassant != OFF_BOARD && (from + (byte) (from +  RIGHTCAP_64) == enPassant)) {
                  // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.ENPASSANT));
-                 moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+                 moves.add(Move.encodeMove(from, from + LEFTCAP_64, bP, 0, Move.FLAG_EN_PASSANT));
              }
          } else {
              if (enPassant != OFF_BOARD && (from - LEFTCAP_64) == enPassant) {
                  // moves.add(new Move((byte) from, (byte) (from - LEFTCAP_64), BLACK, WHITE_PAWN, MoveType.ENPASSANT));
-                 moves.add(Move.encodeMove(from, from - LEFTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+                 moves.add(Move.encodeMove(from, from - LEFTCAP_64, wP, 0, Move.FLAG_EN_PASSANT));
              }
              if (enPassant != OFF_BOARD && (from + (byte) (from - RIGHTCAP_64) == enPassant)) {
                  // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), BLACK, WHITE_PAWN, MoveType.ENPASSANT));
-                 moves.add(Move.encodeMove(from, from - RIGHTCAP_64, 0, 0, Move.FLAG_EN_PASSANT));
+                 moves.add(Move.encodeMove(from, from - RIGHTCAP_64, wP, 0, Move.FLAG_EN_PASSANT));
              }
          }
     }
@@ -218,15 +220,9 @@ public class PieceMove {
                     return;
                 }
                 // moves.add(new Move((byte) from, (byte) to, WHITE, WHITE_PAWN, MoveType.NORMAL));
-                moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_NONE));
+                moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_QUIET));
             }
         }
-    }
-
-    private static void getPromotions(Board b, int from, boolean side, List<Integer> moves) {
-         if (side == WHITE) {
-             // if ((from + )
-         }
     }
 
 
@@ -251,7 +247,7 @@ public class PieceMove {
                     return;
                 }
                 // moves.add(new Move((byte) from, (byte) to, BLACK, BLACK_PAWN, MoveType.NORMAL));
-                moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_NONE));
+                moves.add(Move.encodeMove(from, to, 0, 0, Move.FLAG_QUIET));
             }
         }
     }
@@ -267,7 +263,7 @@ public class PieceMove {
                  if (isOnSeventhRank((byte) from)) {
                      int to = left + LEFTCAP_64;
                      // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.PROMOTION_CAPTURE));
-                     // moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_NONE));
+                     // moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_QUIET));
                      moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
                      moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
                      moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
@@ -275,7 +271,7 @@ public class PieceMove {
                  }
                  else {
                      // moves.add(new Move((byte) from, (byte) (from + LEFTCAP_64), WHITE, WHITE_PAWN, MoveType.CAPTURE));
-                     moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_NONE));
+                     moves.add(Move.encodeMove(from, from + LEFTCAP_64, 0, 0, Move.FLAG_CAPTURE));
                  }
              }
          }
@@ -291,7 +287,7 @@ public class PieceMove {
                      moves.add(Move.encodeMove(from, to, p.getValue(), WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
                  } else {
                      // moves.add(new Move((byte) from, (byte) (from + RIGHTCAP_64), WHITE, WHITE_PAWN, MoveType.CAPTURE));
-                     moves.add(Move.encodeMove(from, from + RIGHTCAP_64, p.getValue(), 0, Move.FLAG_NONE));
+                     moves.add(Move.encodeMove(from, from + RIGHTCAP_64, p.getValue(), 0, Move.FLAG_QUIET));
                  }
              }
          }
@@ -315,7 +311,7 @@ public class PieceMove {
                 }
                 else {
                     // moves.add(new Move((byte) from, (byte) (from - LEFTCAP_64), BLACK, BLACK_PAWN, MoveType.CAPTURE));
-                    moves.add(Move.encodeMove(from, from - LEFTCAP_64, p.getValue(),0, Move.FLAG_NONE));
+                    moves.add(Move.encodeMove(from, from - LEFTCAP_64, p.getValue(),0, Move.FLAG_QUIET));
                 }
             }
         }
@@ -332,40 +328,12 @@ public class PieceMove {
                     moves.add(Move.encodeMove(from, to, p.getValue(), BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
                 } else {
                     // moves.add(new Move((byte) from, (byte) (from - RIGHTCAP_64), WHITE, WHITE_PAWN, MoveType.CAPTURE));
-                    moves.add(Move.encodeMove(from, from - RIGHTCAP_64, p.getValue(),0, Move.FLAG_NONE));
+                    moves.add(Move.encodeMove(from, from - RIGHTCAP_64, p.getValue(),0, Move.FLAG_QUIET));
                 }
             }
         }
     }
 
-    // generate pawn moves that can capture and promote with the capture
-    private static Move generatePawnPromotions(Board board, int from, int to, boolean side) {
-         if (side == BLACK) {
-             if (to >= 0 && to < 8) {
-                 if (board.getPieceOnBoard(to) == EMPTY) { // promote
-                     return new Move((byte) from, (byte) to, BLACK, BLACK_PAWN,
-                             MoveType.PROMOTION);
-                 }
-                 else if (board.getPieceOnBoard(to).isWhite()) { // can capture and promote
-                     return new Move((byte) from, (byte) to, BLACK, BLACK_PAWN,
-                             MoveType.PROMOTION_CAPTURE);
-                 }
-             }
-         }
-         if (side == WHITE) {
-             if (to > 55 && to < 63) {
-                 if (board.getPieceOnBoard(to) == EMPTY) { // promote
-                     return new Move((byte) from, (byte) to, WHITE, WHITE_PAWN,
-                             MoveType.PROMOTION);
-                 }
-                 else if (board.getPieceOnBoard(to).isBlack()) { // can capture and promote
-                     return new Move((byte) from, (byte) to, WHITE, WHITE_PAWN,
-                             MoveType.PROMOTION_CAPTURE);
-                 }
-             }
-         }
-         return null;
-    }
 }
 
 

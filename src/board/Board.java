@@ -12,16 +12,14 @@
  */
 package board;
 
-import piece.Bishop;
+import piece.Knight;
 import piece.Pawn;
-import piece.Queen;
-import piece.Rook;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 
 import static board.BoardUtilities.*;
+import static board.Move.*;
 import static board.PieceType.*;
 
 
@@ -35,12 +33,13 @@ public class Board {
     static String FEN_2 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
     static String FEN_3 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
     static String FEN_4 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2";
-    static String FEN_5 =  "8/8/8/3K4/8/8/8/8 w - - 0 1"; // single king 8 coordinates test
-    static String FEN_6 =  "8/8/8/8/8/8/8/K7 w - - 0 1"; // single king offboard test
-    static String FEN_7 =  "8/8/3p4/2p1B3/3b1P2/4P3/8/8 w - - 0 1"; // bishop off board test
-    static String FEN_8 =  "8/8/8/3p4/2r1R3/4P3/8/8 w - - 0 1"; // rook move generation test
-    static String FEN_9 =  "8/8/8/3p1q2/2Q3P1/4P3/8/8 w - - 0 1"; // queen move generation test
-    static String FEN_10 =  "8/8/3p4/2P1p3/8/3P4/4P3/8 w - - 0 1"; // pawn move testing
+    static String FEN_K2 =  "8/8/8/3K4/8/8/8/8 w - - 0 1"; // single king 8 coordinates test
+    static String FEN_K1 =  "8/8/8/8/8/8/8/K7 w - - 0 1"; // single king offboard test
+    static String FEN_B =  "8/8/3p4/2p1B3/3b1P2/4P3/8/8 w - - 0 1"; // bishop off board test
+    static String FEN_R =  "8/8/8/3p4/2r1R3/4P3/8/8 w - - 0 1"; // rook move generation test
+    static String FEN_Q =  "8/8/8/3p1q2/2Q3P1/4P3/8/8 w - - 0 1"; // queen move generation test
+    static String FEN_P =  "8/8/3p4/2P1p3/8/3P4/4P3/8 w - - 0 1"; // pawn move testing
+    static String FEN_N = "8/3p4/8/4N3/3n1P2/8/4P3/8 w - - 0 1"; // knight move test
 
 
     // sentinel and blocking piece
@@ -92,19 +91,21 @@ public class Board {
     private final int[] whitePieceList;
     private final int[] blackPieceList;
     private final int[] playHistory; // holds moves played on board : game history
-    int captures;
+    private final int[] irreversibleAspect; // holds irreversible moves such as castlingRights, enpassant,
+    private int ply;
 
     public Board() {
         board64 = initializeBoard64();
         sideToMove = WHITE;
         fullMoveCounter = 1;
-        halfMoveClock = 0;
+        halfMoveClock = RANK_1;
         enPassant = OFF_BOARD; // modifiable
-        castlingRights = encodeCastlingRigts(true, true, true, true);
+        castlingRights = encodeCastlingRights(true, true, true, true);
         whitePieceList = new int[MAX_MAX];
         blackPieceList = new int[MAX_MAX];
         playHistory    = new int[1000];
-        captures = 0;
+        irreversibleAspect    = new int[1000];
+        ply = RANK_1;
         fillPieceList();
     }
 
@@ -119,7 +120,7 @@ public class Board {
      * @throws          IllegalArgumentException if piece is null or those not have 64 elements
      */
     public Board(PieceType[] pieces, boolean stm,int fmCounter, int hmClock, byte cRights, byte enPt) {
-        if (pieces == null || pieces.length != 64) throw new IllegalArgumentException("pieces must have 64 elements");
+        if (pieces == null || pieces.length != BOARD_SIZE) throw new IllegalArgumentException("pieces must have 64 elements");
         board64 = pieces;
         sideToMove = stm;
         fullMoveCounter = fmCounter;
@@ -130,50 +131,59 @@ public class Board {
         blackPieceList = new int[MAX_MAX];
         fillPieceList();
         playHistory    = new int[1000];
-        captures = 0;
+        irreversibleAspect    = new int[1000];
+        ply = 0;
     }
 
+    /**
+     * @return disjoint list of only white pieces.
+     */
     public int[] getWhitePieceList() {
         return whitePieceList;
     }
 
+    /**
+     * @return disjoint list of only white pieces.
+     */
     public int[] getBlackPieceList() {
         return blackPieceList;
     }
+
     /**
-     *
-     * @return side to move
+     * @return side(white/black) to move.
      */
     public boolean getSideToMove() {
         return sideToMove;
     }
+
     /**
-     * @param fullMoves assigns field fullMoveCounter to fullMoves
+     * @param fullMoves assigns fullMoves to field fullMoveCounter
      */
     public void setFullMoveCounter(int fullMoves) {
         this.fullMoveCounter = fullMoves;
     }
 
     /**
-     * @param halfMove assigns field halfMoveClock to halfMove
+     * @param halfMove assigns  halfMove to field halfMoveClock
      */
     public void setHalfMoveClock(int halfMove) {
         this.halfMoveClock = halfMove;
     }
 
     /**
-     * @param rights byte encoding of queen side and kingside rights of black and white sides
+     * @param rights byte encoding of queen side and king side castle rights of black and white
      */
     public void setCastlingRights(byte rights) {
         boolean wk = canWhiteCastleKingside(rights);
         boolean wq = canWhiteCastleQueenside(rights);
         boolean bk = canBlackCastleQueenside(rights);
         boolean bq = canBlackCastleQueenside(rights);
-        this.castlingRights = encodeCastlingRigts(wk, wq, bk, bq);
+        this.castlingRights = encodeCastlingRights(wk, wq, bk, bq);
     }
 
     /**
-     * @param eP is enPassant possible
+     * @param eP single byte 0-63 corresponding to square on board.
+     *           available on only third(white) and 5th(black) rank.
      */
     public void setEnPassant(byte eP) {
         this.enPassant = eP;
@@ -218,7 +228,7 @@ public class Board {
      * @param bq true if white can castle queen side    1000
      * @return single byte encoding by OR all binary constants
      */
-    public static byte encodeCastlingRigts(boolean wk, boolean wq, boolean bk, boolean bq) {
+    public static byte encodeCastlingRights(boolean wk, boolean wq, boolean bk, boolean bq) {
         byte rights = 0;
         if (wk) rights |= WHITE_KINGSIDE;
         if (wq) rights |= WHITE_QUEENSIDE;
@@ -267,117 +277,195 @@ public class Board {
     }
 
 
-    private void make(Move move) {
-        if (move == null) throw new IllegalArgumentException("moves must not be null");
-        switch (move.getMoveType()) {
-            case NORMAL -> {
-                board64[move.getFrom()] = EMPTY;
-                board64[move.getTo()]   = move.getPieceType();
-                System.out.println(move.getPieceType() + " moves to empty " + move.getFrom() + " to " + move.getTo());
-                if (Math.abs(move.getPieceType().getValue()) == 1) {
-                    // record en Passant for double push
-                    if (Math.abs(move.getFrom() - move.getTo()) == 16)
-                        setEnPassant((byte) (move.getTo() - RANK_8));
-                    else
-                        setEnPassant(OFF_BOARD);
+    public void make(int move) {
+        // if (move == null) throw new IllegalArgumentException("moves must not be null");
+        int flags = Move.getFlags(move);
+        int to = Move.getTargetSquare(move);
+        int from = Move.getFromSquare(move);
+        int capturedPiece = Move.getCapturedPiece(move);
+        int promotion = Move.getPromotionPiece(move);
+        PieceType piece = board64[from];
+
+        assert(piece != EMPTY);
+        addIrreversibleAspect(enPassant, castlingRights, halfMoveClock);
+        addMoveToHistory(move);
+        updatePly(true);
+        updatePieceList(move, piece, from, to, flags);
+
+        switch (flags) {
+            case FLAG_QUIET -> {
+                assert(board64[to] == EMPTY);
+                makeMove(from, to, piece);
+                // increment half move clock for 50 move draw rule
+                halfMoveClock++;
+            }
+            case FLAG_EN_PASSANT -> {
+                assert(board64[to] == EMPTY);
+                assert(enPassant != OFF_BOARD);
+
+                makeMove(from, to, piece);
+                PieceType pt = board64[to - RANK_8];
+
+                assert(pt != EMPTY);
+
+                if (piece.isWhite()) {// enPassant capture happens at double push - 8
+                    assert(pt.isBlack());
+                    board64[to - RANK_8] = EMPTY;
+                }
+                else {// enPassant capture happens at double push + 8
+                    assert(pt.isWhite());
+                    board64[to + RANK_8] = EMPTY;
+                }
+                setEnPassant(OFF_BOARD); // reset enPassant to offboard
+                halfMoveClock = RANK_1; // reset to 0 with every capture.
+            }
+            case FLAG_DOUBLE_PAWN_PUSH -> {
+                assert(board64[to] == EMPTY);
+                makeMove(from, to, piece);
+                if (piece.isWhite()) setEnPassant((byte) (to - RANK_8));
+                else setEnPassant((byte) (to + RANK_8));
+                halfMoveClock++;
+            }
+            case FLAG_CAPTURE -> {
+                assert(board64[to] != EMPTY);
+                board64[from] = EMPTY;
+                board64[to]   = piece;
+                halfMoveClock = RANK_1;
+            }
+            case FLAG_PROMOTION -> {
+                PieceType promotedPiece = PieceType.getPieceType(promotion);
+                board64[from] = EMPTY;
+                board64[to] = promotedPiece;
+            }
+        }
+    }
+
+
+    private void addMoveToHistory(int move) {
+        playHistory[ply] = move;
+    }
+
+    private void updatePly(boolean b) {
+        assert(ply >= OFF_BOARD);
+        if (b) {
+            ply++;
+        }
+        else {
+            ply--;
+        }
+    }
+
+    private void addIrreversibleAspect(int enPassant, int castleRights, int halfMoveClock) {
+            int ep = (enPassant & 0x3F);   // Mask to 6 bits
+            int cR = (castlingRights & 0xF) << 6; // Shift and mask to 4 bits
+            int hM = (halfMoveClock & 0x3F) << 10; // Shift and mask to 6 bits
+            irreversibleAspect[ply] = (ep | cR | hM);
+    }
+
+    private void unaddIrreversibleAspect() {
+        int copyPly = ply - 1;
+        int irreversible = irreversibleAspect[copyPly];
+        int ep = (irreversible & 0x3f);
+        ep = (ep == 63) ?  OFF_BOARD : ep;
+        int cR = (irreversible >> 6) & 0x3f;
+        int hM = (irreversible >> 10) & 0x3f;
+        setEnPassant((byte) ep);
+        setCastlingRights((byte) cR);
+        setHalfMoveClock(hM);
+    }
+
+    private void updatePieceList(int move, PieceType p, int from, int to, int flag) {
+        if (p == null) throw new IllegalArgumentException("Piece is null");
+        int floor = getPieceListFloor(p);
+        int ceil = getPieceListSize(p);
+        int square, xsquare;
+        boolean sideToPlay = p.isWhite();
+        int[] side = (sideToPlay) ? getWhitePieceList() : getBlackPieceList();
+        int[] xside = (sideToPlay) ? getBlackPieceList() : getWhitePieceList();
+        int promotedPiece = Move.getPromotionPiece(move);
+        PieceType capturedPiece = PieceType.getPieceType(Move.getCapturedPiece(move));
+        // enpassant
+
+        for (int index = floor; index < ceil; index++) {
+            if (side[index] != RANK_1) {
+                square = side[index] & 0xff;
+                // update piece's square to targetSquare
+                if (square == from) {
+                    side[index] = ((p.getValue() << RANK_8) | to);
+                    break; // piece value in piece list adjusted
                 }
             }
-            case CAPTURE -> updatePieceLists(move, move.getSideToPlay());
-        }
-    }
-
-    private void updatePieceLists(Move move, boolean sideToPlay) {
-        int[] side = (sideToPlay) ? whitePieceList : blackPieceList;
-        int[] xside = (sideToPlay) ? blackPieceList : whitePieceList;
-        if (move.getMoveType() != MoveType.CAPTURE) return;
-        // what is the captured piece
-        PieceType pieceCaptured = getPieceOnBoard(move.getTo());
-        assert(pieceCaptured != EMPTY);
-        assert(pieceCaptured.isWhite() != sideToPlay);
-        // capture
-        board64[move.getFrom()] = EMPTY;
-        board64[move.getTo()]   = move.getPieceType();
-        // update captures
-        playHistory[captures++] = (pieceCaptured.getValue() << 8 | move.getTo());
-        System.out.println(move.getPieceType().getName() + " Captures " + pieceCaptured.getName() +
-                           " on " + move.getTo());
-
-        int floor   = getPieceListFloor(pieceCaptured);
-        int ceiling = getPieceListSize(pieceCaptured);
-        int encoding, square;
-        int xencoding, xsquare;
-
-        // update white and black's list
-        for (int index = floor; index < ceiling; index++) {
-            if (sideToPlay) { // if white update black;s lists
-                if (blackPieceList[index] != 0) {
-                    encoding = blackPieceList[index] >> 8;
-                    square   = blackPieceList[index] & 0xff;
-                    if (square == move.getTo()) {
-                        blackPieceList[index] = 0;
-                        break;
-                    }
+            // do not update opponent list if it is a quiet move or double pawn push
+            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH) continue;
+            if (xside[index] != RANK_1) {
+                xsquare = xside[index] & 0xff;
+                // update piece's square to zero
+                if (flag == FLAG_EN_PASSANT) {
+                    if (p.isWhite() && (xsquare == to + RANK_8)) xside[index] = RANK_1;
+                    else if (p.isBlack() && (xsquare == to - RANK_8)) xside[index] = RANK_1;
                 }
+                // set capture to zero for any other flag
+                if (xsquare == to) xside[index] = RANK_1;
             }
-            else { // update white's lists
-                if (whitePieceList[index] != 0) {
-                    encoding = whitePieceList[index] >> 8;
-                    square   = whitePieceList[index] & 0xff;
-                    if (square == move.getTo()) {
-                        whitePieceList[index] = 0;
-                        break;
-                    }
+        }
+        // update piece list for promotion
+        if (flag == FLAG_PROMOTION) {
+            PieceType promo = PieceType.getPieceType(promotedPiece);
+            floor = getPieceListFloor(promo);
+            ceil = getPieceListSize(promo);
+
+            for (int i = floor; i < ceil; i++) {
+                if (side[i] == RANK_1) {
+                    side[i] = ((promo.getValue() << RANK_8) | to);
+                    break;
                 }
             }
         }
-
     }
 
+    public void unmake(int move) {
+        int flag = Move.getFlags(move);
+        int to = Move.getTargetSquare(move);
+        int from = Move.getFromSquare(move);
+        int capturedPiece = Move.getCapturedPiece(move);
+        int promotion = Move.getPromotionPiece(move);
+        PieceType piece = board64[to]; // piece has moved to target square
+        assert(ply != RANK_1);
+        assert(board64[to] != EMPTY);
+        int checkPly = ply - 1;
+        assert(playHistory[checkPly] == move);
+        unaddIrreversibleAspect();
+        updatePly(false);
 
-    private void unmake(Move move) {
-        if (move == null) throw new IllegalArgumentException("moves must not be null");
-        switch (move.getMoveType()) {
-            case NULLMOVE ->
-                    System.out.println(move.getPieceType() + " undo move " + move.getTo() + " to " + move.getFrom());
-            case NORMAL -> {
-                    board64[move.getTo()] = EMPTY;
-                    board64[move.getFrom()]   = move.getPieceType();
-                    System.out.println(move.getPieceType() + " undo move " + move.getTo() + " to " + move.getFrom());
+        switch (flag) {
+            case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
+                assert(board64[from] == EMPTY);
+                makeMove(to, from, piece);
             }
-            case CAPTURE -> unmakeHistory(move);
-        }
-    }
-
-    private void unmakeHistory(Move move) {
-        boolean side = move.getSideToPlay();
-        int from = move.getFrom();
-        int to = move.getTo();
-        // return piece back to from
-        if (board64[to] != move.getPieceType()) throw new IllegalArgumentException("Piece is not on destination");
-        board64[to] = EMPTY;
-        board64[from] = move.getPieceType();
-
-        // get most recent capture
-        int captured = playHistory[--captures];
-        int type = captured >> 8;
-        int square = captured & 0xff;
-        PieceType piece = PieceType.getPieceType(type);
-        // put piece on board
-        board64[to] = piece;
-        // update piecelists
-        int floor, ceiling, index;
-        floor = getPieceListFloor(piece);
-        ceiling = getPieceListSize(piece);
-        for (index = floor; index < ceiling; index++) {
-            if (side) { // white capture : update black's piece lists
-                if (blackPieceList[index] == 0) blackPieceList[index] = captured;
-                break;
-            } else { // black capture : update white's piece lists
-                if (whitePieceList[index] == 0) whitePieceList[index] = captured;
-                break;
+            case FLAG_EN_PASSANT -> {
+                makeMove(to, from, piece);
+                PieceType cap = PieceType.getPieceType(capturedPiece);
+                if (cap.isWhite()) board64[enPassant + RANK_8] = cap;
+                else board64[enPassant - RANK_8] = cap;
+            }
+            case FLAG_CAPTURE -> {
+                assert(board64[from] == EMPTY);
+                makeMove(to, from, piece);
+                board64[to] = PieceType.getPieceType(capturedPiece);
+            }
+            case FLAG_PROMOTION -> {
+                assert(board64[from] == EMPTY);
+                makeMove(to, from, piece);
+                if (promotion != RANK_1) board64[to] = PieceType.getPieceType(promotion); // replace piece on board
             }
         }
     }
+
+    private void makeMove(int from, int to, PieceType p) {
+        board64[from] = EMPTY;
+        board64[to] = p;
+    }
+
 
     // intialize field variable Piecetype []
     private static PieceType[] initializeBoard64() {
@@ -514,14 +602,15 @@ public class Board {
         //System.out.println(board.blackListe.size());
 //
         Board board;
-        board = FENParser.parseFENotation(FEN_10);
+        board = FENParser.parseFENotation(FEN_N);
         System.out.println(board);
         // move testing
         System.out.println("MOVE GENERATION TEST");
         System.out.println(FENParser.getFENotation(board));
-        //int count = 0;
-        for (Move m : Pawn.possibleMoves(board, WHITE)) {
+        int count = 0;
+        for (int m : Knight.possibleMoves(board, WHITE)) {
             // if (count++ != 9) continue;
+            System.out.printf(++count +"\t" + printMove(m) + "\n");
             board.make(m);
             System.out.println(board);
             System.out.println("ENpanssant " + board.getEnPassant());

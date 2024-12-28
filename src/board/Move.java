@@ -4,11 +4,12 @@ public class Move {
 
 
     // tactical move flags
-    public static final int FLAG_NONE = 0;
+    public static final int FLAG_QUIET = 0;
     public static final int FLAG_EN_PASSANT = 1;
     public static final int FLAG_CASTLE = 2;
     public static final int FLAG_DOUBLE_PAWN_PUSH = 3;
-    public static final int FLAG_PROMOTION = 4;
+    public static final int FLAG_CAPTURE = 4;
+    public static final int FLAG_PROMOTION = 5;
 
     private final byte from; // origin square
     private final byte to; // target square
@@ -100,6 +101,22 @@ public class Move {
             default -> throw new IllegalStateException("Unexpected value: " + piece);
         };
     }
+
+    public static String printMove(int move) {
+        StringBuilder sb = new StringBuilder();
+        int from = getFromSquare(move);
+        int to = getTargetSquare(move);
+        int fromRank = (from / 8) + 1; // adjust for zero based index
+        int fromFile = from % 8;
+        int toRank = 1 + (to / 8);
+        int toFile = to % 8;
+        sb.append((char) ('a' + fromFile))
+                .append(fromRank)
+                .append((char) ('a' + toFile))
+                .append(toRank);
+        return sb.toString();
+    }
+
 
     public static void main(String[] args) {
         int move = encodeMove(12, 28,0, 0, FLAG_EN_PASSANT);
