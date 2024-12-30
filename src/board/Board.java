@@ -277,6 +277,10 @@ public class Board {
     }
 
 
+    /**
+     *
+     * @param move 32 bit encoding of move information: from square, target square, flags etc
+     */
     public void make(int move) {
         // if (move == null) throw new IllegalArgumentException("moves must not be null");
         int flags = Move.getFlags(move);
@@ -374,6 +378,7 @@ public class Board {
         setHalfMoveClock(hM);
     }
 
+
     private void updatePieceList(int move, PieceType p, int from, int to, int flag) {
         if (p == null) throw new IllegalArgumentException("Piece is null");
         int floor = getPieceListFloor(p);
@@ -396,16 +401,23 @@ public class Board {
                 }
             }
             // do not update opponent list if it is a quiet move or double pawn push
-            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH) continue;
-            if (xside[index] != RANK_1) {
-                xsquare = xside[index] & 0xff;
-                // update piece's square to zero
-                if (flag == FLAG_EN_PASSANT) {
-                    if (p.isWhite() && (xsquare == to + RANK_8)) xside[index] = RANK_1;
-                    else if (p.isBlack() && (xsquare == to - RANK_8)) xside[index] = RANK_1;
+            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
+        }
+
+        if (capturedPiece != EMPTY) {
+            int index = getPieceListFloor(capturedPiece);
+            int ceiling = getPieceListSize(capturedPiece);
+            for (; index < ceiling; index++) {
+                if (xside[index] != RANK_1) {
+                    xsquare = xside[index] & 0xff;
+                    // update piece's square to zero
+                    if (flag == FLAG_EN_PASSANT) {
+                        if (p.isWhite() && (xsquare == to + RANK_8)) xside[index] = RANK_1;
+                        else if (p.isBlack() && (xsquare == to - RANK_8)) xside[index] = RANK_1;
+                    }
+                    // set capture to zero for any other flag
+                    if (xsquare == to) xside[index] = RANK_1; break;
                 }
-                // set capture to zero for any other flag
-                if (xsquare == to) xside[index] = RANK_1;
             }
         }
         // update piece list for promotion
@@ -423,6 +435,9 @@ public class Board {
         }
     }
 
+    /**
+     * @param move 32 bit integer encoding of from square, target square, flags and captured piece
+     */
     public void unmake(int move) {
         int flag = Move.getFlags(move);
         int to = Move.getTargetSquare(move);
@@ -436,6 +451,13 @@ public class Board {
         assert(playHistory[checkPly] == move);
         unaddIrreversibleAspect();
         updatePly(false);
+        if (flag == FLAG_PROMOTION) {
+            if (sideToMove == WHITE)
+                decrementalUpdate(move, WHITE_PAWN, from, to, flag);
+            else
+                decrementalUpdate(move, BLACK_PAWN, from, to, flag);
+        }
+        else decrementalUpdate(move, piece, from, to, flag);
 
         switch (flag) {
             case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
@@ -466,6 +488,53 @@ public class Board {
         board64[to] = p;
     }
 
+    private void decrementalUpdate(int move, PieceType piece, int from, int to, int flag) {
+        if (piece == null) throw new IllegalArgumentException("decremental updated invoked with null piece");
+        int floor = getPieceListFloor(piece);
+        int ceil = getPieceListSize(piece);
+        boolean sideToPlay = piece.isWhite();
+        int side[] = (sideToPlay) ? getWhitePieceList() : getBlackPieceList();
+        int xside[] = (sideToPlay) ? getBlackPieceList() : getWhitePieceList();
+        int promotedPiece = Move.getPromotionPiece(move);
+        PieceType capturedPiece = PieceType.getPieceType(Move.getCapturedPiece(move));
+
+        // update opponent list
+        if (capturedPiece != EMPTY) {
+            int start = getPieceListFloor(capturedPiece);
+            int end = getPieceListSize(capturedPiece);
+            for (; start < end; start++) {
+                // put encoded piece in the first empty spot found;
+                if (xside[start] == RANK_1) {
+                    xside[start] = ((capturedPiece.getValue() << RANK_8) | to);
+                    break;
+                }
+            }
+        }
+        // update current side list
+        for (int index = floor; index < ceil; index++) {
+            // encode piece at  available index as long as it is not a promotion
+            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) {
+                int tile = side[index] & 0xff;
+                if (tile == to) {
+                    side[index] = ((piece.getValue() << RANK_8) | from); // encode piece
+                    break;
+                }
+            }
+            if (flag == FLAG_CASTLE) { return; }
+        }
+        // second update required when promotion is available promotion piece and pawn
+        if (flag == FLAG_PROMOTION) {
+            int start = getPieceListFloor(PieceType.getPieceType(promotedPiece));
+            int end = getPieceListSize(PieceType.getPieceType(promotedPiece));
+            for (; start < end; start++) {
+                if (side[start] != RANK_1) {
+                    int tile = side[start] & 0xff;
+                    if (tile == to) side[start] = RANK_1; // remove from piecelist
+                    break;
+                }
+            }
+        }
+    }
 
     // intialize field variable Piecetype []
     private static PieceType[] initializeBoard64() {

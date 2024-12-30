@@ -114,17 +114,14 @@ public class PieceMove {
                         PieceType pieceOnBoard = board.getPieceOnBoard(newSquare);
                         if (pieceOnBoard != EMPTY) {
                             boolean sameSide = pieceOnBoard.isWhite();
-                            if (sameSide != sideToPlay) {
-                                moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
-                                //moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay,
-                                        // piece, MoveType.CAPTURE));
-                                break;
+                            if (sameSide == !sideToPlay) {
+                                moves.add(Move.encodeMove(from, newSquare, pieceOnBoard.getValue(), 0, Move.FLAG_CAPTURE));
                             }
-                            else break;
+                            break;
                         }
                         else {
                             // moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay, piece, MoveType.NORMAL));
-                            moves.add(Move.encodeMove(from, square + vectorCoordinate64[i], pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
+                            moves.add(Move.encodeMove(from, newSquare, pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
                         }
                         if(!slides) break;
                         square = newSquare; // advance square
