@@ -71,7 +71,8 @@ public class Move {
     }
 
     public static int getPromotionPiece(int move) {
-        return (move >> 16) & 0xf; // bits 12 - 15
+        int piece = (move >> 16) & 0xf;
+        return (piece > 8)  ? mapCapturedPieceToBlack(piece) : piece; // bits 12 - 15
     }
 
     public static int getFlags(int move) {

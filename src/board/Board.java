@@ -12,11 +12,16 @@
  */
 package board;
 
+import piece.Bishop;
 import piece.Knight;
 import piece.Pawn;
+import piece.Queen;
+import piece.Rook;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 import static board.BoardUtilities.*;
 import static board.Move.*;
@@ -40,6 +45,7 @@ public class Board {
     static String FEN_Q =  "8/8/8/3p1q2/2Q3P1/4P3/8/8 w - - 0 1"; // queen move generation test
     static String FEN_P =  "8/8/3p4/2P1p3/8/3P4/4P3/8 w - - 0 1"; // pawn move testing
     static String FEN_N = "8/3p4/8/4N3/3n1P2/8/4P3/8 w - - 0 1"; // knight move test
+    static String FEN_P2 = "rnbqkbnr/p1p1p3/3p3p/1p6/2P1Pp2/8/PP1P1PpP/RNBQKB1R b - - 0 1";
 
 
     // sentinel and blocking piece
@@ -381,45 +387,15 @@ public class Board {
 
     private void updatePieceList(int move, PieceType p, int from, int to, int flag) {
         if (p == null) throw new IllegalArgumentException("Piece is null");
-        int floor = getPieceListFloor(p);
-        int ceil = getPieceListSize(p);
+        int floor;
+        int ceil;
         int square, xsquare;
         boolean sideToPlay = p.isWhite();
         int[] side = (sideToPlay) ? getWhitePieceList() : getBlackPieceList();
         int[] xside = (sideToPlay) ? getBlackPieceList() : getWhitePieceList();
         int promotedPiece = Move.getPromotionPiece(move);
         PieceType capturedPiece = PieceType.getPieceType(Move.getCapturedPiece(move));
-        // enpassant
 
-        for (int index = floor; index < ceil; index++) {
-            if (side[index] != RANK_1) {
-                square = side[index] & 0xff;
-                // update piece's square to targetSquare
-                if (square == from) {
-                    side[index] = ((p.getValue() << RANK_8) | to);
-                    break; // piece value in piece list adjusted
-                }
-            }
-            // do not update opponent list if it is a quiet move or double pawn push
-            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
-        }
-
-        if (capturedPiece != EMPTY) {
-            int index = getPieceListFloor(capturedPiece);
-            int ceiling = getPieceListSize(capturedPiece);
-            for (; index < ceiling; index++) {
-                if (xside[index] != RANK_1) {
-                    xsquare = xside[index] & 0xff;
-                    // update piece's square to zero
-                    if (flag == FLAG_EN_PASSANT) {
-                        if (p.isWhite() && (xsquare == to + RANK_8)) xside[index] = RANK_1;
-                        else if (p.isBlack() && (xsquare == to - RANK_8)) xside[index] = RANK_1;
-                    }
-                    // set capture to zero for any other flag
-                    if (xsquare == to) xside[index] = RANK_1; break;
-                }
-            }
-        }
         // update piece list for promotion
         if (flag == FLAG_PROMOTION) {
             PieceType promo = PieceType.getPieceType(promotedPiece);
@@ -433,6 +409,46 @@ public class Board {
                 }
             }
         }
+        // update opponent's list if capture available
+        if (capturedPiece != EMPTY) {
+            int index = getPieceListFloor(capturedPiece);
+            int ceiling = getPieceListSize(capturedPiece);
+            for (; index < ceiling; index++) {
+                if (xside[index] != RANK_1) {
+                    xsquare = xside[index] & 0xff;
+                    // update piece's square to zero
+                    if (flag == FLAG_EN_PASSANT) {
+                        if (p.isWhite() && (xsquare == to + RANK_8)) xside[index] = RANK_1;
+                        else if (p.isBlack() && (xsquare == to - RANK_8)) xside[index] = RANK_1;
+                    }
+                    // set capture to zero for any other flag
+                    if (xsquare == to) {
+                        xside[index] = RANK_1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        floor = getPieceListFloor(p);
+        ceil = getPieceListSize(p);
+        boolean found = false;
+        for (int index = floor; index < ceil; index++) {
+            if (side[index] != RANK_1) {
+                square = side[index] & 0xff;
+                // update piece's square to targetSquare
+                if (square == from) {
+                    // if promotion is possible set the promoting pawn to a 0
+                    // else update it's current square
+                    side[index] = (flag == FLAG_PROMOTION) ? RANK_1 : ((p.getValue() << RANK_8) | to);
+                    found = true;
+                    break; // piece value in piece list adjusted
+                }
+            }
+            // do not update opponent list if it is a quiet move or double pawn push
+            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
+        }
+        if (!found) throw new RuntimeException("Error: Piece encoding not found");
     }
 
     /**
@@ -477,8 +493,10 @@ public class Board {
             }
             case FLAG_PROMOTION -> {
                 assert(board64[from] == EMPTY);
-                makeMove(to, from, piece);
-                if (promotion != RANK_1) board64[to] = PieceType.getPieceType(promotion); // replace piece on board
+                if (sideToMove == WHITE) {
+                    makeMove(to, from, WHITE_PAWN);
+                } else makeMove(to, from, BLACK_PAWN);
+                if (capturedPiece != RANK_1) board64[to] = PieceType.getPieceType(capturedPiece); // replace piece on board
             }
         }
     }
@@ -511,17 +529,26 @@ public class Board {
             }
         }
         // update current side list
-        for (int index = floor; index < ceil; index++) {
-            // encode piece at  available index as long as it is not a promotion
-            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) {
-                int tile = side[index] & 0xff;
-                if (tile == to) {
-                    side[index] = ((piece.getValue() << RANK_8) | from); // encode piece
-                    break;
+            for (int index = floor; index < ceil; index++) {
+                if (flag != FLAG_PROMOTION) {
+                    // encode piece at  available index as long as it is not a promotion
+                    int tile = side[index] & 0xff;
+                    if (tile == to) {
+                        side[index] = ((piece.getValue() << RANK_8) | from); // encode piece
+                        break;
+                    }
                 }
-            }
-            if (flag == FLAG_CASTLE) { return; }
+                else {
+                    if (side[index] == RANK_1) {
+                        side[index] = ((piece.getValue() << RANK_8) | from);
+                        break;
+                    }
+                }
+
         }
+            // second update required for rook
+        if (flag == FLAG_CASTLE) { return; }
+
         // second update required when promotion is available promotion piece and pawn
         if (flag == FLAG_PROMOTION) {
             int start = getPieceListFloor(PieceType.getPieceType(promotedPiece));
@@ -529,8 +556,10 @@ public class Board {
             for (; start < end; start++) {
                 if (side[start] != RANK_1) {
                     int tile = side[start] & 0xff;
-                    if (tile == to) side[start] = RANK_1; // remove from piecelist
-                    break;
+                    if (tile == to) {
+                        side[start] = RANK_1; // remove from piecelist
+                        break;
+                    }
                 }
             }
         }
@@ -671,18 +700,20 @@ public class Board {
         //System.out.println(board.blackListe.size());
 //
         Board board;
-        board = FENParser.parseFENotation(FEN_N);
+        board = FENParser.parseFENotation(FEN_P2);
         System.out.println(board);
         // move testing
         System.out.println("MOVE GENERATION TEST");
         System.out.println(FENParser.getFENotation(board));
         int count = 0;
-        for (int m : Knight.possibleMoves(board, WHITE)) {
+        Collection<Integer> somelist = Pawn.possibleMoves(board, BLACK);
+        System.out.println(somelist.size());
+        for (int m : somelist) {
             // if (count++ != 9) continue;
             System.out.printf(++count +"\t" + printMove(m) + "\n");
             board.make(m);
             System.out.println(board);
-            System.out.println("ENpanssant " + board.getEnPassant());
+            System.out.println("ENpanssant " + board.getEnPassant() + "\t" + getEnpassantSquare(board.getEnPassant()));
             board.unmake(m);
             System.out.println("\n");
             System.out.println(board);
@@ -690,5 +721,13 @@ public class Board {
         }
     }
 
-
+    private static String getEnpassantSquare(byte sq) {
+        if (sq == OFF_BOARD) return "-";
+        if (sq < RANK_1 || sq >= BOARD_SIZE) throw new IllegalArgumentException();
+        StringBuilder sb = new StringBuilder(2);
+        int rank = sq >> 3;
+        int file = sq &  7;
+        sb.append((char) (file + 'a')).append(rank + 1);
+        return sb.toString();
+    }
 }
