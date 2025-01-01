@@ -11,16 +11,6 @@ import static board.BoardUtilities.*;
 import static board.PieceType.*;
 
 public class Pawn {
-    static final int[] ATTACK_MAP = new int[128];
-
-    static {
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                
-            }
-        }
-
-    }
 
     public static Collection<Integer> possibleMoves(Board board,  boolean sideToPlay) {
         if (board == null) throw new IllegalArgumentException("possible King moves invoked with null");
@@ -44,5 +34,4 @@ public class Pawn {
         return PieceMove.generatePseudoLegal(board, sideToPlay, floor, ceiling, piece);
     }
 
-    // attack maps
 }

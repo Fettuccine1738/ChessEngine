@@ -1,16 +1,10 @@
 package piece;
 
 import board.Board;
-import board.Move;
-import board.MoveType;
 import board.PieceType;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
-import static board.Board.getMailbox120Number;
-import static board.Board.getMailbox64Number;
 import static board.BoardUtilities.*;
 import static board.PieceType.*;
 
