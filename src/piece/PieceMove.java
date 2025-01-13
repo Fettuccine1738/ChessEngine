@@ -1,12 +1,15 @@
 package piece;
 
 import board.Board;
+import board.BoardUtilities;
+import board.Square;
 import board.Move;
 import board.PieceType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 import static board.Board.getMailbox120Number;
 import static board.Board.getMailbox64Number;
@@ -14,7 +17,7 @@ import static board.BoardUtilities.*;
 import static board.PieceType.*;
 
 public class PieceMove {
-    // is piecetype at this index a sliding piece (does the piece need to reset to its from
+    // is piece type at this index a sliding piece (does the piece need to reset to its from
     // index to make the next move?/
     //    index like so --------->      { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING_;
     final static boolean[] IS_SLIDING = { false, false, true, true, true, false};
@@ -70,10 +73,16 @@ public class PieceMove {
     }
 
 
-    // legal moves ?? play move then look at !side (opponent), if current square is in move list of
-    // !side remove move.
+    // generates pseudolegal moves: moves that obey chess rules except leaving King in check
 
-    // castling ??
+    /**
+     * @param board  current position
+     * @param sideToPlay WHITE (true) or BLACK (false) represents sides to play
+     * @param floor      avoids scanning the entire board, lowerbound index in piece-list
+     * @param ceiling    upperbound index piece-list
+     * @param piece      Piece to move
+     * @return           a list of 32 bit ints encoding all move information
+     */
     public static List<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
         if (board == null) throw new IllegalArgumentException("possible moves invoked with null board");
         if (piece == null) throw new IllegalArgumentException("pseudolega genearate with null piece");
@@ -84,6 +93,8 @@ public class PieceMove {
             generatePseudoPawnMoves(board, moves, sideToPlay);
             return moves;
         }
+        // generate castles
+        generateCastle(board, sideToPlay, moves);
 
         int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
         // use piece value to index into offset vector
@@ -122,7 +133,6 @@ public class PieceMove {
                             break;
                         }
                         else {
-                            // moves.add(new Move((byte) (from), (byte) (square + vectorCoordinate64[i]), sideToPlay, piece, MoveType.NORMAL));
                             moves.add(Move.encodeMove(from, newSquare, pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
                         }
                         if(!slides) break;
@@ -131,23 +141,87 @@ public class PieceMove {
                 }
             }
         }
-        // System.out.println(moves.size());
         return moves;
     }
 
+
+    /**
+     * @param board  current position.
+     * @param side   side to move BLACK or WHITE.
+     * @param moves  list of Ints to put moves in.
+     */
+    public static void generateCastle(Board board, boolean side, List<Integer> moves) {
+         byte rights = board.getCastlingRights();
+         boolean longCastle = (side) ? board.canWhiteCastleQueenside(rights) : board.canBlackCastleQueenside(rights);
+         boolean shortCastle = (side) ? board.canWhiteCastleKingside(rights) : board.canBlackCastleKingside(rights);
+
+         if (longCastle) {
+             if (side == WHITE) {
+                 if (board.getPieceOnBoard(0) == WHITE_ROOK && board.getPieceOnBoard(1) == EMPTY
+                         && board.getPieceOnBoard(2) == EMPTY && board.getPieceOnBoard(3) == EMPTY) {
+                     moves.add(Move.encodeMove(4, 2, 0, 0, Move.FLAG_CASTLE));
+                 }
+             }
+             else {
+                 if (board.getPieceOnBoard(63) == BLACK_ROOK && board.getPieceOnBoard(62) == EMPTY
+                         && board.getPieceOnBoard(61) == EMPTY && board.getPieceOnBoard(60) == EMPTY) {
+                     moves.add(Move.encodeMove(59, 61, 0, 0, Move.FLAG_CASTLE));
+                 }
+             }
+         }
+         if (shortCastle) {
+             if (side == WHITE) {
+                 if (board.getPieceOnBoard(7) == WHITE_ROOK && board.getPieceOnBoard(6) == EMPTY
+                         && board.getPieceOnBoard(5) == EMPTY) {
+                     moves.add(Move.encodeMove(4, 6, 0, 0, Move.FLAG_CASTLE));
+                 }
+             }
+             else {
+                 if (board.getPieceOnBoard(58) == BLACK_ROOK && board.getPieceOnBoard(57) == EMPTY
+                         && board.getPieceOnBoard(56) == EMPTY) {
+                     moves.add(Move.encodeMove(59, 57, 0, 0, Move.FLAG_CASTLE));
+                 }
+             }
+         }
+    }
+
+    // validate pseudo legal castle moves to see if  an opponent's piece
+    // attacks a square between the from and to square
+    private void validateCastle(int from, int to, boolean side) {
+         if (side == WHITE) {
+             assert(from == 4);
+             assert(to == 6 || to == 2);
+         }
+         if (side == BLACK) {
+             assert(from == 59);
+             assert(to == 57 || to == 61);
+         }
+         int start = from;
+         int end = to;
+         for (; start < end; start++) {
+             // boolean sqrAttacked = AttackMap.isSquareAttacked();
+         }
+
+    }
+
+    /**
+     * @param board current position
+     * @param moves list of integers encoding move info
+     * @param sideToPlay side to play
+     */
     public static void generatePseudoPawnMoves(Board board, List<Integer> moves, boolean sideToPlay) {
         int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
         int start = getPieceListFloor((sideToPlay) ? WHITE_PAWN : BLACK_PAWN);
         int end = getPieceListSize((sideToPlay) ? WHITE_PAWN : BLACK_PAWN);
         int currentSq;
         int ep = board.getEnPassant();
+        int skip = EMPTY.getValue();
 
         for (; start <= end; start++) {
-            if (piecelist[start] == EMPTY.getValue()) continue; // skip if there is no piece in index
+            if (piecelist[start] == skip) continue; // skip if there is no piece in index
             currentSq = piecelist[start] & 0xff; // get current square
             assert(board.getPieceOnBoard(currentSq) != EMPTY);
 
-            // newSquare = getMailbox120Number(getMailbox64Number(square) + vectorCoordinate120[i]);
             // generate quiet pawn push until the seventh rank
             if (sideToPlay == WHITE) {
                 int to = getMailbox120Number(getMailbox64Number(currentSq) + SINGLE_PUSH);
@@ -166,7 +240,6 @@ public class PieceMove {
                         }
                     }
                 }
-
             }
             else {
                 int to = getMailbox120Number(getMailbox64Number(currentSq) - SINGLE_PUSH);
@@ -186,7 +259,6 @@ public class PieceMove {
                     }
                 }
             }
-
            // generate non promotion captures
             if (sideToPlay == WHITE) {
                 // capture left
@@ -197,7 +269,7 @@ public class PieceMove {
                         moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                     }
                 }
-                if (ep != OFF_BOARD && cap == ep) {
+                if (ep != OFF_BOARD && cap == ep) { // generate enPasant
                     PieceType p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
                     moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
@@ -208,7 +280,7 @@ public class PieceMove {
                         moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                     }
                 }
-                if (ep != OFF_BOARD && cap == ep) {
+                if (ep != OFF_BOARD && cap == ep) { // generate enPassant
                     PieceType p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
                     moves.add(Move.encodeMove(currentSq, ep, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
@@ -240,7 +312,7 @@ public class PieceMove {
                     moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
             }
-            // generate promotion - capture moveso
+            // generate promotion - capture moves : moves that capture into promotion
             if (sideToPlay == WHITE && isOnSeventhRank((byte) currentSq)) {
                 int leftCapture = getMailbox120Number(getMailbox64Number(currentSq) + LEFTCAP);
                 int rightCapture = getMailbox120Number(getMailbox64Number(currentSq) + RIGHTCAP);
@@ -337,6 +409,105 @@ public class PieceMove {
                 }
             }
         }
+    }
+
+    public static void ggeneratePseudoPawnMoves(Board board, List<Integer> moves, boolean sideToPlay) {
+        int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
+        int start = getPieceListFloor(WHITE_PAWN);
+        int end = getPieceListSize(WHITE_PAWN); // same index and range for both black and white
+        int ep = board.getEnPassant();
+        int skip = EMPTY.getValue();
+        int singlePush = sideToPlay == WHITE ? SINGLE_PUSH : -SINGLE_PUSH;
+        int doublePush = sideToPlay == WHITE ? DOUBLE_PUSH : -DOUBLE_PUSH;
+        int leftCapture = sideToPlay == WHITE ? LEFTCAP : -LEFTCAP;
+        int rightCapture = sideToPlay == WHITE ? RIGHTCAP : -RIGHTCAP;
+        Predicate<Byte> isPromotingRank = (sideToPlay == WHITE) ?
+                BoardUtilities::isOnSeventhRank : BoardUtilities::isOnSecondRank;
+        int empty = 0;
+
+        for (; start <= end; start++) {
+            if (piecelist[start] == empty) continue;
+            int from = piecelist[start] & 0xff; // extract from square
+            assert(board.getPieceOnBoard(from) != EMPTY);
+
+            generateQuietPawnMoves(board, moves, from, singlePush, doublePush, sideToPlay, isPromotingRank);
+            generatePawnCaptures(board, moves, from, leftCapture, rightCapture, ep, sideToPlay, isPromotingRank);
+        }
+    }
+
+    private static void generateQuietPawnMoves(Board board, List<Integer> moves, int sq, int singlePush, int doublePush, boolean sideToPlay, Predicate<Byte> isPromotingRank) {
+        int to = getMailbox120Number(getMailbox64Number(sq) + singlePush);
+        if (to != OFF_BOARD && !isPromotingRank.test((byte) sq) && board.getPieceOnBoard(to) == EMPTY) {
+            moves.add(Move.encodeMove(sq, to, 0, 0, Move.FLAG_QUIET));
+
+            if (isOnStartingRank(sq, sideToPlay)) {
+                to = getMailbox120Number(getMailbox64Number(sq) + doublePush);
+                if (board.getPieceOnBoard(to) == EMPTY) {
+                    moves.add(Move.encodeMove(sq, to, 0, 0, Move.FLAG_DOUBLE_PAWN_PUSH));
+                }
+            }
+        }
+    }
+
+    private static void generatePawnCaptures(Board board, List<Integer> moves, int from,
+                                             int leftCapture, int rightCapture, int ep, boolean side, Predicate<Byte> isPromotingRank) {
+        int[] captures = (side) ? new int[]{LEFTCAP, RIGHTCAP} : new int[]{ -LEFTCAP, -RIGHTCAP};
+        for (int c : captures) {
+            int cap = getMailbox120Number(getMailbox64Number(from) + c);
+            // generate non promotion captures
+            if (cap != OFF_BOARD && !isPromotingRank.test((byte) from)) {
+                PieceType piece = board.getPieceOnBoard(cap);
+                if (isOpponentPiece(piece, side)) {
+                    moves.add(Move.encodeMove(from, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
+                }
+                if (cap == ep) { // capture enPassant
+                    PieceType epPiece;
+                    if (side == WHITE) epPiece = board.getPieceOnBoard(cap - SINGLE_PUSH64);
+                    else epPiece = board.getPieceOnBoard(cap + SINGLE_PUSH64);
+                    moves.add(Move.encodeMove(from, cap, epPiece.getValue(), 0, Move.FLAG_EN_PASSANT));
+                }
+            }
+        }
+        boolean check = isOnPromoteRank(from, side);
+        if (check) generatePromotions(board, moves, from, side);
+    }
+
+    private static void generatePromotions(Board board, List<Integer> moves, int from, boolean side) {
+        int[] offsets = (side) ? new int[]{LEFTCAP, RIGHTCAP} : new int[]{ -LEFTCAP, -RIGHTCAP};
+        int promote = getMailbox120Number(getMailbox64Number(from) + SINGLE_PUSH);
+        for (int offset : offsets) {
+            int cap = getMailbox120Number(getMailbox64Number(from) + offset);
+            if (cap != OFF_BOARD) {
+                PieceType piece = board.getPieceOnBoard(cap);
+                if (isOpponentPiece(piece, side)) {
+                    addPromotionMoves(moves, from, cap, piece.getValue(), side);
+                }
+            }
+        }
+        if (promote != OFF_BOARD && board.getPieceOnBoard(promote) == EMPTY) {
+            addPromotionMoves(moves, from, promote, 0, side);
+        }
+    }
+
+    private static void addPromotionMoves(List<Integer> moves, int from, int to, int captured, boolean side) {
+        PieceType[] promotionPieces = (side == WHITE) ? new PieceType[]{WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN}
+                : new PieceType[]{BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN};
+
+        for (PieceType promotion : promotionPieces) {
+            moves.add(Move.encodeMove(from, to, captured, promotion.getValue(), Move.FLAG_PROMOTION));
+        }
+    }
+
+    private static boolean isOpponentPiece(PieceType piece, boolean sideToPlay) {
+        return sideToPlay ? piece.isBlack() : piece.isWhite();
+    }
+
+    private static boolean isOnStartingRank(int square, boolean sideToPlay) {
+        return sideToPlay ? isOnSecondRank((byte) square) : isOnSeventhRank((byte) square);
+    }
+
+    private static boolean isOnPromoteRank(int square, boolean sideToPlay) {
+        return sideToPlay ?  isOnSeventhRank((byte) square) : isOnSecondRank((byte) square);
     }
 }
 

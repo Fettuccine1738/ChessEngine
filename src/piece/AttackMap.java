@@ -43,16 +43,19 @@ public class AttackMap {
     public static final int ATTACK_N = 6;   // Knight
 
 
+    private static final int KNIGHT = 1;
     private static final int BISHOP = 2;
     private static final int ROOK = 3;
     private static final int QUEEN = 4;
 
-    private static final int[][] BISHOP_ATT_MAP = new int[64][];
-    private static final int[][] ROOK_ATT_MAP = new int[64][];
-    private static final int[][] QUEEN_ATT_MAP = new int[64][];
+    private static final int[][] BISHOP_ATT_MAP = new int[BOARD_SIZE][];
+    private static final int[][] ROOK_ATT_MAP = new int[BOARD_SIZE][];
+    private static final int[][] QUEEN_ATT_MAP = new int[BOARD_SIZE][];
+    private static final int[][] KNIGHT_ATT_MAP = new int[BOARD_SIZE][];
 
     static {
         for (int sq = 0; sq < BOARD_SIZE; sq++) {
+            KNIGHT_ATT_MAP[sq] = computePieceMap(sq, KNIGHT);
             BISHOP_ATT_MAP[sq] = computePieceMap(sq, BISHOP);
             ROOK_ATT_MAP[sq] = computePieceMap(sq, ROOK);
             QUEEN_ATT_MAP[sq] = computePieceMap(sq, QUEEN);
@@ -78,7 +81,9 @@ public class AttackMap {
                 else {
                     attacks.add(newSq);
                 }
-                from = newSq;
+                // all sliding piece except knights
+                if (piece > 1) from = newSq;
+                else break;
             }
 
         }
@@ -136,19 +141,22 @@ public class AttackMap {
             System.out.println();
         }
 
-        System.out.println("BISHOP\n");
+        System.out.println("\nKNIGHT\n");
+        for (int[] arr : KNIGHT_ATT_MAP) {
+            System.out.println(Arrays.toString(arr));
+        }
+        System.out.println("\nBISHOP\n");
         for (int[] arr : BISHOP_ATT_MAP) {
             System.out.println(Arrays.toString(arr));
         }
-        System.out.println("ROOK\n");
+        System.out.println("\nROOK\n");
         for (int[] arr : ROOK_ATT_MAP) {
             System.out.println(Arrays.toString(arr));
         }
-        System.out.println("QUEEN\n");
+        System.out.println("\nQUEEN\n");
         for (int[] arr : QUEEN_ATT_MAP) {
             System.out.println(Arrays.toString(arr));
         }
-
     }
 
     // attack maps for sliding pieces

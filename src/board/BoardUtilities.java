@@ -1,7 +1,13 @@
 package board;
 
+import java.util.function.Predicate;
+
+import static board.Square.*;
+
 public class BoardUtilities {
 
+    static Predicate<Byte> secondRank = i -> (i >= A3.getIndex() && i <= H2.getIndex());
+    static Predicate<Byte> seventhRank = i -> (i >= A7.getIndex() && i <= H7.getIndex());
     // board size
     public final static int BOARD_SIZE     = 64;
     public final static int BOARD_SIZE_120 = 120;
@@ -62,10 +68,10 @@ public class BoardUtilities {
     }
 
     public static boolean isOnSecondRank(byte square) {
-        return square >= FILE_H && square <= 15;
+        return secondRank.test(square);
     }
 
     public static boolean isOnSeventhRank(byte square) {
-        return square >= 48 && square <= 55;
+        return seventhRank.test(square);
     }
 }

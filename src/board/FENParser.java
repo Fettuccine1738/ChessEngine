@@ -50,19 +50,19 @@ public class FENParser {
 
         boolean castlingRigts = false;
         byte  castle = board.getCastlingRights();
-        if (canWhiteCastleKingside(castle)) {
+        if (board.canWhiteCastleKingside(castle)) {
             notation.append('K');
             castlingRigts = true;
         }
-        if (canWhiteCastleQueenside(castle)) {
+        if (board.canWhiteCastleQueenside(castle)) {
             notation.append('Q');
             castlingRigts = true;
         }
-        if (canBlackCastleKingside(castle)) {
+        if (board.canBlackCastleKingside(castle)) {
             notation.append('k');
             castlingRigts = true;
         }
-        if (canBlackCastleQueenside(castle)) {
+        if (board.canBlackCastleQueenside(castle)) {
             notation.append('q');
             castlingRigts = true;
         }

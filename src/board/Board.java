@@ -182,7 +182,7 @@ public class Board {
     public void setCastlingRights(byte rights) {
         boolean wk = canWhiteCastleKingside(rights);
         boolean wq = canWhiteCastleQueenside(rights);
-        boolean bk = canBlackCastleQueenside(rights);
+        boolean bk = canBlackCastleKingside(rights);
         boolean bq = canBlackCastleQueenside(rights);
         this.castlingRights = encodeCastlingRights(wk, wq, bk, bq);
     }
@@ -244,21 +244,21 @@ public class Board {
     }
 
     // is king side castling right for white available
-    public static boolean canWhiteCastleKingside(byte rights) {
+    public boolean canWhiteCastleKingside(byte rights) {
         return (rights & WHITE_KINGSIDE) != 0;
     }
 
     // is queenside castling right for white available
-    public static boolean canWhiteCastleQueenside(byte rights) {
+    public  boolean canWhiteCastleQueenside(byte rights) {
         return (rights & WHITE_QUEENSIDE) != 0;
     }
 
     // is king side castling right for black available
-    public static boolean canBlackCastleKingside(byte rights) {
+    public boolean canBlackCastleKingside(byte rights) {
         return (rights & BLACK_KINGSIDE) != 0;
     }
 
-    public static boolean canBlackCastleQueenside(byte rights) {
+    public  boolean canBlackCastleQueenside(byte rights) {
         return (rights & BLACK_QUEENSIDE) != 0;
     }
 
@@ -634,6 +634,16 @@ public class Board {
         return (rank * 10) + 21 + file;
     }
 
+    // retunrs string represntation of en passant square
+    private static String getEnpassantSquare(byte sq) {
+        if (sq == OFF_BOARD) return "-";
+        if (sq < RANK_1 || sq >= BOARD_SIZE) throw new IllegalArgumentException();
+        StringBuilder sb = new StringBuilder(2);
+        int rank = sq >> 3;
+        int file = sq &  7;
+        sb.append((char) (file + 'a')).append(rank + 1);
+        return sb.toString();
+    }
     /**
      * @return 8 x 8 representation of board with enums in index represented by their char values
      *         Uppercase chars for white and lowercase for black
@@ -707,7 +717,7 @@ public class Board {
         System.out.println(FENParser.getFENotation(board));
         int count = 0;
         Collection<Integer> somelist = Pawn.possibleMoves(board, WHITE);
-        System.out.println(somelist.size());
+        System.out.println("Moves available: " + somelist.size() + "\n");
         for (int m : somelist) {
             // if (count++ != 9) continue;
             System.out.printf(++count +"\t" + printMove(m) + "\n");
@@ -719,15 +729,5 @@ public class Board {
             System.out.println(board);
             System.out.println("\n");
         }
-    }
-
-    private static String getEnpassantSquare(byte sq) {
-        if (sq == OFF_BOARD) return "-";
-        if (sq < RANK_1 || sq >= BOARD_SIZE) throw new IllegalArgumentException();
-        StringBuilder sb = new StringBuilder(2);
-        int rank = sq >> 3;
-        int file = sq &  7;
-        sb.append((char) (file + 'a')).append(rank + 1);
-        return sb.toString();
     }
 }
