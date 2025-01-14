@@ -716,7 +716,7 @@ public class Board {
         System.out.println("MOVE GENERATION TEST");
         System.out.println(FENParser.getFENotation(board));
         int count = 0;
-        Collection<Integer> somelist = Pawn.possibleMoves(board, WHITE);
+        Collection<Integer> somelist = Pawn.possibleMoves(board, BLACK);
         System.out.println("Moves available: " + somelist.size() + "\n");
         for (int m : somelist) {
             // if (count++ != 9) continue;

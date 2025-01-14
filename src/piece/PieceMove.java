@@ -90,7 +90,7 @@ public class PieceMove {
         List<Integer> moves = new ArrayList<>();
         // generate pawn moves separately
         if (Math.abs(piece.getValue()) == 1) {
-            generatePseudoPawnMoves(board, moves, sideToPlay);
+            ggeneratePseudoPawnMoves(board, moves, sideToPlay);
             return moves;
         }
         // generate castles
@@ -474,7 +474,8 @@ public class PieceMove {
 
     private static void generatePromotions(Board board, List<Integer> moves, int from, boolean side) {
         int[] offsets = (side) ? new int[]{LEFTCAP, RIGHTCAP} : new int[]{ -LEFTCAP, -RIGHTCAP};
-        int promote = getMailbox120Number(getMailbox64Number(from) + SINGLE_PUSH);
+        int sp = (side) ? SINGLE_PUSH : -SINGLE_PUSH;
+        int promote = getMailbox120Number(getMailbox64Number(from) + sp);
         for (int offset : offsets) {
             int cap = getMailbox120Number(getMailbox64Number(from) + offset);
             if (cap != OFF_BOARD) {

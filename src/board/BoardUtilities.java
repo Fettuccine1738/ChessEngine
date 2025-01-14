@@ -6,7 +6,7 @@ import static board.Square.*;
 
 public class BoardUtilities {
 
-    static Predicate<Byte> secondRank = i -> (i >= A3.getIndex() && i <= H2.getIndex());
+    static Predicate<Byte> secondRank = i -> (i >= A2.getIndex() && i <= H2.getIndex());
     static Predicate<Byte> seventhRank = i -> (i >= A7.getIndex() && i <= H7.getIndex());
     // board size
     public final static int BOARD_SIZE     = 64;
