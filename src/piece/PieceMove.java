@@ -2,7 +2,6 @@ package piece;
 
 import board.Board;
 import board.BoardUtilities;
-import board.Square;
 import board.Move;
 import board.PieceType;
 
@@ -49,6 +48,28 @@ public class PieceMove {
     final static int RIGHTCAP_64 = 7;
     final static int RIGHTCAP = 9;
 
+    /**
+     * @param board current position
+     * @param moves list of integers encoding move information
+     * @return moves with moves that leave king in check (illegal moves ) removed. Move contains only legal moves.
+     */
+    public static List<Integer> validateMoves(Board board, List<Integer> moves) {
+        if (moves.isEmpty() || board == null) throw new IllegalArgumentException("validate moves invoked with " +
+                " null or empty board");
+        int m = 0;
+        for (int move : moves) {
+            board.make(move);
+            System.out.println(board);
+            if (AttackMap.isKingInCheck(board)) {
+                System.out.println("\n" + move + " leaves king in check");
+                m = moves.remove(move);
+            }
+            board.setSideToMove(!board.getSideToMove());
+            board.unmake(m);
+            System.out.println(board);
+        }
+        return moves;
+    }
 
      public static List<Integer> possibleMoves(Board board, boolean sideToPlay) {
         List<Integer> moves = new ArrayList<>();
@@ -72,8 +93,6 @@ public class PieceMove {
         return moves;
     }
 
-
-    // generates pseudolegal moves: moves that obey chess rules except leaving King in check
 
     /**
      * @param board  current position
@@ -201,215 +220,9 @@ public class PieceMove {
          for (; start < end; start++) {
              // boolean sqrAttacked = AttackMap.isSquareAttacked();
          }
-
     }
 
-    /**
-     * @param board current position
-     * @param moves list of integers encoding move info
-     * @param sideToPlay side to play
-     */
-    public static void generatePseudoPawnMoves(Board board, List<Integer> moves, boolean sideToPlay) {
-        int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
-        int start = getPieceListFloor((sideToPlay) ? WHITE_PAWN : BLACK_PAWN);
-        int end = getPieceListSize((sideToPlay) ? WHITE_PAWN : BLACK_PAWN);
-        int currentSq;
-        int ep = board.getEnPassant();
-        int skip = EMPTY.getValue();
 
-        for (; start <= end; start++) {
-            if (piecelist[start] == skip) continue; // skip if there is no piece in index
-            currentSq = piecelist[start] & 0xff; // get current square
-            assert(board.getPieceOnBoard(currentSq) != EMPTY);
-
-            // generate quiet pawn push until the seventh rank
-            if (sideToPlay == WHITE) {
-                int to = getMailbox120Number(getMailbox64Number(currentSq) + SINGLE_PUSH);
-                // if we are not off board or on the seventh rank(promotion)
-                if (to != OFF_BOARD && !isOnSeventhRank((byte) currentSq)) {
-                    PieceType pieceOnBoard = board.getPieceOnBoard(to);
-                    if (pieceOnBoard == EMPTY) {
-                        moves.add(Move.encodeMove(currentSq, to, 0, 0, Move.FLAG_QUIET));
-                        // if on second rank add a double push
-                        if (isOnSecondRank((byte) currentSq)) {
-                            to = getMailbox120Number(getMailbox64Number(currentSq) + DOUBLE_PUSH);
-                            pieceOnBoard = board.getPieceOnBoard(to);
-                            if (pieceOnBoard == EMPTY) {
-                                moves.add(Move.encodeMove(currentSq, to, 0, 0, Move.FLAG_DOUBLE_PAWN_PUSH));
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                int to = getMailbox120Number(getMailbox64Number(currentSq) - SINGLE_PUSH);
-                // if we are not off board or on the seventh rank(promotion)
-                if (to != OFF_BOARD && !isOnSecondRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(to);
-                    if (piece == EMPTY) {
-                        moves.add(Move.encodeMove(currentSq, to, 0, 0, Move.FLAG_QUIET));
-                        // if on seventh rank add a double push
-                        if (isOnSeventhRank((byte) currentSq)) {
-                            to = getMailbox120Number(getMailbox64Number(currentSq) - DOUBLE_PUSH);
-                            piece = board.getPieceOnBoard(to);
-                            if (piece == EMPTY) {
-                                moves.add(Move.encodeMove(currentSq, to, 0, 0, Move.FLAG_DOUBLE_PAWN_PUSH));
-                            }
-                        }
-                    }
-                }
-            }
-           // generate non promotion captures
-            if (sideToPlay == WHITE) {
-                // capture left
-                int cap = getMailbox120Number(getMailbox64Number(currentSq) + LEFTCAP);
-                if (cap != OFF_BOARD && !isOnSeventhRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
-                    if (piece.isBlack()) {
-                        moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
-                    }
-                }
-                if (ep != OFF_BOARD && cap == ep) { // generate enPasant
-                    PieceType p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
-                    moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
-                }
-                cap = getMailbox120Number(getMailbox64Number(currentSq) + RIGHTCAP);
-                if (cap != OFF_BOARD && !isOnSeventhRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
-                    if (piece.isBlack()) {
-                        moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
-                    }
-                }
-                if (ep != OFF_BOARD && cap == ep) { // generate enPassant
-                    PieceType p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
-                    moves.add(Move.encodeMove(currentSq, ep, p.getValue(), 0, Move.FLAG_EN_PASSANT));
-                }
-            }
-            else {
-                // capture left
-                int cap = getMailbox120Number(getMailbox64Number(currentSq) - LEFTCAP);
-                if (cap != OFF_BOARD && !isOnSecondRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
-                    if (piece.isWhite()) {
-                        moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
-                    }
-                }
-                if (ep != OFF_BOARD && cap == ep) {
-                    PieceType p = board.getPieceOnBoard(cap + SINGLE_PUSH64);
-                    assert(p.getValue() == WHITE_PAWN.getValue());
-                    moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
-                }
-                cap = getMailbox120Number(getMailbox64Number(currentSq) - RIGHTCAP);
-                if (cap != OFF_BOARD && !isOnSecondRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
-                    if (piece.isWhite()) {
-                        moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
-                    }
-                }
-                if (ep != OFF_BOARD && cap == ep) { // capture enpassant
-                    PieceType p = board.getPieceOnBoard(cap + SINGLE_PUSH64);
-                    assert(p.getValue() == WHITE_PAWN.getValue());
-                    moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
-                }
-            }
-            // generate promotion - capture moves : moves that capture into promotion
-            if (sideToPlay == WHITE && isOnSeventhRank((byte) currentSq)) {
-                int leftCapture = getMailbox120Number(getMailbox64Number(currentSq) + LEFTCAP);
-                int rightCapture = getMailbox120Number(getMailbox64Number(currentSq) + RIGHTCAP);
-                int push = getMailbox120Number(getMailbox64Number(currentSq) + SINGLE_PUSH);
-                assert(leftCapture != OFF_BOARD);
-                assert(rightCapture != OFF_BOARD);
-                assert(push != OFF_BOARD);
-                if (leftCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(leftCapture);
-                    if (piece.isBlack()) { // add promotion to all major piece
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
-                    }
-                }
-                if (rightCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(rightCapture);
-                    if (piece.isBlack()) { // add promotion to all major piece
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
-                    }
-                }
-                if (push != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(rightCapture);
-                    if (piece == EMPTY) { // add promotion to all major piece
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                WHITE_BISHOP.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                WHITE_ROOK.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                WHITE_QUEEN.getValue(), Move.FLAG_PROMOTION));
-                    }
-                }
-            }
-            // black promotion
-            if (sideToPlay == BLACK &&  isOnSecondRank((byte) currentSq)) {
-                int leftCapture = getMailbox120Number(getMailbox64Number(currentSq) - LEFTCAP);
-                int rightCapture = getMailbox120Number(getMailbox64Number(currentSq) - RIGHTCAP);
-                int push = getMailbox120Number(getMailbox64Number(currentSq) - SINGLE_PUSH);
-                assert(leftCapture != OFF_BOARD);
-                assert(rightCapture != OFF_BOARD);
-                assert(push != OFF_BOARD);
-                if (leftCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(leftCapture);
-                    if (piece.isWhite()) { // add promotion to all major piece
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                BLACK_ROOK.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
-                                BLACK_QUEEN.getValue(), Move.FLAG_PROMOTION));
-                    }
-                }
-                if (rightCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(rightCapture);
-                    if (piece.isWhite()) { // add promotion to all major piece
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                BLACK_ROOK.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
-                                BLACK_QUEEN.getValue(), Move.FLAG_PROMOTION));
-                    }
-                }
-                if (push != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(push);
-                    if (piece == EMPTY) { // add promotion to all major piece
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                BLACK_BISHOP.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                BLACK_ROOK.getValue(), Move.FLAG_PROMOTION));
-                        moves.add(Move.encodeMove(currentSq, push, 0,
-                                BLACK_QUEEN.getValue(), Move.FLAG_PROMOTION));
-                    }
-                }
-            }
-        }
-    }
 
     public static void ggeneratePseudoPawnMoves(Board board, List<Integer> moves, boolean sideToPlay) {
         int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
@@ -417,15 +230,15 @@ public class PieceMove {
         int end = getPieceListSize(WHITE_PAWN); // same index and range for both black and white
         int ep = board.getEnPassant();
         int skip = EMPTY.getValue();
-        int singlePush = sideToPlay == WHITE ? SINGLE_PUSH : -SINGLE_PUSH;
-        int doublePush = sideToPlay == WHITE ? DOUBLE_PUSH : -DOUBLE_PUSH;
-        int leftCapture = sideToPlay == WHITE ? LEFTCAP : -LEFTCAP;
+        int singlePush =  sideToPlay == WHITE ? SINGLE_PUSH : -SINGLE_PUSH;
+        int doublePush =  sideToPlay == WHITE ? DOUBLE_PUSH : -DOUBLE_PUSH;
+        int leftCapture =  sideToPlay == WHITE ? LEFTCAP : -LEFTCAP;
         int rightCapture = sideToPlay == WHITE ? RIGHTCAP : -RIGHTCAP;
         Predicate<Byte> isPromotingRank = (sideToPlay == WHITE) ?
                 BoardUtilities::isOnSeventhRank : BoardUtilities::isOnSecondRank;
         int empty = 0;
 
-        for (; start <= end; start++) {
+        for (; start < end; start++) {
             if (piecelist[start] == empty) continue;
             int from = piecelist[start] & 0xff; // extract from square
             assert(board.getPieceOnBoard(from) != EMPTY);
@@ -468,8 +281,7 @@ public class PieceMove {
                 }
             }
         }
-        boolean check = isOnPromoteRank(from, side);
-        if (check) generatePromotions(board, moves, from, side);
+        if (isOnPromoteRank(from, side)) generatePromotions(board, moves, from, side);
     }
 
     private static void generatePromotions(Board board, List<Integer> moves, int from, boolean side) {

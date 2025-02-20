@@ -15,6 +15,7 @@ package board;
 import piece.Bishop;
 import piece.Knight;
 import piece.Pawn;
+import piece.PieceMove;
 import piece.Queen;
 import piece.Rook;
 
@@ -47,6 +48,9 @@ public class Board {
     static String FEN_N = "8/3p4/8/4N3/3n1P2/8/4P3/8 w - - 0 1"; // knight move test
     static String FEN_P2 = "rnbqkbnr/p1p1p3/3p3p/1p6/2P1Pp2/8/PP1P1PpP/RNBQKB1R b - - 0 1";
 
+
+    static String FEN_TESTPINS = "1R1K2R1/PPPPPPPP/8/6b1/3r4/8/8/8 w - - 0 1";
+    static String FEN_PINS = "8/8/8/3r4/6b1/8/PPPPPPPP/1R1K2R1 w - - 0 1";
 
     // sentinel and blocking piece
     private final static byte OFF_BOARD = -1;
@@ -350,7 +354,6 @@ public class Board {
         }
     }
 
-
     private void addMoveToHistory(int move) {
         playHistory[ply] = move;
     }
@@ -403,13 +406,13 @@ public class Board {
             ceil = getPieceListSize(promo);
 
             for (int i = floor; i < ceil; i++) {
-                if (side[i] == RANK_1) {
+                if (side[i] == RANK_1) { // place the piece encoding in next available position ( = 0)
                     side[i] = ((promo.getValue() << RANK_8) | to);
                     break;
                 }
             }
         }
-        // update opponent's list if capture available
+        // update opponent's list if opponent piece is captured
         if (capturedPiece != EMPTY) {
             int index = getPieceListFloor(capturedPiece);
             int ceiling = getPieceListSize(capturedPiece);
@@ -430,13 +433,14 @@ public class Board {
             }
         }
 
+        // update current side piecelist
         floor = getPieceListFloor(p);
         ceil = getPieceListSize(p);
         boolean found = false;
         for (int index = floor; index < ceil; index++) {
-            if (side[index] != RANK_1) {
+            if (side[index] != RANK_1) { // check entry if it is not empty ( = 0)
                 square = side[index] & 0xff;
-                // update piece's square to targetSquare
+                // update piece's square to targetSquare if it is the piece on the current index
                 if (square == from) {
                     // if promotion is possible set the promoting pawn to a 0
                     // else update it's current square
@@ -449,6 +453,11 @@ public class Board {
             if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
         }
         if (!found) throw new RuntimeException("Error: Piece encoding not found");
+        // this.sideToMove = !sideToMove; // update side to play
+    }
+
+    public void setSideToMove(boolean side) {
+        this.sideToMove = side;
     }
 
     /**
@@ -499,6 +508,7 @@ public class Board {
                 if (capturedPiece != RANK_1) board64[to] = PieceType.getPieceType(capturedPiece); // replace piece on board
             }
         }
+        // this.sideToMove = !sideToMove; // update side to play
     }
 
     private void makeMove(int from, int to, PieceType p) {
@@ -531,7 +541,7 @@ public class Board {
         // update current side list
             for (int index = floor; index < ceil; index++) {
                 if (flag != FLAG_PROMOTION) {
-                    // encode piece at  available index as long as it is not a promotion
+                    // encode piece at next available index as long as it is not a promotion
                     int tile = side[index] & 0xff;
                     if (tile == to) {
                         side[index] = ((piece.getValue() << RANK_8) | from); // encode piece
@@ -710,13 +720,14 @@ public class Board {
         //System.out.println(board.blackListe.size());
 //
         Board board;
-        board = FENParser.parseFENotation(FEN_P2);
+        board = FENParser.parseFENotation(FEN_TESTPINS);
         System.out.println(board);
         // move testing
         System.out.println("MOVE GENERATION TEST");
         System.out.println(FENParser.getFENotation(board));
         int count = 0;
-        Collection<Integer> somelist = Pawn.possibleMoves(board, BLACK);
+        Collection<Integer> somelist = Pawn.possibleMoves(board, WHITE);
+        // Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
         System.out.println("Moves available: " + somelist.size() + "\n");
         for (int m : somelist) {
             // if (count++ != 9) continue;

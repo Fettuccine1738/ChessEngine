@@ -1,6 +1,6 @@
 package board;
 
-import java.util.function.Predicate;
+import java.util.Arrays;
 
 public enum Square {
 
@@ -14,15 +14,21 @@ public enum Square {
         A8, B8, C8, D8, E8, F8, G8, H8;
 
         public Square getSquare(int sq) {
-            return Square.values()[sq]; // return tile at that index;
+            return Square.values()[sq]; // return value at that index;
         }
 
         public int getIndex() {
             String str = this.name();
             // int r = Integer.parseInt(str.substring(0,1));
             int file = str.charAt(0) - 'A';
-            int rank = Integer.parseInt(str.substring(1, 2)) - 1; // adjust to zero based index
-            return rank * BoardUtilities.FILE_H + file;
+            int rank = Integer.parseInt(str.substring(1, 2)) - 1;
+            // adjust to zero based indexreturn rank * BoardUtilities.FILE_H + file;
+            return rank * BoardUtilities.RANK_8 + file;
         }
 
+    public static void main(String[] args) {
+            Arrays.stream(Square.values())
+                    .forEach(enumVal -> System.out.println(enumVal.name() + "\t" + enumVal.getIndex()));
+    }
 }
+

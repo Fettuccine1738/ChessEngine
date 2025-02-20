@@ -1,5 +1,8 @@
 package piece;
 
+import board.Board;
+import board.BoardUtilities;
+import board.Move;
 import board.PieceType;
 
 import java.util.ArrayList;
@@ -10,6 +13,7 @@ import static board.Board.getMailbox120Number;
 import static board.Board.getMailbox64Number;
 import static board.BoardUtilities.BOARD_SIZE;
 import static board.BoardUtilities.OFF_BOARD;
+import static board.PieceType.EMPTY;
 
 /************************************************************************************
  * <a href="https://mediocrechess.blogspot.com/2006/12/guide-attacked-squares.html">...</a>
@@ -131,6 +135,106 @@ public class AttackMap {
         System.out.println(ATTACK_ARRAY[normalizedIndex]);
         return ATTACK_ARRAY[normalizedIndex] != ATTACK_NONE;
     }
+
+    public static boolean isKingInCheck(Board board) {
+        // extract king data from board
+        int kingPosition = (board.getSideToMove()) ? board.getWhitePieceList()[0]
+                : board.getBlackPieceList()[0];
+        assert(kingPosition != 0);
+        int kingSquare = kingPosition & 0xff; // extract last bits  - index (0 .. 63)
+        assert(0 <= kingSquare  && kingSquare < BOARD_SIZE);
+        return isSquareAttacked(board, kingSquare, board.getSideToMove());
+    }
+
+    /**
+     * @param board current position to be evaluated
+     * @param attackedIndex check if this board index is attacked
+     * @param side   current side to play
+     * @return   true if the square can be attacked,  false if that square is not attacked
+     */
+    public static boolean isSquareAttacked(Board board, int attackedIndex, boolean side) {
+        if (attackedIndex < 0 || attackedIndex >= BOARD_SIZE) {
+            throw new IllegalArgumentException("Invalid attacking index: " + attackedIndex);
+        }
+        if (board == null) {
+            throw new NullPointerException("Null board");
+        }
+
+        for (int sq = KNIGHT; sq <= QUEEN; sq++) {
+            if (isInComputedAttackMap(board, attackedIndex, sq)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int[][] computedAttackMaps(int piece) {
+        if (piece < KNIGHT || piece > QUEEN) {
+            throw new IllegalArgumentException("Invalid piece: " + piece);
+        }
+        switch (piece) {
+            case KNIGHT -> { return KNIGHT_ATT_MAP; }
+            case BISHOP -> { return BISHOP_ATT_MAP; }
+            case ROOK -> { return ROOK_ATT_MAP; }
+            case QUEEN -> { return QUEEN_ATT_MAP; }
+            default -> throw new IllegalArgumentException("Invalid piece: " + piece);
+        }
+    }
+
+    private static boolean isInComputedAttackMap(Board board, int attackedIndex, int piece) {
+        int[][] attackMap = computedAttackMaps(piece);
+        int length = attackMap[attackedIndex].length;
+        for (int sq = 0; sq < length; sq++) {
+            if (canReachSquare(board, attackedIndex,
+                    attackMap[attackedIndex][sq], board.getSideToMove()))  {
+                return true;
+            }
+        }
+       return false;
+    }
+
+    public static boolean canReachSquare(Board board, int attacked, int attacking, boolean side) {
+        PieceType attackingPiece = board.getPieceOnBoard(attacking);
+        // is the attacking square on the same side as attacked or empty?
+        if (attackingPiece == PieceType.EMPTY) { return false; }
+        else if (attackingPiece.isWhite() == side) return false;
+        else {
+            int piece = Math.abs(attackingPiece.getValue());
+            int directions = PieceMove.DIRECTIONS[piece];
+            // int[] vector120 = PieceMove.OFFSET_VECTOR_COORDINATES[directions];
+            int start, square = attacking;
+            boolean slides = PieceMove.IS_SLIDING[piece];
+            int newSquare;
+            for (int i = 0; i < directions; i++) {
+                // ignore any coordinates that leads to index of pieces that may not contain the piece
+                // if the attacked index is less than the attacking, we only need to look at index lower
+                // than attacking, alternate for the opposite
+                if (PieceMove.OFFSET_VECTOR_COORDINATES[piece][i] < 0 && attacking < attacked ) {
+                    continue;
+                }
+                else if (PieceMove.OFFSET_VECTOR_COORDINATES[piece][i] > 0 && attacking > attacked) {
+                    continue;
+                }
+                while (true) {
+                    newSquare = getMailbox120Number(getMailbox64Number(square)
+                    + PieceMove.OFFSET_VECTOR_COORDINATES[piece][i]);
+                    if (newSquare == OFF_BOARD) break;
+                    PieceType currentPiece = board.getPieceOnBoard(newSquare);
+                    if (currentPiece == PieceType.EMPTY) { // advance to next square
+                        if (newSquare == attacked) return true; // attack square reached
+                        if (!slides) break; // it's not a sliding piece move to next direction
+                        square = newSquare;
+                    }
+                    else { // there is a blocking piece
+                        break;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+
 
     public static void pprint() {
         int count = 0;

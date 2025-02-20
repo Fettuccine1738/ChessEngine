@@ -2,12 +2,29 @@ package board;
 
 import java.util.function.Predicate;
 
-import static board.Square.*;
-
 public class BoardUtilities {
 
-    static Predicate<Byte> secondRank = i -> (i >= A2.getIndex() && i <= H2.getIndex());
-    static Predicate<Byte> seventhRank = i -> (i >= A7.getIndex() && i <= H7.getIndex());
+    // commonly used rank and files bounds
+    private final static int A_0 = 0;
+    private final static int B_1 = 1;
+    private final static int C_2 = 2;
+    private final static int D_3 = 3;
+    private final static int E_1 = 4;
+    private final static int F_1 = 5;
+    private final static int G_1 = 6;
+    private final static int H_1 = 7;
+    private final static int A_2 = 8;
+    private final static int A_7 = 48;
+    private final static int H_2 = 15;
+    private final static int H_7 = 55;
+    private final static int A_8 = 56;
+    private final static int B_8 = 57;
+    private final static int C_8 = 58;
+    private final static int E_8 = 60;
+    private final static int F_8 = 61;
+    private final static int G_8 = 62;
+    private final static int H_8 = 63;
+
     // board size
     public final static int BOARD_SIZE     = 64;
     public final static int BOARD_SIZE_120 = 120;
@@ -43,10 +60,11 @@ public class BoardUtilities {
     public final static byte MAX_MAX    = 49;
 
 
+    // this 
     public static int getPieceListSize(PieceType piece) {
         switch (piece) {
             case BLACK_ROOK, WHITE_ROOK -> { return MAX_ROOKS; }
-            case BLACK_PAWN, WHITE_PAWN -> { return MAX_PAWN; }
+            case BLACK_PAWN, WHITE_PAWN -> { return MAX_MAX; }
             case BLACK_BISHOP, WHITE_BISHOP -> { return MAX_BISHOP; }
             case BLACK_KNIGHT, WHITE_KNIGHT -> { return MAX_KNIGHT; }
             case BLACK_QUEEN, WHITE_QUEEN -> { return MAX_QUEEN; }
@@ -66,6 +84,9 @@ public class BoardUtilities {
             default ->  throw new IllegalArgumentException("Invalid piece type");
         }
     }
+
+    static Predicate<Byte> secondRank = i -> (i >= A_2  && i <= H_2);
+    static Predicate<Byte> seventhRank = i -> (i >= A_7 && i <= H_7);
 
     public static boolean isOnSecondRank(byte square) {
         return secondRank.test(square);
