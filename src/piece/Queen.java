@@ -1,11 +1,9 @@
 package piece;
 
 import board.Board;
-import board.Move;
 import board.PieceType;
 
 import java.util.Collection;
-import java.util.List;
 
 import static board.BoardUtilities.*;
 import static board.PieceType.BLACK_QUEEN;
@@ -23,7 +21,7 @@ public class Queen {
     public static Collection<Integer> possibleMoves(Board board,  boolean sideToPlay) {
         if (board == null) throw new IllegalArgumentException("possible Knigt moves invoked with null");
         int floor   = getPieceListFloor(WHITE_QUEEN);
-        int ceiling = getPieceListSize(BLACK_QUEEN);
+        int ceiling = getPieceListCeiling(BLACK_QUEEN);
         if (sideToPlay == WHITE) {
             return generatePseudoLegal(board, sideToPlay, floor, ceiling, WHITE_QUEEN);
         }

@@ -1,8 +1,6 @@
 package piece;
 
 import board.Board;
-import board.BoardUtilities;
-import board.Move;
 import board.PieceType;
 
 import java.util.ArrayList;
@@ -13,7 +11,6 @@ import static board.Board.getMailbox120Number;
 import static board.Board.getMailbox64Number;
 import static board.BoardUtilities.BOARD_SIZE;
 import static board.BoardUtilities.OFF_BOARD;
-import static board.PieceType.EMPTY;
 
 /************************************************************************************
  * <a href="https://mediocrechess.blogspot.com/2006/12/guide-attacked-squares.html">...</a>
@@ -51,11 +48,19 @@ public class AttackMap {
     private static final int BISHOP = 2;
     private static final int ROOK = 3;
     private static final int QUEEN = 4;
+    private static final int KING = 5;
+    private static final int PAWN = 6;
+
+    // number of pawn directions
+    private static final int PAWN_DIR = 2;
 
     private static final int[][] BISHOP_ATT_MAP = new int[BOARD_SIZE][];
     private static final int[][] ROOK_ATT_MAP = new int[BOARD_SIZE][];
+    // queen map not needed
     private static final int[][] QUEEN_ATT_MAP = new int[BOARD_SIZE][];
     private static final int[][] KNIGHT_ATT_MAP = new int[BOARD_SIZE][];
+    private static final int[][] KING_ATT_MAP = new int[BOARD_SIZE][];
+    private static final int[][] PAWN_ATT_MAP = new int[BOARD_SIZE][];
 
     static {
         for (int sq = 0; sq < BOARD_SIZE; sq++) {
@@ -63,6 +68,8 @@ public class AttackMap {
             BISHOP_ATT_MAP[sq] = computePieceMap(sq, BISHOP);
             ROOK_ATT_MAP[sq] = computePieceMap(sq, ROOK);
             QUEEN_ATT_MAP[sq] = computePieceMap(sq, QUEEN);
+            KING_ATT_MAP[sq] = computePieceMap(sq, KING);
+            PAWN_ATT_MAP[sq] = computePieceMap(sq, PAWN);
         }
     }
 
@@ -71,9 +78,11 @@ public class AttackMap {
         int file = sq % BOARD_SIZE;
 
         List<Integer> attacks = new ArrayList<>();
-        int[] delta = PieceMove.VECTOR_COORDINATES[piece];
-        int[] offset_delta = PieceMove.OFFSET_VECTOR_COORDINATES[piece];
-        int DIR = PieceMove.DIRECTIONS[piece];
+        int[] delta = (piece <= KING) ? PieceMove.VECTOR_COORDINATES[piece] :
+                new int[]{PieceMove.LEFTCAP_64, PieceMove.RIGHTCAP_64};
+        int[] offset_delta = (piece <= KING) ? PieceMove.OFFSET_VECTOR_COORDINATES[piece] :
+                            new int[]{PieceMove.LEFTCAP, PieceMove.RIGHTCAP};
+        int DIR = (piece <= KING) ? PieceMove.DIRECTIONS[piece] : PAWN_DIR;
         int from, newSq = 0;
 
         for (int i = 0; i < DIR; i++) {
@@ -85,8 +94,8 @@ public class AttackMap {
                 else {
                     attacks.add(newSq);
                 }
-                // all sliding piece except knights
-                if (piece > 1) from = newSq;
+                // all sliding piece except knights and kings
+                if (piece > 1 && piece < 5) from = newSq;
                 else break;
             }
 
@@ -136,6 +145,18 @@ public class AttackMap {
         return ATTACK_ARRAY[normalizedIndex] != ATTACK_NONE;
     }
 
+    private static int[][] computedAttackMaps(int piece) {
+        switch (piece) {
+            case KNIGHT -> { return KNIGHT_ATT_MAP; }
+            case BISHOP -> { return BISHOP_ATT_MAP; }
+            case ROOK -> { return ROOK_ATT_MAP; }
+            case QUEEN -> { return QUEEN_ATT_MAP; }
+            case KING -> { return KING_ATT_MAP; }
+            case PAWN -> { return PAWN_ATT_MAP; }
+            default -> throw new IllegalArgumentException("Invalid piece: " + piece);
+        }
+    }
+
     public static boolean isKingInCheck(Board board) {
         // extract king data from board
         int kingPosition = (board.getSideToMove()) ? board.getWhitePieceList()[0]
@@ -143,48 +164,45 @@ public class AttackMap {
         assert(kingPosition != 0);
         int kingSquare = kingPosition & 0xff; // extract last bits  - index (0 .. 63)
         assert(0 <= kingSquare  && kingSquare < BOARD_SIZE);
-        return isSquareAttacked(board, kingSquare, board.getSideToMove());
+        return isSquareAttacked(board, kingSquare);
     }
+
+    //
+    //public static boolean isSquareAttacked(Board board, int piece, int attacked, boolean side) {
+        //int[] pieceMap = computedAttackMaps(piece)[attacked]; // look into all king's current position
+        //
+        //return false;
+    //}
 
     /**
      * @param board current position to be evaluated
      * @param attackedIndex check if this board index is attacked
-     * @param side   current side to play
      * @return   true if the square can be attacked,  false if that square is not attacked
      */
-    public static boolean isSquareAttacked(Board board, int attackedIndex, boolean side) {
+    public static boolean isSquareAttacked(Board board, int attackedIndex) {
         if (attackedIndex < 0 || attackedIndex >= BOARD_SIZE) {
             throw new IllegalArgumentException("Invalid attacking index: " + attackedIndex);
         }
         if (board == null) {
             throw new NullPointerException("Null board");
         }
-
-        for (int sq = KNIGHT; sq <= QUEEN; sq++) {
-            if (isInComputedAttackMap(board, attackedIndex, sq)) {
+        // for each piece attack map , see if we can reach the king square
+        for (int pc = KNIGHT; pc <= PAWN; pc++) {
+            if (isInComputedAttackMap(board, attackedIndex, pc)) {
                 return true;
             }
         }
         return false;
     }
 
-    private static int[][] computedAttackMaps(int piece) {
-        if (piece < KNIGHT || piece > QUEEN) {
-            throw new IllegalArgumentException("Invalid piece: " + piece);
-        }
-        switch (piece) {
-            case KNIGHT -> { return KNIGHT_ATT_MAP; }
-            case BISHOP -> { return BISHOP_ATT_MAP; }
-            case ROOK -> { return ROOK_ATT_MAP; }
-            case QUEEN -> { return QUEEN_ATT_MAP; }
-            default -> throw new IllegalArgumentException("Invalid piece: " + piece);
-        }
-    }
-
     private static boolean isInComputedAttackMap(Board board, int attackedIndex, int piece) {
         int[][] attackMap = computedAttackMaps(piece);
         int length = attackMap[attackedIndex].length;
         for (int sq = 0; sq < length; sq++) {
+            // is it possible for this piece type to reach the square ?
+            //if (!isSquareAttacked(attackedIndex, attackMap[attackedIndex][sq])) {
+                //continue;
+            //}
             if (canReachSquare(board, attackedIndex,
                     attackMap[attackedIndex][sq], board.getSideToMove()))  {
                 return true;
@@ -199,7 +217,7 @@ public class AttackMap {
         if (attackingPiece == PieceType.EMPTY) { return false; }
         else if (attackingPiece.isWhite() == side) return false;
         else {
-            int piece = Math.abs(attackingPiece.getValue());
+            int piece = Math.abs(attackingPiece.getValue()) - 1;
             int directions = PieceMove.DIRECTIONS[piece];
             // int[] vector120 = PieceMove.OFFSET_VECTOR_COORDINATES[directions];
             int start, square = attacking;
@@ -221,10 +239,11 @@ public class AttackMap {
                     if (newSquare == OFF_BOARD) break;
                     PieceType currentPiece = board.getPieceOnBoard(newSquare);
                     if (currentPiece == PieceType.EMPTY) { // advance to next square
-                        if (newSquare == attacked) return true; // attack square reached
+                        // if (newSquare == attacked) return true; // attack square reached
                         if (!slides) break; // it's not a sliding piece move to next direction
                         square = newSquare;
                     }
+                    else if (newSquare == attacked) return true; // attack square reached
                     else { // there is a blocking piece
                         break;
                     }
@@ -261,6 +280,14 @@ public class AttackMap {
         for (int[] arr : QUEEN_ATT_MAP) {
             System.out.println(Arrays.toString(arr));
         }
+        System.out.println("\nKING\n");
+        for (int[] arr : KING_ATT_MAP) {
+            System.out.println(Arrays.toString(arr));
+        }
+        System.out.println("\nPAwn\n");
+        for (int[] arr : PAWN_ATT_MAP) {
+            System.out.println(Arrays.toString(arr));
+        }
     }
 
     // attack maps for sliding pieces
@@ -268,11 +295,11 @@ public class AttackMap {
         pprint();
         int attacked_square = 25;
         int attacking_square = 28;
-
+//
         int index =  attacking_square - attacked_square  + 120;
         System.out.println(index);
         System.out.println(ATTACK_ARRAY[index]);
-
+//
         int attacked = 74; // d4
         int attacking = 55; // g7
         System.out.println(AttackMap.isSquareAttacked(attacked, attacking)); // true for bishop or queen

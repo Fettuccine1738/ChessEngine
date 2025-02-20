@@ -12,12 +12,8 @@
  */
 package board;
 
-import piece.Bishop;
-import piece.Knight;
 import piece.Pawn;
 import piece.PieceMove;
-import piece.Queen;
-import piece.Rook;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,7 +25,7 @@ import static board.Move.*;
 import static board.PieceType.*;
 
 
-public class Board {
+public class Board  implements Cloneable{
 
     // tests functions
     public  ArrayList<PieceType> blackListe = new ArrayList<>();
@@ -51,6 +47,8 @@ public class Board {
 
     static String FEN_TESTPINS = "1R1K2R1/PPPPPPPP/8/6b1/3r4/8/8/8 w - - 0 1";
     static String FEN_PINS = "8/8/8/3r4/6b1/8/PPPPPPPP/1R1K2R1 w - - 0 1";
+    static String FEN_ONE_PIN = "8/8/8/3r4/8/5b2/PPPP1PPP/2RKR3 w - - 0 1";
+
 
     // sentinel and blocking piece
     private final static byte OFF_BOARD = -1;
@@ -145,20 +143,70 @@ public class Board {
         ply = 0;
     }
 
+    // Clones a board from another board instance
+    public Board(Board board) {
+        this.board64 = board.getBoard64();
+        this.sideToMove = board.sideToMove;
+        this.fullMoveCounter = board.fullMoveCounter;
+        this.halfMoveClock = board.halfMoveClock;
+        this.enPassant = board.enPassant;
+        this.castlingRights = board.castlingRights;
+        this.whitePieceList = board.getWhitePieceList();
+        this.blackPieceList = board.getBlackPieceList();
+        this.playHistory = board.getPlayHistory();
+        this.irreversibleAspect = board.getIrreversibleAspect();
+        this.positionHash = board.positionHash;
+        this.ply = board.ply;
+    }
+
+    public PieceType[] getBoard64() {
+        PieceType[] copy = new PieceType[BOARD_SIZE];
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            copy[i] = board64[i];
+        }
+        return copy;
+    }
     /**
      * @return disjoint list of only white pieces.
      */
     public int[] getWhitePieceList() {
-        return whitePieceList;
+        int[] copy = new int[whitePieceList.length];
+        int N = whitePieceList.length;
+        for (int i = 0; i < N; i++) {
+            copy[i] = whitePieceList[i];
+        }
+        return copy;
     }
 
     /**
      * @return disjoint list of only white pieces.
      */
     public int[] getBlackPieceList() {
-        return blackPieceList;
+        int[] copy = new int[blackPieceList.length];
+        int N = blackPieceList.length;
+        for (int i = 0; i < N; i++) {
+            copy[i] = blackPieceList[i];
+        }
+        return copy;
     }
 
+    public int[] getPlayHistory() {
+        int[] copy = new int[playHistory.length];
+        int N = playHistory.length;
+        for (int i = 0; i < N; i++) {
+            copy[i] = playHistory[i];
+        }
+        return copy;
+    }
+
+    public int[] getIrreversibleAspect() {
+        int[] copy = new int[irreversibleAspect.length];
+        int N = irreversibleAspect.length;
+        for (int i = 0; i < N; i++) {
+            copy[i] = irreversibleAspect[i];
+        }
+        return copy;
+    }
     /**
      * @return side(white/black) to move.
      */
@@ -403,7 +451,7 @@ public class Board {
         if (flag == FLAG_PROMOTION) {
             PieceType promo = PieceType.getPieceType(promotedPiece);
             floor = getPieceListFloor(promo);
-            ceil = getPieceListSize(promo);
+            ceil = getPieceListCeiling(promo);
 
             for (int i = floor; i < ceil; i++) {
                 if (side[i] == RANK_1) { // place the piece encoding in next available position ( = 0)
@@ -415,7 +463,7 @@ public class Board {
         // update opponent's list if opponent piece is captured
         if (capturedPiece != EMPTY) {
             int index = getPieceListFloor(capturedPiece);
-            int ceiling = getPieceListSize(capturedPiece);
+            int ceiling = getPieceListCeiling(capturedPiece);
             for (; index < ceiling; index++) {
                 if (xside[index] != RANK_1) {
                     xsquare = xside[index] & 0xff;
@@ -435,7 +483,7 @@ public class Board {
 
         // update current side piecelist
         floor = getPieceListFloor(p);
-        ceil = getPieceListSize(p);
+        ceil = getPieceListCeiling(p);
         boolean found = false;
         for (int index = floor; index < ceil; index++) {
             if (side[index] != RANK_1) { // check entry if it is not empty ( = 0)
@@ -519,7 +567,7 @@ public class Board {
     private void decrementalUpdate(int move, PieceType piece, int from, int to, int flag) {
         if (piece == null) throw new IllegalArgumentException("decremental updated invoked with null piece");
         int floor = getPieceListFloor(piece);
-        int ceil = getPieceListSize(piece);
+        int ceil = getPieceListCeiling(piece);
         boolean sideToPlay = piece.isWhite();
         int side[] = (sideToPlay) ? getWhitePieceList() : getBlackPieceList();
         int xside[] = (sideToPlay) ? getBlackPieceList() : getWhitePieceList();
@@ -529,7 +577,7 @@ public class Board {
         // update opponent list
         if (capturedPiece != EMPTY) {
             int start = getPieceListFloor(capturedPiece);
-            int end = getPieceListSize(capturedPiece);
+            int end = getPieceListCeiling(capturedPiece);
             for (; start < end; start++) {
                 // put encoded piece in the first empty spot found;
                 if (xside[start] == RANK_1) {
@@ -562,7 +610,7 @@ public class Board {
         // second update required when promotion is available promotion piece and pawn
         if (flag == FLAG_PROMOTION) {
             int start = getPieceListFloor(PieceType.getPieceType(promotedPiece));
-            int end = getPieceListSize(PieceType.getPieceType(promotedPiece));
+            int end = getPieceListCeiling(PieceType.getPieceType(promotedPiece));
             for (; start < end; start++) {
                 if (side[start] != RANK_1) {
                     int tile = side[start] & 0xff;
@@ -623,7 +671,7 @@ public class Board {
     // fills piece list encoding piece value and square 64 coordinates
     private void fillPieceList(int[] pieceList, PieceType piece) {
         int index = getPieceListFloor(piece);
-        int max = getPieceListSize(piece);
+        int max = getPieceListCeiling(piece);
         for (int square = 0, j = index; square < BOARD_SIZE && j <= max; square++) {
             if (board64[square] == piece) {
                 // encode both square and piece on the square
@@ -720,14 +768,15 @@ public class Board {
         //System.out.println(board.blackListe.size());
 //
         Board board;
-        board = FENParser.parseFENotation(FEN_TESTPINS);
+        board = FENParser.parseFENotation(FEN_ONE_PIN);
         System.out.println(board);
         // move testing
         System.out.println("MOVE GENERATION TEST");
         System.out.println(FENParser.getFENotation(board));
         int count = 0;
-        Collection<Integer> somelist = Pawn.possibleMoves(board, WHITE);
-        // Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
+        Collection<Integer> omelist = Pawn.possibleMoves(board, WHITE);
+        Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
+
         System.out.println("Moves available: " + somelist.size() + "\n");
         for (int m : somelist) {
             // if (count++ != 9) continue;
@@ -741,4 +790,6 @@ public class Board {
             System.out.println("\n");
         }
     }
+
+
 }

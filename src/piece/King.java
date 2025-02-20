@@ -1,7 +1,6 @@
 package piece;
 
 import board.Board;
-import board.Move;
 import board.PieceType;
 
 import java.util.ArrayList;
@@ -56,7 +55,7 @@ public class King {
     public static Collection<Integer> possibleMoves(Board board,  boolean sideToPlay) {
         if (board == null) throw new IllegalArgumentException("possible King moves invoked with null");
         int floor   = getPieceListFloor(WHITE_KING);
-        int ceiling = getPieceListSize(BLACK_KING);
+        int ceiling = getPieceListCeiling(BLACK_KING);
         if (sideToPlay == WHITE) {
             return generatePseudoLegal(board, sideToPlay, floor, ceiling, WHITE_KING);
         }

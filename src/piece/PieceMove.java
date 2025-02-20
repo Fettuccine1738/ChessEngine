@@ -4,8 +4,10 @@ import board.Board;
 import board.BoardUtilities;
 import board.Move;
 import board.PieceType;
+import edu.princeton.cs.algs4.In;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -51,22 +53,25 @@ public class PieceMove {
     /**
      * @param board current position
      * @param moves list of integers encoding move information
-     * @return moves with moves that leave king in check (illegal moves ) removed. Move contains only legal moves.
+     * @return pruned move list with moves that leave king in check (illegal moves ) removed. list contains only legal moves.
      */
     public static List<Integer> validateMoves(Board board, List<Integer> moves) {
+       //  Board copyBoard = new Board(board);
         if (moves.isEmpty() || board == null) throw new IllegalArgumentException("validate moves invoked with " +
                 " null or empty board");
-        int m = 0;
-        for (int move : moves) {
-            board.make(move);
-            System.out.println(board);
+        int count = 0;
+        int m;
+        Iterator<Integer> iterator = moves.iterator();
+        while (iterator.hasNext()) {
+            m = iterator.next();
+            board.make(m);
+            //System.out.println(board + "\n");
             if (AttackMap.isKingInCheck(board)) {
-                System.out.println("\n" + move + " leaves king in check");
-                m = moves.remove(move);
+                iterator.remove(); // avoid concurrent Modification
+              //   System.out.println("\n" + m + " leaves king in check");
             }
-            board.setSideToMove(!board.getSideToMove());
             board.unmake(m);
-            System.out.println(board);
+            // System.out.println(board + "\n");
         }
         return moves;
     }
@@ -86,7 +91,7 @@ public class PieceMove {
 
         for (PieceType piece : pieces) {
             floor   = getPieceListFloor(piece);
-            ceiling = getPieceListSize(piece);
+            ceiling = getPieceListCeiling(piece);
             moves.addAll(Objects.requireNonNull(generatePseudoLegal(board, sideToPlay, floor, ceiling, piece)));
         }
          System.out.println("SZ " + moves.size());
@@ -109,7 +114,7 @@ public class PieceMove {
         List<Integer> moves = new ArrayList<>();
         // generate pawn moves separately
         if (Math.abs(piece.getValue()) == 1) {
-            ggeneratePseudoPawnMoves(board, moves, sideToPlay);
+            generatePseudoPawnMoves(board, moves, sideToPlay);
             return moves;
         }
         // generate castles
@@ -224,10 +229,10 @@ public class PieceMove {
 
 
 
-    public static void ggeneratePseudoPawnMoves(Board board, List<Integer> moves, boolean sideToPlay) {
+    public static void generatePseudoPawnMoves(Board board, List<Integer> moves, boolean sideToPlay) {
         int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
         int start = getPieceListFloor(WHITE_PAWN);
-        int end = getPieceListSize(WHITE_PAWN); // same index and range for both black and white
+        int end = getPieceListCeiling(WHITE_PAWN); // same index and range for both black and white
         int ep = board.getEnPassant();
         int skip = EMPTY.getValue();
         int singlePush =  sideToPlay == WHITE ? SINGLE_PUSH : -SINGLE_PUSH;

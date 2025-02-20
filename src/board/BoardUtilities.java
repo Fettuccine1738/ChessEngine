@@ -61,7 +61,7 @@ public class BoardUtilities {
 
 
     // this 
-    public static int getPieceListSize(PieceType piece) {
+    public static int getPieceListCeiling(PieceType piece) {
         switch (piece) {
             case BLACK_ROOK, WHITE_ROOK -> { return MAX_ROOKS; }
             case BLACK_PAWN, WHITE_PAWN -> { return MAX_MAX; }
