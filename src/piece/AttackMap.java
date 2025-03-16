@@ -95,7 +95,7 @@ public class AttackMap {
                     attacks.add(newSq);
                 }
                 // all sliding piece except knights and kings
-                if (piece > 1 && piece < 5) from = newSq;
+                if (piece > KNIGHT && piece < KING) from = newSq;
                 else break;
             }
 
@@ -167,13 +167,6 @@ public class AttackMap {
         return isSquareAttacked(board, kingSquare);
     }
 
-    //
-    //public static boolean isSquareAttacked(Board board, int piece, int attacked, boolean side) {
-        //int[] pieceMap = computedAttackMaps(piece)[attacked]; // look into all king's current position
-        //
-        //return false;
-    //}
-
     /**
      * @param board current position to be evaluated
      * @param attackedIndex check if this board index is attacked
@@ -199,23 +192,31 @@ public class AttackMap {
         int[][] attackMap = computedAttackMaps(piece);
         int length = attackMap[attackedIndex].length;
         for (int sq = 0; sq < length; sq++) {
-            // is it possible for this piece type to reach the square ?
-            //if (!isSquareAttacked(attackedIndex, attackMap[attackedIndex][sq])) {
-                //continue;
-            //}
             if (canReachSquare(board, attackedIndex,
-                    attackMap[attackedIndex][sq], board.getSideToMove()))  {
+                    attackMap[attackedIndex][sq], board.getSideToMove(), piece))  {
                 return true;
             }
         }
        return false;
     }
 
-    public static boolean canReachSquare(Board board, int attacked, int attacking, boolean side) {
+    /**
+     * @param board current position
+     * @param attacked index between 0..63 that is checked to see if we can reach this index
+     * @param attacking  the origin index
+     * @param side  side to play
+     * @param pc    piece value , optimizes function  ignoring redundant lookups
+     * @return   true / false if piece on attacking can reach attacked index.
+     */
+    public static boolean canReachSquare(Board board, int attacked, int attacking, boolean side, int pc) {
         PieceType attackingPiece = board.getPieceOnBoard(attacking);
         // is the attacking square on the same side as attacked or empty?
         if (attackingPiece == PieceType.EMPTY) { return false; }
         else if (attackingPiece.isWhite() == side) return false;
+        // if it is an opponent piece but cannot traverse through current searching piece ray's directions
+        // then ignore e.g (if we find a rook instead of a bishop , no need looping back to attacked
+        // since no ray directions shared.
+        else if (!traverseRayDirections(pc, attackingPiece)) return false;
         else {
             int piece = Math.abs(attackingPiece.getValue()) - 1;
             int directions = PieceMove.DIRECTIONS[piece];
@@ -253,7 +254,14 @@ public class AttackMap {
         return false;
     }
 
-
+    private static boolean traverseRayDirections(int searcher, PieceType p) {
+        // create pairs for bishop queen and rookqueen and maybe kingqueen
+        int value = Math.abs(p.getValue());
+        if (searcher == BISHOP && (value-1 == QUEEN || value-1 == BISHOP)) return true;
+        else if (searcher == ROOK && (value-1 == QUEEN || value-1 == ROOK)) return true;
+        if (value == 1 && searcher == PAWN) return true;
+        return (searcher == --value);
+    }
 
     public static void pprint() {
         int count = 0;

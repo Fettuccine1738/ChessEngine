@@ -4,26 +4,27 @@ import java.util.function.Predicate;
 
 public class BoardUtilities {
 
-    // commonly used rank and files bounds
-    private final static int A_0 = 0;
-    private final static int B_1 = 1;
-    private final static int C_2 = 2;
-    private final static int D_3 = 3;
-    private final static int E_1 = 4;
-    private final static int F_1 = 5;
-    private final static int G_1 = 6;
-    private final static int H_1 = 7;
-    private final static int A_2 = 8;
-    private final static int A_7 = 48;
-    private final static int H_2 = 15;
-    private final static int H_7 = 55;
-    private final static int A_8 = 56;
-    private final static int B_8 = 57;
-    private final static int C_8 = 58;
-    private final static int E_8 = 60;
-    private final static int F_8 = 61;
-    private final static int G_8 = 62;
-    private final static int H_8 = 63;
+    // castling constants commonly used rank and files bounds
+    public final static int A_1 = 0;
+    public final static int B_1 = 1;
+    public final static int C_1 = 2;
+    public final static int D_1 = 3;
+    public final static int E_1 = 4;
+    public final static int F_1 = 5;
+    public final static int G_1 = 6;
+    public final static int H_1 = 7;
+    public final static int A_2 = 8;
+    public final static int A_7 = 48;
+    public final static int H_2 = 15;
+    public final static int H_7 = 55;
+    public final static int A_8 = 56;
+    public final static int B_8 = 57;
+    public final static int C_8 = 58;
+    public final static int D_8 = 59;
+    public final static int E_8 = 60;
+    public final static int F_8 = 61;
+    public final static int G_8 = 62;
+    public final static int H_8 = 63;
 
     // board size
     public final static int BOARD_SIZE     = 64;
@@ -58,7 +59,6 @@ public class BoardUtilities {
     public final static byte MAX_KNIGHT = 41;
     public final static byte MAX_PAWN   = 48;
     public final static byte MAX_MAX    = 49;
-
 
     // this 
     public static int getPieceListCeiling(PieceType piece) {
