@@ -26,12 +26,12 @@ public class King {
     private final static int[][] ATTACK_MAP = new int[BOARD_SIZE][];
     private final static int SIZE = 8; // direction size
 
-    static {
-        for (int sq = 0; sq < BOARD_SIZE; sq++) {
-            ATTACK_MAP[sq] = computeKingAttacks(sq);
-        }
-    }
-
+    //static {
+        //for (int sq = 0; sq < BOARD_SIZE; sq++) {
+            //ATTACK_MAP[sq] = computeKingAttacks(sq);
+        //}
+    //}
+//
     private static int[] computeKingAttacks(int sq) {
         int rank = sq / RANK_8;
         int file = sq % RANK_8;

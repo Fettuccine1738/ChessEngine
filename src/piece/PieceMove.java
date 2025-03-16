@@ -57,7 +57,6 @@ public class PieceMove {
      * @return pruned move list with moves that leave king in check (illegal moves ) removed. list contains only legal moves.
      */
     public static List<Integer> validateMoves(Board board, List<Integer> moves) {
-       //  Board copyBoard = new Board(board);
         if (moves.isEmpty() || board == null) throw new IllegalArgumentException("validate moves invoked with " +
                 " null or empty board");
         int count = 0;
@@ -84,7 +83,6 @@ public class PieceMove {
      public static List<Integer> possibleMoves(Board board, boolean sideToPlay) {
         List<Integer> moves = new ArrayList<>();
         if (board == null) throw new IllegalArgumentException("possible King moves invoked with null");
-        PieceType[] pieces;
         int floor, ceiling;
 
         for (PieceType piece : (sideToPlay ? WHITE_PIECES : BLACK_PIECES)) {
@@ -115,14 +113,15 @@ public class PieceMove {
             generatePseudoPawnMoves(board, moves, sideToPlay);
             return moves;
         }
-        // generate castles
-        generateCastle(board, sideToPlay, moves);
+        // generate castles separately
+        if (Math.abs(piece.getValue()) == IS_KING) {
+            generateCastle(board, sideToPlay, moves);
+        }
 
         int[] piecelist = (sideToPlay) ? board.getWhitePieceList() : board.getBlackPieceList();
         // use piece value to index into offset vector
         int x = Math.abs(piece.getValue()) - 1;
         int[] vectorCoordinate120 = OFFSET_VECTOR_COORDINATES[x]; // board 120
-        int[] vectorCoordinate64  = VECTOR_COORDINATES[x];
         boolean slides = IS_SLIDING[x];
         int empty = 0;
 
@@ -192,7 +191,7 @@ public class PieceMove {
                      assert(Math.abs(board.getPieceOnBoard(E_1).getValue()) == IS_KING);
                      assert(!AttackMap.isKingInCheck(board));
                      // move king towards rook
-                     moves.add(Move.encodeMove(E_1, A_1, 0, 0, Move.FLAG_CASTLE));
+                     moves.add(Move.encodeMove(E_1, C_1, 0, 0, Move.FLAG_CASTLE));
                  }
              }
              else { // black
@@ -204,7 +203,7 @@ public class PieceMove {
                          && !AttackMap.isSquareAttacked(board, C_8)) {
                      assert(Math.abs(board.getPieceOnBoard(E_8).getValue()) == IS_KING);
                      assert(!AttackMap.isKingInCheck(board));// does not make sense
-                     moves.add(Move.encodeMove(E_8, A_8, 0, 0, Move.FLAG_CASTLE));
+                     moves.add(Move.encodeMove(E_8, C_8, 0, 0, Move.FLAG_CASTLE));
                  }
              }
          }
@@ -218,7 +217,7 @@ public class PieceMove {
                          && !AttackMap.isSquareAttacked(board, F_1)) {
                      assert(Math.abs(board.getPieceOnBoard(E_1).getValue()) == IS_KING);
                      assert(!AttackMap.isKingInCheck(board));
-                     moves.add(Move.encodeMove(E_1, H_1, 0, 0, Move.FLAG_CASTLE));
+                     moves.add(Move.encodeMove(E_1, G_1, 0, 0, Move.FLAG_CASTLE));
                  }
              }
              else {
@@ -230,7 +229,7 @@ public class PieceMove {
                          && !AttackMap.isSquareAttacked(board, F_8)) {
                      assert(!AttackMap.isKingInCheck(board));// does not make sense
                      assert(Math.abs(board.getPieceOnBoard(E_8).getValue()) == IS_KING);
-                     moves.add(Move.encodeMove(E_8, H_8, 0, 0, Move.FLAG_CASTLE));
+                     moves.add(Move.encodeMove(E_8, G_8, 0, 0, Move.FLAG_CASTLE));
                  }
              }
          }

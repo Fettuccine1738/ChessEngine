@@ -238,13 +238,14 @@ public class AttackMap {
                     newSquare = getMailbox120Number(getMailbox64Number(square)
                     + PieceMove.OFFSET_VECTOR_COORDINATES[piece][i]);
                     if (newSquare == OFF_BOARD) break;
+                    if (newSquare == attacked) return true; // attack square reached
                     PieceType currentPiece = board.getPieceOnBoard(newSquare);
                     if (currentPiece == PieceType.EMPTY) { // advance to next square
                         // if (newSquare == attacked) return true; // attack square reached
                         if (!slides) break; // it's not a sliding piece move to next direction
                         square = newSquare;
                     }
-                    else if (newSquare == attacked) return true; // attack square reached
+                   // if (newSquare == attacked) return true; // attack square reached
                     else { // there is a blocking piece
                         break;
                     }
@@ -254,6 +255,7 @@ public class AttackMap {
         return false;
     }
 
+    // allow queen to travers rook rays and bishop rays (maybe vice versa)???
     private static boolean traverseRayDirections(int searcher, PieceType p) {
         // create pairs for bishop queen and rookqueen and maybe kingqueen
         int value = Math.abs(p.getValue());

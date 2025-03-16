@@ -12,17 +12,11 @@
  */
 package board;
 
-import piece.Bishop;
-import piece.Knight;
-import piece.Pawn;
-import piece.PieceMove;
-import piece.Queen;
-import piece.Rook;
+import piece.King;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import static board.BoardUtilities.*;
 import static board.Move.*;
@@ -59,6 +53,25 @@ public class Board  implements Cloneable{
     static String FEN_NO_WKING_CAP = "3b4/1n6/8/K7/8/8/8/r3q3 w - - 0 1"; // removes pawn blocking bishop
     // static String FEN_NO_BKING_CAP = "R3Q3/8/8/8/k7/1P6/1N6/3B4 b - - 0 1";
     static String FEN_NO_BKING_CAP = "R3Q3/8/8/8/k7/8/1N6/3B4 b - - 0 1";
+
+    // white/black king long& shrt castles available
+    static String FEN_CASTLE_RIGHTS_KING_MOVE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3K2R b KQkq - 5 7";
+    // black king castles both sides white has none(already castled)
+    static String FEN_CASTLE_RIGHTS_BKING_MOVE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/2KR3R b kq - 6 7";
+    // white castles only king side
+    static String FEN_WK_QUEENSIDE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3K1R1 w Qkq - 5 7";
+    // king side blocked by white's pieces
+    static String FEN_WQ = "r3k2r/ppp1qppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3KBNR b KQkq - 5 7";
+    // white king side clear
+    static String FEN_WK_CLR = "r3k2r/ppp1qppp/2n2n2/3pp3/3PP3/2NB1N2/PPPBQPPP/RN2K2R b KQkq - 5 7";
+    // castling with check scenarios
+    static String FEN_CHK_1 = "r3k2r/ppp1qp1p/2n3p1/3pp3/3PP3/2NQ1b2/PPPB1PPP/R3K2R w KQkq - 5 7";
+    static String FEN_CHK_2 = "r3k2r/ppp1qp1p/2n3p1/3pp3/3PP3/2N5/PPPBQbPP/R3K2R w KQkq - 5 7"; // king in check, cannot castle for white, has to capture
+    static String FEN_CHK_3 = "r3k2r/ppp2ppp/2n5/3pp3/3PP3/2N2N2/PPPBQPbP/R3K2R w KQkq - 5 7"; // rook being attacked, no kingside castle for white
+    static String FEN_CHK4 = "r3k2r/ppp2ppp/8/3pp3/3PP3/2N2N2/PPPBQPPq/R3K2R w KQkq - 5 7"; // h file rook attacked no kingside castles for white
+    // minimal material easy testing for both black and white
+    static String FEN_MIN1 = "4k2r/8/8/8/8/8/8/R3K3 w Qk - 0 1"; // blakc kingside and white queenside
+    static String FEN_MIN2 = "r3k3/8/8/8/8/8/8/4K2R b Kq - 0 1"; // white kingside and black queen side available
 
 
     // sentinel and blocking piece
@@ -361,6 +374,35 @@ public class Board  implements Cloneable{
         if (flags != FLAG_CASTLE) {
             updatePieceList(move, piece, from, to, flags); }
 
+        // remove castles for rooks
+        int isRookOrKing = Math.abs(piece.getValue());
+        if (isRookOrKing == WHITE_ROOK.getValue()
+            || isRookOrKing == WHITE_KING.getValue()
+                && flags != FLAG_CASTLE) {
+            byte castles = getCastlingRights();
+            if (piece.isWhite()) {
+                if (isRookOrKing == WHITE_KING.getValue()
+                        && (canWhiteCastleKingside(castles)
+                        || canWhiteCastleQueenside(castles))) {
+                    castles &= ~WHITE_KINGSIDE;
+                    castles &= ~WHITE_QUEENSIDE;
+                }
+                if (canWhiteCastleQueenside(getCastlingRights()) && to == C_1) castles &= ~WHITE_QUEENSIDE;
+                if (canWhiteCastleKingside(getCastlingRights())  && to == G_1) castles &= ~WHITE_KINGSIDE;
+            }
+            else {
+                if (isRookOrKing == WHITE_KING.getValue()
+                        && (canBlackCastleKingside(castles)
+                        || canBlackCastleQueenside(castles))) { // remove long and short castles if king moves
+                    castles &= ~BLACK_KINGSIDE;
+                    castles &= ~BLACK_QUEENSIDE;
+                }
+                if (canBlackCastleQueenside(getCastlingRights()) && to == C_8) castles &= ~BLACK_QUEENSIDE;
+                if (canBlackCastleKingside(getCastlingRights()) && to == G_8) castles &= ~BLACK_KINGSIDE;
+            }
+            setCastlingRights(castles);
+        }
+
         switch (flags) {
             case FLAG_QUIET -> {
                 assert(board64[to] == EMPTY);
@@ -409,39 +451,46 @@ public class Board  implements Cloneable{
     }
 
     private void makeCastle(int from, int to, PieceType p, int move){
-        int kingSq = 0;
-        int rookSq = 0;
+        int rookFr = 0;
+        int rookTo = 0;
+        byte castles = getCastlingRights();
         if (p.isWhite()) {
             assert(getPieceOnBoard(from) == WHITE_KING);
-            assert(getPieceOnBoard(to) == WHITE_ROOK);
-            if (to == A_1) {
-                kingSq = C_1;  // queenside castle
-                rookSq = D_1;
+            if (to == C_1) {
+                rookFr = A_1;  // queenside castle
+                rookTo = D_1;
             }
-            else if (to == H_1) {
-                kingSq = G_1; // kingside castles
-                rookSq = F_1;
+            else if (to == G_1) {
+                rookFr = H_1; // kingside castles
+                rookTo = F_1;
             }
             else throw new IllegalArgumentException("invalid castle");
+            castles &= ~WHITE_QUEENSIDE;
+            castles &= ~WHITE_KINGSIDE;
+            setCastlingRights(castles);
         }
         else {
             assert(getPieceOnBoard(from) == BLACK_KING);
-            assert(getPieceOnBoard(to) == BLACK_ROOK);
-            if (to == A_8)  {
-                kingSq = C_8;
-                rookSq = D_8;
+            if (to == C_8)  { // queenside
+                rookFr = A_8;
+                rookTo = D_8;
             }
-            else if (to == H_8) {
-                kingSq = G_8;
-                rookSq = F_8;
+            else if (to == G_8) { // kingside
+                rookFr = H_8;
+                rookTo = F_8;
             }
             else throw new IllegalArgumentException("invalid castle");
+            castles &= ~BLACK_QUEENSIDE;
+            castles &= ~BLACK_KINGSIDE;
+            setCastlingRights(castles);
         }
         // move, piece, from, to, flags
-        makeMove(from, kingSq, p); // for king
-        updatePieceList(move, p, from, kingSq, FLAG_CASTLE);
-        makeMove(to, rookSq, getPieceOnBoard(to)); // for rook
-        updatePieceList(move , getPieceOnBoard(to), to, rookSq, FLAG_CASTLE);
+        // int move, PieceType p, int from, int to, int flag
+        makeMove(from, to, p); // for king
+        updatePieceList(move, p, from, to, FLAG_CASTLE);
+        updatePieceList(move, getPieceOnBoard(rookFr), rookFr, rookTo, FLAG_CASTLE); // BUGBUG:
+        makeMove(rookFr, rookTo, getPieceOnBoard(rookFr)); // for rook
+        // moved rook off to but still uses the piece on to (which is empty) and messes up the update list
     }
 
     private void addMoveToHistory(int move) {
@@ -468,8 +517,8 @@ public class Board  implements Cloneable{
     private void unaddIrreversibleAspect() {
         int copyPly = ply - 1;
         int irreversible = irreversibleAspect[copyPly];
-        int ep = (irreversible & 0x3f);
-        ep = (ep == 63) ?  OFF_BOARD : ep;
+        int ep = (irreversible & 0x3f); // mask lower 6 bits
+        ep = (ep == 63) ?  OFF_BOARD : ep; // don't remember why 63 is here
         int cR = (irreversible >> 6) & 0x3f;
         int hM = (irreversible >> 10) & 0x3f;
         setEnPassant((byte) ep);
@@ -599,55 +648,57 @@ public class Board  implements Cloneable{
                 } else makeMove(to, from, BLACK_PAWN);
                 if (capturedPiece != RANK_1) board64[to] = getPieceType(capturedPiece); // replace piece on board
             }
-            case FLAG_CASTLE -> {
-               unmakeCastle(from, to, piece, move);
-            }
+            case FLAG_CASTLE -> unmakeCastle(from, to, piece, move);
             default -> throw new IllegalArgumentException();
         }
         // this.sideToMove = !sideToMove; // update side to play
     }
 
     private void unmakeCastle(int from, int to, PieceType piece, int move) {
-        int rookSq = 0;
-        int kingSq = 0;
+        assert(from == E_8);
+        int rookFr = 0;
+        int rookTo = 0;
         if (piece.isWhite()) {
-            if (to == A_1) { // from D_1 and A_1
-                kingSq = C_1;
-                rookSq = D_1;
+            if (to == C_1) { // long castles
                 board64[from] = getPieceOnBoard(C_1);
                 board64[C_1] = EMPTY;
-                board64[to] = getPieceOnBoard(D_1);
+                assert(getPieceOnBoard(D_1) == WHITE_ROOK);
+                board64[A_1] = getPieceOnBoard(D_1);
                 board64[D_1] = EMPTY;
+                rookFr = A_1;
+                rookTo = D_1;
             }
-            else if (to == H_1) {
-                kingSq = G_1;
-                rookSq = F_1;
+            else if (to == G_1) { // short castles
                 board64[from] = getPieceOnBoard(G_1);
                 board64[G_1] = EMPTY;
-                board64[to] = getPieceOnBoard(F_1);
+                assert(getPieceOnBoard(F_1) == WHITE_ROOK);
+                board64[H_1] = getPieceOnBoard(F_1);
                 board64[F_1] = EMPTY;
+                rookFr = H_1;
+                rookTo = F_1;
             }
         }
         else {
-            if (to == A_8) { // from D_1 and A_1
-                kingSq = C_8;
-                rookSq = D_8;
+            if (to == C_8) { // long castles
                 board64[from] = getPieceOnBoard(C_8);
                 board64[C_8] = EMPTY;
-                board64[to] = getPieceOnBoard(D_8);
+                board64[A_8] = getPieceOnBoard(D_8);
                 board64[D_8] = EMPTY;
+                rookFr = A_8;
+                rookTo = D_8;
             }
-            else if (to == H_8) {
-                kingSq = G_8;
-                rookSq = F_8;
+            else if (to == G_8) { // short castles
                 board64[from] = getPieceOnBoard(G_8);
                 board64[G_8] = EMPTY;
-                board64[to] = getPieceOnBoard(F_8);
+                board64[H_8] = getPieceOnBoard(F_8);
                 board64[F_8] = EMPTY;
+                rookFr = H_8;
+                rookTo = F_8;
             }
         }
-        decrementalUpdate(move, piece, kingSq, from, FLAG_CASTLE);
-        decrementalUpdate(move, getPieceOnBoard(rookSq), rookSq, to, FLAG_CASTLE);
+       // int move, PieceType piece, int from, int to, int flag
+        decrementalUpdate(move, piece, from, to,FLAG_CASTLE); // dec king
+        decrementalUpdate(move, getPieceOnBoard(rookFr), rookFr, rookTo, FLAG_CASTLE);
     }
 
     private void makeMove(int from, int to, PieceType p) {
@@ -655,6 +706,7 @@ public class Board  implements Cloneable{
         board64[to] = p;
     }
 
+    //
     private void decrementalUpdate(int move, PieceType piece, int from, int to, int flag) {
         if (piece == null) throw new IllegalArgumentException("decremental updated invoked with null piece");
         int floor = getPieceListFloor(piece);
@@ -859,13 +911,15 @@ public class Board  implements Cloneable{
         //System.out.println(board.blackListe.size());
 //
         Board board;
-        board = FENParser.parseFENotation(FEN_NO_BKING_CAP);
+        board = FENParser.parseFENotation(FEN_CASTLE_RIGHTS_KING_MOVE);
         System.out.println(board);
         // move testing
         System.out.println("MOVE GENERATION TEST");
         System.out.println(FENParser.getFENotation(board));
         int count = 0;
-        Collection<Integer> omelist = Bishop.possibleMoves(board, WHITE);
+         boolean control = BLACK;
+        // boolean control = WHITE;
+        Collection<Integer> omelist = King.possibleMoves(board, control);
         //Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
         System.out.println("Moves available: " + omelist.size() + "\n");
         for (int m : omelist) {
@@ -873,11 +927,24 @@ public class Board  implements Cloneable{
             System.out.printf(++count +"\t" + printMove(m) + "\n");
             board.make(m);
             System.out.println(board);
-            System.out.println("ENpanssant " + board.getEnPassant() + "\t" + getEnpassantSquare(board.getEnPassant()));
+            // System.out.println("ENpanssant " + board.getEnPassant() + "\t" + getEnpassantSquare(board.getEnPassant()));
+            System.out.println(
+                    "Kingside castle " +
+                            ((control) ?  board.canWhiteCastleKingside(board.getCastlingRights()) :
+                                    board.canBlackCastleKingside(board.getCastlingRights()))   +
+                            "\tqueen side castle " +
+                            ((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights())));
+
             board.unmake(m);
             System.out.println("\n");
             System.out.println(board);
             System.out.println("\n");
+            System.out.println(
+                    "Kingside castle " +
+                            ((control) ? board.canWhiteCastleKingside(board.getCastlingRights()) : board.canBlackCastleKingside(board.getCastlingRights())) +
+                            "\tqueen side castle " +
+                            ((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights()))
+            );
         }
     }
 
