@@ -1,7 +1,7 @@
 package com.github.fehinti;
 
 import com.github.fehinti.board.Board;
-import piece.PieceMove;
+import com.github.fehinti.piece.*;
 
 import static com.github.fehinti.board.BoardUtilities.*;
 

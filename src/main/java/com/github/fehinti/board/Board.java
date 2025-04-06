@@ -453,6 +453,7 @@ public class Board  implements Cloneable{
             case FLAG_CASTLE ->   makeCastle(from, to, piece, move);
             default -> throw new IllegalStateException("Unexpected value: " + flags);
         }
+        if (piece.isBlack()) fullMoveCounter++;
         alternateSide();
     }
 
@@ -663,8 +664,9 @@ public class Board  implements Cloneable{
             case FLAG_CASTLE -> unmakeCastle(from, to, piece, move);
             default -> throw new IllegalArgumentException();
         }
+        if (piece.isBlack()) fullMoveCounter--;
+        // update side to play
         alternateSide();
-        // this.sideToMove = !sideToMove; // update side to play
     }
 
     private void unmakeCastle(int from, int to, PieceType piece, int move) {
@@ -848,7 +850,7 @@ public class Board  implements Cloneable{
         if (sq < RANK_1 || sq >= BOARD_SIZE) throw new IllegalArgumentException();
         StringBuilder sb = new StringBuilder(2);
         int rank = sq >> 3;
-        int file = sq &  7;
+        int file = sq & 7;
         sb.append((char) (file + 'a')).append(rank + 1);
         return sb.toString();
     }
