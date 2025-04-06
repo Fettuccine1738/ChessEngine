@@ -1,7 +1,9 @@
 package com.github.fehinti.board;
 
-public class Move {
+import static com.github.fehinti.board.PieceType.BLACK_ROOK;
+import static com.github.fehinti.board.PieceType.WHITE_ROOK;
 
+public class Move {
 
     // tactical move flags
     public static final int FLAG_QUIET = 0;
@@ -83,6 +85,11 @@ public class Move {
         return sb.toString();
     }
 
+    static int convertsFileRankToIndex(String fileRank) {
+        int file = fileRank.charAt(0) - 'a';
+        int rank = Integer.parseInt(fileRank.charAt(1) + "") - 1;
+        return rank * BoardUtilities.RANK_8 + file;
+    }
 
     public static void main(String[] args) {
         int move = encodeMove(12, 28,0, 0, FLAG_EN_PASSANT);
@@ -93,6 +100,11 @@ public class Move {
         System.out.println("Captured: " + getCapturedPiece(move)); // Output: 0
         System.out.println("Promotion: " + getPromotionPiece(move)); // Output: 0
         System.out.println("Flags: " + getFlags(move));            // Output: 1
+        int m1 = encodeMove(convertsFileRankToIndex("a1"),
+                convertsFileRankToIndex("b1"),
+                0,
+                0, Move.FLAG_QUIET);
+        System.out.println(m1);
 
 
 

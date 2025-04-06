@@ -1,16 +1,17 @@
 package com.github.fehinti.board;
 
-import com.github.fehinti.piece.PieceMove;
-import edu.princeton.cs.algs4.In;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import static com.github.fehinti.board.PieceType.*;
 import static com.github.fehinti.piece.PieceMove.pseudoLegal;
@@ -30,6 +31,7 @@ class BoardTest {
     static String FEN_N = "8/3p4/8/4N3/3n1P2/8/4P3/8 w - - 0 1"; // knight move test
 
     private Board board;
+    private static Board globalBoard;
     private static Random random;
 
     static int convertsFileRankToIndex(String fileRank) {
@@ -41,10 +43,13 @@ class BoardTest {
     @BeforeAll
     static void initAll() {
         random = new Random();
+        String FEN_CASTLE_RIGHTS_KING_MOVE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3K2R b KQkq - 5 7";
+        globalBoard = FENParser.parseFENotation(FEN_CASTLE_RIGHTS_KING_MOVE);
     }
 
     @AfterAll
     static void tearDownAll() {
+        assertEquals(0, globalBoard.getCastlingRights());
         System.out.println("Test completed");
     }
 
@@ -253,8 +258,65 @@ class BoardTest {
     void setHalfMoveClock() {
     }
 
-    @Test
-    void setCastlingRights() {
+    // this test uses a method to generate moves for black and white
+    // moving both rooks for both colors,incrementally removing castling rights
+    @ParameterizedTest
+    @MethodSource("removeCastlingRights")
+    void testMovesThatRemoveCastlingRights(int move) {
+        globalBoard.make(move);
+        System.out.println(globalBoard + "\n");
+        System.out.println("rights" + globalBoard.getCastlingRights() + "\n");
+        byte bR = globalBoard.getCastlingRights();
+       // assert that black kingside castle right is removed
+       if (move == 4031) {
+           assertFalse(globalBoard.canBlackCastleKingside(bR));
+       }
+        // assert that black queenside castle right is removed
+       if (move == 3704) {
+           assertFalse(globalBoard.canBlackCastleQueenside(bR));
+       }
+        // assert that white kingside castle right is removed
+        if (move == 391) {
+            assertFalse(globalBoard.canWhiteCastleKingside(bR));
+        }
+        // assert that white queenside castle right is removed
+        if (move == 64) {
+            assertFalse(globalBoard.canWhiteCastleQueenside(bR));
+        }
+    }
+
+    static Stream<Integer> removeCastlingRights() {
+        // helper method, generates moves that nullify castling rights
+      String FEN_CASTLE_RIGHTS_KING_MOVE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3K2R b KQkq - 5 7";
+      String blackfrom1 = "h8";
+      String blackTo1 = "g8";
+      // blacks king side castle
+      int blackKingSide = (Move.encodeMove(convertsFileRankToIndex(blackfrom1),
+               convertsFileRankToIndex(blackTo1),
+              0,
+              0, Move.FLAG_QUIET));
+      // white king side castle
+        String whiteFrom1 = "h1";
+        String whiteTo1  = "g1";
+        int whiteKingSide = (Move.encodeMove(convertsFileRankToIndex(whiteFrom1),
+                convertsFileRankToIndex(whiteTo1),
+                0,
+                0, Move.FLAG_QUIET));
+        // black queenside castle
+        String blackfrom2 = "a8";
+        String blackTo2 = "b8";
+        int bQueenSide = (Move.encodeMove(convertsFileRankToIndex(blackfrom2),
+                convertsFileRankToIndex(blackTo2),
+                0,
+                0, Move.FLAG_QUIET));
+        String whiteFrom2 = "a1";
+        String whiteTo2  = "b1";
+        // white queenside castle
+        int wQueenSide = (Move.encodeMove(convertsFileRankToIndex(whiteFrom2),
+                convertsFileRankToIndex(whiteTo2),
+                0, 0, Move.FLAG_QUIET));
+        // black to play first
+       return Stream.of(blackKingSide, whiteKingSide, bQueenSide, wQueenSide);
     }
 
     @Test

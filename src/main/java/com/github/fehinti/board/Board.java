@@ -381,32 +381,8 @@ public class Board  implements Cloneable{
 
         // remove castles for rooks
         int isRookOrKing = Math.abs(piece.getValue());
-        if (isRookOrKing == WHITE_ROOK.getValue()
-            || isRookOrKing == WHITE_KING.getValue()
-                && flags != FLAG_CASTLE) {
-            byte castles = getCastlingRights();
-            if (piece.isWhite()) {
-                if (isRookOrKing == WHITE_KING.getValue()
-                        && (canWhiteCastleKingside(castles)
-                        || canWhiteCastleQueenside(castles))) {
-                    castles &= ~WHITE_KINGSIDE;
-                    castles &= ~WHITE_QUEENSIDE;
-                }
-                if (canWhiteCastleQueenside(getCastlingRights()) && to == C_1) castles &= ~WHITE_QUEENSIDE;
-                if (canWhiteCastleKingside(getCastlingRights())  && to == G_1) castles &= ~WHITE_KINGSIDE;
-            }
-            else {
-                if (isRookOrKing == WHITE_KING.getValue()
-                        && (canBlackCastleKingside(castles)
-                        || canBlackCastleQueenside(castles))) { // remove long and short castles if king moves
-                    castles &= ~BLACK_KINGSIDE;
-                    castles &= ~BLACK_QUEENSIDE;
-                }
-                if (canBlackCastleQueenside(getCastlingRights()) && to == C_8) castles &= ~BLACK_QUEENSIDE;
-                if (canBlackCastleKingside(getCastlingRights()) && to == G_8) castles &= ~BLACK_KINGSIDE;
-            }
-            setCastlingRights(castles);
-        }
+        if (isRookOrKing == WHITE_KING.getValue()
+                || isRookOrKing == WHITE_ROOK.getValue())  onRookMove(from, to, piece, flags);
 
         switch (flags) {
             case FLAG_QUIET -> {
@@ -457,6 +433,41 @@ public class Board  implements Cloneable{
         alternateSide();
     }
 
+    // remove castling rights when rooks move;
+    private void onRookMove(int from, int to, PieceType piece, int flag) {
+        if (castlingRights == 0 || flag == FLAG_CASTLE) return; // if no castles exists
+        int value = piece.getValue();
+        byte castles = getCastlingRights();
+        assert(Math.abs(value) == 6 || Math.abs(value) == 4);
+
+        if (value == WHITE_ROOK.getValue()
+                || value == WHITE_KING.getValue()) {
+                if (value == WHITE_KING.getValue()
+                        && (canWhiteCastleKingside(castles)
+                        || canWhiteCastleQueenside(castles))) {
+                    castles &= ~WHITE_KINGSIDE;
+                    castles &= ~WHITE_QUEENSIDE;
+                }
+                else {
+                    if (canWhiteCastleQueenside(getCastlingRights()) && from == A_1) castles &= ~WHITE_QUEENSIDE;
+                    if (canWhiteCastleKingside(getCastlingRights()) && from == H_1) castles &= ~WHITE_KINGSIDE;
+                }
+        }
+        else {
+                if (value == BLACK_KING.getValue()
+                        && (canBlackCastleKingside(castles)
+                        || canBlackCastleQueenside(castles))) { // remove long and short castles if king moves
+                    castles &= ~BLACK_KINGSIDE;
+                    castles &= ~BLACK_QUEENSIDE;
+                }
+                else {
+                    if (canBlackCastleQueenside(castles) && from == A_8) castles &= ~BLACK_QUEENSIDE;
+                    if (canBlackCastleKingside(castles) && from == H_8) castles &= ~BLACK_KINGSIDE;
+                }
+            }
+            setCastlingRights(castles);
+    }
+
     private void makeCastle(int from, int to, PieceType p, int move){
         int rookFr = 0;
         int rookTo = 0;
@@ -499,6 +510,7 @@ public class Board  implements Cloneable{
         makeMove(rookFr, rookTo, getPieceOnBoard(rookFr)); // for rook
         // moved rook off to but still uses the piece on to (which is empty) and messes up the update list
     }
+
 
     private void addMoveToHistory(int move) {
         playHistory[ply] = move;
