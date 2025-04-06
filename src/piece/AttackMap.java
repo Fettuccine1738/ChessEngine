@@ -208,7 +208,7 @@ public class AttackMap {
      * @param pc    piece value , optimizes function  ignoring redundant lookups
      * @return   true / false if piece on attacking can reach attacked index.
      */
-    public static boolean canReachSquare(Board board, int attacked, int attacking, boolean side, int pc) {
+    public static boolean canReachSquare(Board board, int attacked, int attacking, boolean side, int pc) { // raytracing
         PieceType attackingPiece = board.getPieceOnBoard(attacking);
         // is the attacking square on the same side as attacked or empty?
         if (attackingPiece == PieceType.EMPTY) { return false; }

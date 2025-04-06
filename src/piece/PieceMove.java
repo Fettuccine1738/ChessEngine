@@ -4,10 +4,8 @@ import board.Board;
 import board.BoardUtilities;
 import board.Move;
 import board.PieceType;
-import edu.princeton.cs.algs4.In;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -34,7 +32,7 @@ public class PieceMove {
             { -11, -10, -9, -1, 1,  9, 10, 11 }  /* KING */  };
 
     // board coordinates for board 64
-    final static int[][] VECTOR_COORDINATES = {
+    public final static int[][] VECTOR_COORDINATES = {
             {   0,   0,  0,  0, 0,  0,  0,  0 },
             { -17, -15, -10, -6,  6, 10, 15, 17}, /* KNIGHT */
             {  -9,  -7,  7,  9,   0, 0,  0,  0 }, /* BISHOP */
@@ -80,18 +78,19 @@ public class PieceMove {
     final static PieceType[] BLACK_PIECES  = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING};
     private final static int IS_KING = 6;
 
-     public static List<Integer> possibleMoves(Board board, boolean sideToPlay) {
+     public static List<Integer> pseudoLegal(Board board) {
         List<Integer> moves = new ArrayList<>();
         if (board == null) throw new IllegalArgumentException("possible King moves invoked with null");
         int floor, ceiling;
+        boolean sideToPlay = board.getSideToMove();
 
         for (PieceType piece : (sideToPlay ? WHITE_PIECES : BLACK_PIECES)) {
             floor   = getPieceListFloor(piece);
             ceiling = getPieceListCeiling(piece);
             moves.addAll(Objects.requireNonNull(generatePseudoLegal(board, sideToPlay, floor, ceiling, piece)));
         }
-         System.out.println("SZ " + moves.size());
-        return moves;
+         // System.out.println("SZ " + moves.size());
+       return moves;
     }
 
 
@@ -113,8 +112,9 @@ public class PieceMove {
             generatePseudoPawnMoves(board, moves, sideToPlay);
             return moves;
         }
-        // generate castles separately
-        if (Math.abs(piece.getValue()) == IS_KING) {
+
+        // generate castles separately if available
+        if (Math.abs(piece.getValue()) == IS_KING && board.canSideCastle(piece.isWhite())) {
             generateCastle(board, sideToPlay, moves);
         }
 

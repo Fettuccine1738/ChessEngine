@@ -17,6 +17,7 @@ import piece.King;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Stack;
 
 import static board.BoardUtilities.*;
 import static board.Move.*;
@@ -25,9 +26,8 @@ import static board.PieceType.*;
 
 public class Board  implements Cloneable{
 
-    // tests function
-    public  ArrayList<PieceType> blackListe = new ArrayList<>();
-    public  ArrayList<PieceType> whiteListe = new ArrayList<>();
+
+
     // test strings for FEN Notation
     static String FEN_INIT = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     static String FEN_2 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
@@ -316,6 +316,15 @@ public class Board  implements Cloneable{
         return rights;
     }
 
+    public boolean canSideCastle(boolean b) {
+        byte castles = getCastlingRights();
+        if (b) { // masks blacks bits if white to play
+            castles &= ~(BLACK_QUEENSIDE | BLACK_KINGSIDE);
+        }
+        else            castles &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
+        return castles != 0;
+    }
+
     // is king side castling right for white available
     public boolean canWhiteCastleKingside(byte rights) {
         return (rights & WHITE_KINGSIDE) != 0;
@@ -448,12 +457,14 @@ public class Board  implements Cloneable{
             case FLAG_CASTLE ->   makeCastle(from, to, piece, move);
             default -> throw new IllegalStateException("Unexpected value: " + flags);
         }
+        alternateSide();
     }
 
     private void makeCastle(int from, int to, PieceType p, int move){
         int rookFr = 0;
         int rookTo = 0;
         byte castles = getCastlingRights();
+        if (!canSideCastle(p.isWhite())) return; // we cannot castle
         if (p.isWhite()) {
             assert(getPieceOnBoard(from) == WHITE_KING);
             if (to == C_1) {
@@ -465,8 +476,7 @@ public class Board  implements Cloneable{
                 rookTo = F_1;
             }
             else throw new IllegalArgumentException("invalid castle");
-            castles &= ~WHITE_QUEENSIDE;
-            castles &= ~WHITE_KINGSIDE;
+            castles &= ~(WHITE_QUEENSIDE | WHITE_KINGSIDE);
             setCastlingRights(castles);
         }
         else {
@@ -480,8 +490,7 @@ public class Board  implements Cloneable{
                 rookTo = F_8;
             }
             else throw new IllegalArgumentException("invalid castle");
-            castles &= ~BLACK_QUEENSIDE;
-            castles &= ~BLACK_KINGSIDE;
+            castles &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
             setCastlingRights(castles);
         }
         // move, piece, from, to, flags
@@ -489,6 +498,7 @@ public class Board  implements Cloneable{
         makeMove(from, to, p); // for king
         updatePieceList(move, p, from, to, FLAG_CASTLE);
         updatePieceList(move, getPieceOnBoard(rookFr), rookFr, rookTo, FLAG_CASTLE); // BUGBUG:
+        assert(getPieceOnBoard(rookFr).getValue() == WHITE_ROOK.getValue());
         makeMove(rookFr, rookTo, getPieceOnBoard(rookFr)); // for rook
         // moved rook off to but still uses the piece on to (which is empty) and messes up the update list
     }
@@ -533,8 +543,8 @@ public class Board  implements Cloneable{
         int ceil;
         int square, xsquare;
         boolean sideToPlay = p.isWhite();
-        int[] side = (sideToPlay) ? getWhitePieceList() : getBlackPieceList();
-        int[] xside = (sideToPlay) ? getBlackPieceList() : getWhitePieceList();
+        int[] side = (sideToPlay) ? whitePieceList : blackPieceList;
+        int[] xside = (sideToPlay) ? blackPieceList : whitePieceList;
         int promotedPiece = getPromotionPiece(move);
         PieceType capturedPiece = getPieceType(getCapturedPiece(move));
 
@@ -589,15 +599,21 @@ public class Board  implements Cloneable{
                 }
             }
             // do not update opponent list if it is a quiet move or double pawn push
-            if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
+            // if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
         }
         if (!found) throw new RuntimeException("Error: Piece encoding not found");
         // this.sideToMove = !sideToMove; // update side to play
     }
 
+    // switch sides implementation;
+    public void alternateSide() {
+        sideToMove = !sideToMove;
+    }
+
     public void setSideToMove(boolean side) {
         this.sideToMove = side;
     }
+
 
     /**
      * @param move 32 bit integer encoding of from square, target square, flags and captured piece
@@ -633,7 +649,7 @@ public class Board  implements Cloneable{
             case FLAG_EN_PASSANT -> {
                 makeMove(to, from, piece);
                 PieceType cap = getPieceType(capturedPiece);
-                if (cap.isWhite()) board64[enPassant + RANK_8] = cap;
+                if (cap.isWhite()) board64[enPassant + RANK_8] = cap; // captured piece is a square above enpassant
                 else board64[enPassant - RANK_8] = cap;
             }
             case FLAG_CAPTURE -> {
@@ -651,6 +667,7 @@ public class Board  implements Cloneable{
             case FLAG_CASTLE -> unmakeCastle(from, to, piece, move);
             default -> throw new IllegalArgumentException();
         }
+        alternateSide();
         // this.sideToMove = !sideToMove; // update side to play
     }
 
@@ -712,8 +729,8 @@ public class Board  implements Cloneable{
         int floor = getPieceListFloor(piece);
         int ceil = getPieceListCeiling(piece);
         boolean sideToPlay = piece.isWhite();
-        int side[] = (sideToPlay) ? getWhitePieceList() : getBlackPieceList();
-        int xside[] = (sideToPlay) ? getBlackPieceList() : getWhitePieceList();
+        int side[] = (sideToPlay) ? whitePieceList : blackPieceList;
+        int xside[] = (sideToPlay) ? blackPieceList : whitePieceList;
         int promotedPiece = getPromotionPiece(move);
         PieceType capturedPiece = getPieceType(getCapturedPiece(move));
 
@@ -820,12 +837,6 @@ public class Board  implements Cloneable{
                 // encode both square and piece on the square
                 pieceList[j] = ((piece.getValue() << 8) | square);
                 j++;
-                if (piece == BLACK_KING && blackListe.contains(piece)) {
-                    System.out.println();
-                    System.out.println("Error " + square + " " + piece + "black king" + j);
-                }
-                if (piece.getValue() < 0) blackListe.add(piece);
-                else whiteListe.add(piece);
             }
         }
     }
@@ -836,7 +847,7 @@ public class Board  implements Cloneable{
     }
 
     // retunrs string represntation of en passant square
-    private static String getEnpassantSquare(byte sq) {
+    public static String getEnpassantString(byte sq) {
         if (sq == OFF_BOARD) return "-";
         if (sq < RANK_1 || sq >= BOARD_SIZE) throw new IllegalArgumentException();
         StringBuilder sb = new StringBuilder(2);
@@ -845,6 +856,7 @@ public class Board  implements Cloneable{
         sb.append((char) (file + 'a')).append(rank + 1);
         return sb.toString();
     }
+
     /**
      * @return 8 x 8 representation of board with enums in index represented by their char values
      *         Uppercase chars for white and lowercase for black

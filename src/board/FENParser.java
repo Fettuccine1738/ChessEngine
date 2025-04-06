@@ -75,16 +75,11 @@ public class FENParser {
         if (board == null) throw new IllegalArgumentException("Enpassant invoked with null board");
         StringBuilder notation = new StringBuilder();
         byte enPassant = board.getEnPassant();
-        if (enPassant == OFF_BOARD) return notation.append('-').toString();
+        if (enPassant == OFF_BOARD) return "-";
         int rank = enPassant >> 3; // divide by 8
         int file = enPassant  & 7; // modulo 8
-        if (rank == 0 && file == 0) { // no en passant available
-            notation.append('-');
-            return notation.toString();
-        }
         // convert file to a - h
-        char chFile = (char) ('a' + rank);
-        notation.append(chFile).append(file);
+        notation.append((char) (file + 'a')).append(rank + 1);
         return notation.toString();
     }
 
