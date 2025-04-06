@@ -1,8 +1,12 @@
-package test;
+package com.github.fehinti.board;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class BoardTest {
-
     static String FEN_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     static String FEN_2 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
     static String FEN_3 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
@@ -15,95 +19,104 @@ class BoardTest {
     static String FEN_P =  "8/8/3p4/2P1p3/8/3P4/4P3/8 w - - 0 1"; // pawn move testing
     static String FEN_N = "8/3p4/8/4N3/3n1P2/8/4P3/8 w - - 0 1"; // knight move test
 
-    @org.junit.jupiter.api.BeforeEach
+
+    @BeforeEach
     void setUp() {
     }
 
-    @org.junit.jupiter.api.AfterEach
+    @AfterEach
     void tearDown() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
+    void getBoard64() {
+    }
+
+    @Test
     void getWhitePieceList() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getBlackPieceList() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
+    void getPlayHistory() {
+    }
+
+    @Test
+    void getIrreversibleAspect() {
+    }
+
+    @Test
     void getSideToMove() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void setFullMoveCounter() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void setHalfMoveClock() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void setCastlingRights() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void setEnPassant() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getEnPassant() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getCastlingRights() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getHalfMoveClock() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getFullMoveCounter() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void encodeCastlingRights() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
+    void canSideCastle() {
+    }
+
+    @Test
     void canWhiteCastleKingside() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void canWhiteCastleQueenside() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void canBlackCastleKingside() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void canBlackCastleQueenside() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getPieceOnBoard() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getMailbox64Number() {
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void getMailbox120Number() {
-    }
-
-    @org.junit.jupiter.api.Test
-    void make() {
-    }
-
-    @org.junit.jupiter.api.Test
-    void unmake() {
     }
 }

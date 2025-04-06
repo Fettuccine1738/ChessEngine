@@ -1,16 +1,17 @@
-package piece;
+package com.github.fehinti.piece;
 
-import board.Board;
-import board.PieceType;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static board.Board.getMailbox120Number;
-import static board.BoardUtilities.*;
-import static board.PieceType.BLACK_KING;
-import static board.PieceType.WHITE_KING;
+import com.github.fehinti.board.Board;
+import com.github.fehinti.board.PieceType;
+import com.github.fehinti.piece.PieceMove;
+import static com.github.fehinti.board.BoardUtilities.*;
+import static com.github.fehinti.board.Board.getMailbox120Number;
+import static com.github.fehinti.board.PieceType.BLACK_KING;
+import static com.github.fehinti.board.PieceType.WHITE_KING;
 
 public class King {
     // king coordinates on board 64

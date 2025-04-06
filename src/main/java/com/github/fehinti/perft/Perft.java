@@ -1,19 +1,18 @@
-package test;
+package com.github.fehinti.perft;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Stack;
 
-import board.Board;
-import board.FENParser;
-import board.Move;
-import piece.AttackMap;
-import piece.PieceMove;
+import com.github.fehinti.board.Board;
+import com.github.fehinti.board.Move;
+import com.github.fehinti.board.FENParser;
+import com.github.fehinti.piece.PieceMove;
+import com.github.fehinti.piece.AttackMap;
 
 /***********************************************************************************
  * Perft, (performance test, move path enumeration)

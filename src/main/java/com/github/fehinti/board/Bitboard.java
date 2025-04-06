@@ -1,11 +1,7 @@
-package board;
-
-import org.w3c.dom.ls.LSOutput;
+package com.github.fehinti.board;
 
 import java.util.Arrays;
-
-import static board.BoardUtilities.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.github.fehinti.board.BoardUtilities.*;
 
 public class Bitboard {
 
@@ -75,18 +71,18 @@ public class Bitboard {
     // checks that the number of set bits (1s) in a start position
     // is equal to number of pieces in a initial chess position
     private void checkBoardBitCount() {
-        assertEquals(1, Long.bitCount(this.WK));
-        assertEquals(1, Long.bitCount(this.WQ));
-        assertEquals(2, Long.bitCount(this.WR));
-        assertEquals(2, Long.bitCount(this.WB));
-        assertEquals(2, Long.bitCount(this.WN));
-        assertEquals(8, Long.bitCount(this.WP));
-        assertEquals(1, Long.bitCount(this.BK));
-        assertEquals(1, Long.bitCount(this.BQ));
-        assertEquals(2, Long.bitCount(this.BR));
-        assertEquals(2, Long.bitCount(this.BB));
-        assertEquals(2, Long.bitCount(this.BN));
-        assertEquals(8, Long.bitCount(this.BP));
+        //assertEquals(1, Long.bitCount(this.WK));
+        //assertEquals(1, Long.bitCount(this.WQ));
+        //assertEquals(2, Long.bitCount(this.WR));
+        //assertEquals(2, Long.bitCount(this.WB));
+        //assertEquals(2, Long.bitCount(this.WN));
+        //assertEquals(8, Long.bitCount(this.WP));
+        //assertEquals(1, Long.bitCount(this.BK));
+        //assertEquals(1, Long.bitCount(this.BQ));
+        //assertEquals(2, Long.bitCount(this.BR));
+        //assertEquals(2, Long.bitCount(this.BB));
+        //assertEquals(2, Long.bitCount(this.BN));
+        //assertEquals(8, Long.bitCount(this.BP));
     }
 
     public void printBitboards() {

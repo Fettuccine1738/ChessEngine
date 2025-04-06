@@ -1,13 +1,11 @@
-package board;
+package com.github.fehinti.board;
 
 import java.util.Arrays;
 
-import static board.Board.*;
-import static board.BoardUtilities.*;
-import static board.PieceType.EMPTY;
+import static com.github.fehinti.board.BoardUtilities.*;
+import static com.github.fehinti.board.PieceType.EMPTY;
 
 public class FENParser {
-
     /**
      * @param board board to scan for piece and corresponding position
      * @return a string that is the Forsyth Edward Notation of the board
@@ -18,10 +16,10 @@ public class FENParser {
         PieceType piece;
         notation = new StringBuilder();
         // start from black side
-        for (int i = BoardUtilities.RANK_8; i > BoardUtilities.RANK_1; i--) {
+        for (int i = RANK_8; i > RANK_1; i--) {
             emptyCount = 0;
-            for (int j = 0; j < BoardUtilities.FILE_H; j++) {
-                piece = board.getPieceOnBoard((i -  1) * BoardUtilities.FILE_H + j);
+            for (int j = 0; j < FILE_H; j++) {
+                piece = board.getPieceOnBoard((i -  1) * FILE_H + j);
                 if (piece == EMPTY) emptyCount++;
                 else {
                     if (emptyCount > 0) notation.append(emptyCount);
@@ -106,17 +104,17 @@ public class FENParser {
         Arrays.fill(pieces, EMPTY);
         String[] tokens = fenotation.split("/");
         // all 8 ranks of the board must be present
-        if (tokens.length != BoardUtilities.RANK_8) throw new IllegalArgumentException();
+        if (tokens.length != RANK_8) throw new IllegalArgumentException();
         char ch;
         int index = 0;
-        int N = BoardUtilities.RANK_8 - 1;
+        int N = RANK_8 - 1;
         // loop through first 7 ranks / string representation starting from top
         for (int i = N; i > 0; i--) {
             index = N - i;
             parseRankandFile(tokens[index], pieces, i);
         }
         // parse last token of FEN string
-        String[] lastToken = tokens[BoardUtilities.RANK_8 - 1].split(" ");
+        String[] lastToken = tokens[RANK_8 - 1].split(" ");
         if (lastToken.length != 6) throw new IllegalArgumentException("Last row invalid in FEN" + lastToken.length);
         // parse first rank of the board
         parseRankandFile(lastToken[0], pieces, RANK_1);
@@ -140,7 +138,7 @@ public class FENParser {
                 file += ch - '0'; // advance to next file, square already filled with EMPTY
             } else {
                 PieceType piece = PieceType.getPieceType(ch);
-                pieceTypes[index * BoardUtilities.FILE_H + file] = piece;
+                pieceTypes[index * FILE_H + file] = piece;
                 file++;
             }
         }
@@ -174,7 +172,7 @@ public class FENParser {
         if (enPassant.equals("-")) return OFF_BOARD; // no enpassant available
         int rank = enPassant.charAt(0) - 'a';
         int file = Integer.parseInt(enPassant.charAt(1) + "");
-        return ((byte) (rank * BoardUtilities.FILE_H + file));
+        return ((byte) (rank * FILE_H + file));
     }
 
     private static int parseHalfMoveClock(String halfMoveClock) {

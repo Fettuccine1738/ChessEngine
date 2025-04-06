@@ -1,9 +1,4 @@
-package piece;
-
-import board.Board;
-import board.BoardUtilities;
-import board.Move;
-import board.PieceType;
+package com.github.fehinti.piece;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -11,10 +6,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
-import static board.Board.getMailbox120Number;
-import static board.Board.getMailbox64Number;
-import static board.BoardUtilities.*;
-import static board.PieceType.*;
+
+import com.github.fehinti.board.Board;
+import com.github.fehinti.board.BoardUtilities;
+import com.github.fehinti.board.Move;
+import com.github.fehinti.board.PieceType;
+
+import static com.github.fehinti.board.PieceType.*;
+import static com.github.fehinti.board.Board.getMailbox120Number;
+import static com.github.fehinti.board.Board.getMailbox64Number;
+import static com.github.fehinti.board.BoardUtilities.*;
 
 public class PieceMove {
     // is piece type at this index a sliding piece (does the piece need to reset to its from

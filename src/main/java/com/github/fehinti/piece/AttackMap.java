@@ -1,16 +1,17 @@
-package piece;
-
-import board.Board;
-import board.PieceType;
+package com.github.fehinti.piece;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static board.Board.getMailbox120Number;
-import static board.Board.getMailbox64Number;
-import static board.BoardUtilities.BOARD_SIZE;
-import static board.BoardUtilities.OFF_BOARD;
+import com.github.fehinti.board.Board;
+import com.github.fehinti.board.PieceType;
+import com.github.fehinti.piece.PieceMove;
+
+import static com.github.fehinti.board.Board.getMailbox120Number;
+import static com.github.fehinti.board.Board.getMailbox64Number;
+import static com.github.fehinti.board.BoardUtilities.BOARD_SIZE;
+import static com.github.fehinti.board.BoardUtilities.OFF_BOARD;
 
 /************************************************************************************
  * <a href="https://mediocrechess.blogspot.com/2006/12/guide-attacked-squares.html">...</a>

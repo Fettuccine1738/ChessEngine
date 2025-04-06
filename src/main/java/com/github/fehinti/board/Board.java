@@ -10,24 +10,20 @@
  * moves in move generation easier.
  * @Author Favour F. Atilade.
  */
-package board;
-
-import piece.King;
+package com.github.fehinti.board;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Stack;
 
-import static board.BoardUtilities.*;
-import static board.Move.*;
-import static board.PieceType.*;
+import static com.github.fehinti.board.BoardUtilities.*;
+import static com.github.fehinti.board.Move.*;
+import static com.github.fehinti.board.PieceType.*;
+import com.github.fehinti.piece.King;
 
 
 public class Board  implements Cloneable{
-
-
-
     // test strings for FEN Notation
     static String FEN_INIT = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     static String FEN_2 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";

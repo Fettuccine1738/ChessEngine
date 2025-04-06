@@ -1,12 +1,12 @@
-package piece;
-
-import board.Board;
-import board.PieceType;
+package com.github.fehinti.piece;
 
 import java.util.Collection;
 
-import static board.BoardUtilities.*;
-import static board.PieceType.*;
+import com.github.fehinti.board.Board;
+import com.github.fehinti.board.PieceType;
+import static com.github.fehinti.board.BoardUtilities.*;
+import static com.github.fehinti.board.PieceType.BLACK_PAWN;
+import static com.github.fehinti.board.PieceType.WHITE_PAWN;
 
 public class Pawn {
 

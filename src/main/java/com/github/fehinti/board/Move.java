@@ -1,4 +1,4 @@
-package board;
+package com.github.fehinti.board;
 
 public class Move {
 

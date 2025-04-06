@@ -1,7 +1,7 @@
-package piece;
+package com.github.fehinti.piece;
 
-import board.Board;
-import board.BoardUtilities;
+import com.github.fehinti.board.BoardUtilities;
+import com.github.fehinti.board.Board;
 
 import java.util.Arrays;
 

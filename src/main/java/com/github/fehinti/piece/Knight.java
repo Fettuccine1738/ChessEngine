@@ -1,12 +1,13 @@
-package piece;
+package com.github.fehinti.piece;
 
-import board.Board;
-import board.PieceType;
+import com.github.fehinti.board.Board;
+import static com.github.fehinti.board.BoardUtilities.*;
+import static com.github.fehinti.board.PieceType.BLACK_KNIGHT;
+import static com.github.fehinti.board.PieceType.WHITE_KNIGHT;
+
+import com.github.fehinti.board.PieceType;
 
 import java.util.Collection;
-
-import static board.BoardUtilities.*;
-import static board.PieceType.*;
 
 public class Knight  {
 

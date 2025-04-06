@@ -1,10 +1,13 @@
-import board.Board;
+package com.github.fehinti;
+
+import com.github.fehinti.board.Board;
 import piece.PieceMove;
 
-import static board.BoardUtilities.*;
+import static com.github.fehinti.board.BoardUtilities.*;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+
 public class Main {
 
     private static final long SHIFT_BY = 1L;
