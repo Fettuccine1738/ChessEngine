@@ -291,7 +291,12 @@ public class PieceMove {
                 if (isOpponentPiece(piece, side) && Math.abs(piece.getValue()) != IS_KING) {
                     moves.add(Move.encodeMove(from, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                 }
+
                 if (cap == ep) { // capture enPassant
+                    // prevent white from capturing en Passant
+                    if (side == WHITE && BoardUtilities.isOnSecondRank((byte) from)) continue;
+                    // prevent black from capturing en Passant
+                    if (side == BLACK && BoardUtilities.isOnSeventhRank((byte) from)) continue;
                     PieceType epPiece;
                     if (side == WHITE) epPiece = board.getPieceOnBoard(cap - SINGLE_PUSH64);
                     else epPiece = board.getPieceOnBoard(cap + SINGLE_PUSH64);

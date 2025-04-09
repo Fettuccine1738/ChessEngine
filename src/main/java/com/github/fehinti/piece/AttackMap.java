@@ -158,13 +158,21 @@ public class AttackMap {
         }
     }
 
+    /**
+     * @param board current position after a move has been played, verifying move legality
+     *           depending on side to move we look at the opposite side because that is the side
+     *          that played before this routine is called.
+     * @return
+     */
     public static boolean isKingInCheck(Board board) {
         // extract king data from board
-        int kingPosition = (board.getSideToMove()) ? board.getWhitePieceList()[0]
-                : board.getBlackPieceList()[0];
+        // if black 's turn to play get the white king because that's the
+        // last move played
+        int kingPosition = (board.getSideToMove()) ? board.getBlackPieceList()[0]
+                : board.getWhitePieceList()[0];
         assert(kingPosition != 0);
         int kingSquare = kingPosition & 0xff; // extract last bits  - index (0 .. 63)
-        assert(0 <= kingSquare  && kingSquare < BOARD_SIZE);
+        assert(kingSquare < BOARD_SIZE);
         return isSquareAttacked(board, kingSquare);
     }
 
@@ -193,8 +201,10 @@ public class AttackMap {
         int[][] attackMap = computedAttackMaps(piece);
         int length = attackMap[attackedIndex].length;
         for (int sq = 0; sq < length; sq++) {
+            // reverse board.getSideTomove() to correctly check the side that "MOVED" not side
+            // to play
             if (canReachSquare(board, attackedIndex,
-                    attackMap[attackedIndex][sq], board.getSideToMove(), piece))  {
+                    attackMap[attackedIndex][sq], !board.getSideToMove(), piece))  {
                 return true;
             }
         }

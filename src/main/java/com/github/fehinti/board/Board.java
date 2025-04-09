@@ -21,6 +21,7 @@ import static com.github.fehinti.board.BoardUtilities.*;
 import static com.github.fehinti.board.Move.*;
 import static com.github.fehinti.board.PieceType.*;
 import com.github.fehinti.piece.King;
+import com.github.fehinti.piece.Pawn;
 
 
 public class Board  implements Cloneable{
@@ -890,84 +891,62 @@ public class Board  implements Cloneable{
 
 
     public static void main(String[] args) {
-
-        //int rooknum = (WHITE_ROOK.getValue() << 8 | 32);
-        //System.out.println(rooknum);
-        //int piece  = rooknum >> 8;
-        //System.out.println("Piece val " + piece);
-        //int square  = rooknum & 0xff;
-        //System.out.println("square" + square);
-        //System.out.println();
-//
-        //int[] offset = { -10,  -1,  1, 10, 0,  0,  0,  0 };
-        //int mailbox64, mail120;
-        //for (int i : offset) {
-            //System.out.printf("for %d\n", i);
-            //mailbox64 = getMailbox64Number(square);
-            //System.out.println("Mail 64 :  " + mailbox64);
-            //System.out.println("Mail 64 + off : " + (mailbox64 + i));
-            //mail120 = mailbox64 + i;
-            //System.out.println("mial 120  " + mail120);
-            //System.out.println(getMailbox120Number(mail120));
-        //}
-
-        //String[] fens = {FEN_1, FEN_2, FEN_3, FEN_4};
         //Board board;
-        //for (String str : fens) {
-            //board = FENParser.parseFENotation(str);
-            //System.out.println();
-            //System.out.println(board);
-            //System.out.printf("\n %s", FENParser.getFENotation(board));
-            //System.out.println();
-        //}
-//
-        //System.out.println();
-        //board = new Board();
-        //System.out.println(board.whiteListe);
-        //for (int i = 0; i < board.whitePieceList.length; i++) {
-            //System.out.printf("%d : \t%d\n", i, board.whitePieceList[i]);
-        //}
-        //System.out.println(board.whiteListe.size());
-        //System.out.println(board.blackListe);
-        //System.out.println(Arrays.toString(board.blackPieceList));
-        //System.out.println(board.blackListe.size());
-//
-        Board board;
-        board = FENParser.parseFENotation(FEN_CASTLE_RIGHTS_KING_MOVE);
-        System.out.println(board);
-        // move testing
-        System.out.println("MOVE GENERATION TEST");
-        System.out.println(FENParser.getFENotation(board));
-        int count = 0;
-         boolean control = BLACK;
+        //board = FENParser.parseFENotation(FEN_CASTLE_RIGHTS_KING_MOVE);
+        //System.out.println(board);
+        //// move testing
+        //System.out.println("MOVE GENERATION TEST");
+        //System.out.println(FENParser.getFENotation(board));
+        //int count = 0;
+         //boolean control = BLACK;
         // boolean control = WHITE;
-        Collection<Integer> omelist = King.possibleMoves(board, control);
-        //Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
-        System.out.println("Moves available: " + omelist.size() + "\n");
-        for (int m : omelist) {
-            // if (count++ != 9) continue;
+        //Collection<Integer> omelist = King.possibleMoves(board, control);
+        ////Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
+        //System.out.println("Moves available: " + omelist.size() + "\n");
+        //for (int m : omelist) {
+            //// if (count++ != 9) continue;
+            //System.out.printf(++count +"\t" + printMove(m) + "\n");
+            //board.make(m);
+            //System.out.println(board);
+            //// System.out.println("ENpanssant " + board.getEnPassant() + "\t" + getEnpassantSquare(board.getEnPassant()));
+            //System.out.println(
+                    //"Kingside castle " +
+                            //((control) ?  board.canWhiteCastleKingside(board.getCastlingRights()) :
+                                    //board.canBlackCastleKingside(board.getCastlingRights()))   +
+                            //"\tqueen side castle " +
+                            //((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights())));
+//
+            //board.unmake(m);
+            //System.out.println("\n");
+            //System.out.println(board);
+            //System.out.println("\n");
+            //System.out.println(
+                    //"Kingside castle " +
+                            //((control) ? board.canWhiteCastleKingside(board.getCastlingRights()) : board.canBlackCastleKingside(board.getCastlingRights())) +
+                            //"\tqueen side castle " +
+                            //((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights()))
+            //);
+        //}
+//
+//
+        int count = 0;
+        String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
+        Board board = FENParser.parseFENotation(falseCap);
+        System.out.println(board);
+
+        Collection<Integer> wronEnPassant = Pawn.possibleMoves(board, WHITE);
+
+        for (Integer m : wronEnPassant) {
             System.out.printf(++count +"\t" + printMove(m) + "\n");
             board.make(m);
             System.out.println(board);
-            // System.out.println("ENpanssant " + board.getEnPassant() + "\t" + getEnpassantSquare(board.getEnPassant()));
-            System.out.println(
-                    "Kingside castle " +
-                            ((control) ?  board.canWhiteCastleKingside(board.getCastlingRights()) :
-                                    board.canBlackCastleKingside(board.getCastlingRights()))   +
-                            "\tqueen side castle " +
-                            ((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights())));
 
             board.unmake(m);
             System.out.println("\n");
             System.out.println(board);
             System.out.println("\n");
-            System.out.println(
-                    "Kingside castle " +
-                            ((control) ? board.canWhiteCastleKingside(board.getCastlingRights()) : board.canBlackCastleKingside(board.getCastlingRights())) +
-                            "\tqueen side castle " +
-                            ((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights()))
-            );
         }
+
     }
 
 

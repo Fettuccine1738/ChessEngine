@@ -33,12 +33,14 @@ public class Perft {
    static long endTime;
    static Board board;
    static Stack<String> boardStack = new Stack<>();
-   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\perft_init.txt";
+  // static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\perft_init.txt";
+   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\perft_iso2.txt";
    static File file;
    static BufferedWriter bufferedWriter; //  = new BufferedWriter(new FileWriter(file));
 
    static {
-       board = new Board();
+       // modified to debug with perftree
+       board = new Board(); // comment out when debugging with perftree
        file = new File(FILEPATH); // exceptions not thrown when opening a file?
 
        try {
@@ -106,14 +108,16 @@ public class Perft {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
            board.make(move);
-           writeFENToFile(FENParser.getFENotation(board));
+
+           if (currentDepth == originalDepth - 2)  writeFENToFile(FENParser.getFENotation(board));
+
            // boardStack.push(FENParser.getFENotation(board));
            //System.out.println(board);
            //// System.out.println(nodeCount);
            //System.out.println(Move.printMove(move) + ":\t" + (board.getSideToMove() ? "WHITE" : "BLACK") + " to play"+
            //"\nEnPassant: \t"+ Board.getEnpassantString(board.getEnPassant()) +
                    //"\nCastling Rights: \t" + board.getCastlingRights()
-           //+ "\nFull Move Counter\t" + board.getFullMoveCounter()
+            //+ "\nFull Move Counter\t" + board.getFullMoveCounter()
            //+ "\nHalf Move \t" + board.getHalfMoveClock());
            if (!AttackMap.isKingInCheck(board)) {
                // board.alternateSide();
@@ -143,9 +147,10 @@ public class Perft {
 
     public static void main(String[] args) {
        startTime = System.currentTimeMillis();
-       if (args.length != 1) {
+       if (args.length != 1) { // adjust length to 2 when debugging with perftree
            System.out.println("Provide a depth please");
        }
+       // board = FENParser.parseFENotation(args[1]); // instatiate board with 2 when debugging with perftree
        int depth = Integer.parseInt(args[0]);
        System.out.println("go perft " + depth);
        long total = divide(depth, depth);
@@ -153,9 +158,6 @@ public class Perft {
    //     long total = pseudoPerformanceTest(depth);
        endTime = System.currentTimeMillis();
        System.out.println("EndTime " + endTime +
-                "\n" + total + " nodes in " + (endTime - startTime) + "ms");
-
-
-
+               "\n" + total + " nodes in " + (endTime - startTime) + "ms");
     }
 }

@@ -1,6 +1,8 @@
 package com.github.fehinti;
 
 import com.github.fehinti.board.Board;
+import com.github.fehinti.board.FENParser;
+import com.github.fehinti.perft.Perft;
 import com.github.fehinti.piece.*;
 
 import static com.github.fehinti.board.BoardUtilities.*;
@@ -39,27 +41,29 @@ public class Main {
                         1L << 7  |            1L << 9  |
                         1L << 15 | 1L << 16 | 1L << 17;
 
-        printLongAsBitboard(KING_ON_B2);
-        // long board = 0b0000_0001;
-        long board = 1L;
-        // board &= (0L);
-        // System.out.println(Long.toBinaryString(board));
-        board |= (1L << 10);// place board at c2
-        // System.out.println(Long.toBinaryString(board));
-        System.out.println(board);
-        printLongAsBitboard(board);
-        boolean isOcc = (board & (1L << 11)) != 0;
-        System.out.println(isOcc);
-        // knight maskso
-        long knightOn27 = 0L;
-        printLongAsBitboard(knightOn27);
-        for(int i : PieceMove.VECTOR_COORDINATES[1]) {
-            knightOn27 |= (1L << i + 27);
-            printLongAsBitboard(knightOn27);
-        }
-        printLongAsBitboard(knightOn27);
-
-
+        //printLongAsBitboard(KING_ON_B2);
+        //// long board = 0b0000_0001;
+        //long board = 1L;
+        //// board &= (0L);
+        //// System.out.println(Long.toBinaryString(board));
+        //board |= (1L << 10);// place board at c2
+        //// System.out.println(Long.toBinaryString(board));
+        //System.out.println(board);
+        //printLongAsBitboard(board);
+        //boolean isOcc = (board & (1L << 11)) != 0;
+        //System.out.println(isOcc);
+        //// knight maskso
+        //long knightOn27 = 0L;
+        //printLongAsBitboard(knightOn27);
+        //for(int i : PieceMove.VECTOR_COORDINATES[1]) {
+            //knightOn27 |= (1L << i + 27);
+            //printLongAsBitboard(knightOn27);
+        //}
+        //printLongAsBitboard(knightOn27);
+//
+        //Perft.main(args);
+//
+//
 
 
     }
