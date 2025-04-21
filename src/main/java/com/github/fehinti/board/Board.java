@@ -15,6 +15,7 @@ package com.github.fehinti.board;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Stack;
 
 import static com.github.fehinti.board.BoardUtilities.*;
@@ -22,6 +23,8 @@ import static com.github.fehinti.board.Move.*;
 import static com.github.fehinti.board.PieceType.*;
 import com.github.fehinti.piece.King;
 import com.github.fehinti.piece.Pawn;
+import com.github.fehinti.piece.PieceMove;
+import com.github.fehinti.piece.Queen;
 
 
 public class Board  implements Cloneable{
@@ -188,7 +191,7 @@ public class Board  implements Cloneable{
         return copy;
     }
     /**
-     * @return disjoint list of only white pieces.
+     * @return disjoint set of white pieces (encoded with value and current position).
      */
     public int[] getWhitePieceList() {
         int[] copy = new int[whitePieceList.length];
@@ -200,7 +203,7 @@ public class Board  implements Cloneable{
     }
 
     /**
-     * @return disjoint list of only white pieces.
+     * @return disjoint set of black pieces.
      */
     public int[] getBlackPieceList() {
         int[] copy = new int[blackPieceList.length];
@@ -226,7 +229,7 @@ public class Board  implements Cloneable{
     }
 
     /**
-     * @return side(white/black) to move.
+     * @return side(white (TRUE) / black (TRUE) to move.
      */
     public boolean getSideToMove() {
         return sideToMove;
@@ -377,55 +380,86 @@ public class Board  implements Cloneable{
         addIrreversibleAspect(enPassant, castlingRights, halfMoveClock);
         addMoveToHistory(move);
         updatePly(true);
-        if (flags != FLAG_CASTLE) {
-            updatePieceList(move, piece, from, to, flags); }
 
         // remove castles for rooks
         int isRookOrKing = Math.abs(piece.getValue());
-        if (isRookOrKing == WHITE_KING.getValue()
-                || isRookOrKing == WHITE_ROOK.getValue())  onRookMove(from, to, piece, flags);
+        if (isRookOrKing == WHITE_KING.getValue() || isRookOrKing == WHITE_ROOK.getValue()
+        && flags != FLAG_CASTLE) onRookMove(from, to, piece, flags);
+
+        int[] side = (sideToMove) ? whitePieceList : blackPieceList;
+        int[] xside = (sideToMove) ? blackPieceList : whitePieceList;
+
+        int val = piece.getValue();
+        int floor = getPieceListFloor(piece);
+        int ceil = getPieceListCeiling(piece);
+        int xfloor, xceil;
+        xfloor = xceil = OFF_BOARD;
+        if (capturedPiece != 0) {
+            PieceType xpiece = getPieceType(capturedPiece);
+            xfloor = getPieceListFloor(xpiece);
+            xceil = getPieceListCeiling(xpiece);
+        }
 
         switch (flags) {
-            case FLAG_QUIET -> {
+            case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
                 assert(board64[to] == EMPTY);
                 makeMove(from, to, piece);
                 // increment half move clock for 50 move draw rule
                 halfMoveClock++;
+                boolean found = incrementalUpdate(side, floor, ceil, from, (val << RANK_8 | to));
+                if (!found) throw new RuntimeException("Error f=quiet&dpPush");
+                if (flags == FLAG_DOUBLE_PAWN_PUSH) {
+                    if (piece.isWhite()) setEnPassant((byte) (to - RANK_8));
+                    else setEnPassant((byte) (to + RANK_8));
+                }
             }
             case FLAG_EN_PASSANT -> {
                 assert(board64[to] == EMPTY);
                 assert(enPassant != OFF_BOARD);
                 makeMove(from, to, piece);
-                PieceType pt = board64[to - RANK_8];
-                assert(pt != EMPTY);
+                int xpos = OFF_BOARD;
                 if (piece.isWhite()) {// enPassant capture happens at double push - 8
-                    assert(pt.isBlack());
-                    board64[to - RANK_8] = EMPTY;
+                    assert(board64[to - RANK_8] == BLACK_PAWN);
+                    xpos = to - RANK_8;
+                    board64[xpos] = EMPTY;
                 }
                 else {// enPassant capture happens at double push + 8
-                    assert(pt.isWhite());
-                    board64[to + RANK_8] = EMPTY;
+                    assert(board64[to + RANK_8] == WHITE_PAWN);
+                    xpos = to + RANK_8;
+                    board64[xpos] = EMPTY;
                 }
                 setEnPassant(OFF_BOARD); // reset enPassant to offboard
                 halfMoveClock = RANK_1; // reset to 0 with every capture.
-            }
-            case FLAG_DOUBLE_PAWN_PUSH -> {
-                assert(board64[to] == EMPTY);
-                makeMove(from, to, piece);
-                if (piece.isWhite()) setEnPassant((byte) (to - RANK_8));
-                else setEnPassant((byte) (to + RANK_8));
-                halfMoveClock++;
+                boolean found1 = incrementalUpdate(side, floor, ceil, from, (val << RANK_8 | to));
+                boolean found2 = incrementalUpdate(xside, xfloor, xceil, xpos, 0); // remove piece
+                if (!found1) throw new RuntimeException("Error f=ep, side");
+                if (!found2) throw new RuntimeException("Error f=ep, xside");
             }
             case FLAG_CAPTURE -> {
                 assert(board64[to] != EMPTY);
                 board64[from] = EMPTY;
                 board64[to]   = piece;
-                halfMoveClock = RANK_1;
+                halfMoveClock = RANK_1; // reset to zero
+                boolean found1 = incrementalUpdate(side, floor, ceil, from, (val << RANK_8 | to));
+                boolean found2 = incrementalUpdate(xside, xfloor, xceil, to, 0); // remove piece
+                if (!found1) throw new RuntimeException("Error f=cap, side");
+                if (!found2) throw new RuntimeException("Error f=cap, xside");
             }
             case FLAG_PROMOTION -> {
-                PieceType promotedPiece = getPieceType(promotion);
+                PieceType pp = getPieceType(promotion); // promoted Piece
+                int f = getPieceListFloor(pp);
+                int c = getPieceListCeiling(pp);
                 board64[from] = EMPTY;
-                board64[to] = promotedPiece;
+                board64[to] = pp;
+                boolean found1 = incrementalUpdate(side, floor, ceil, from, 0);
+                // used 0 because we're looking for the next free spot
+                boolean found2 = incrementalUpdate(side, f, c, 0, ((pp.getValue()) << RANK_8 | to));
+                if (capturedPiece != 0) {
+                    boolean found3 = incrementalUpdate(xside, xfloor, xceil, to, 0); // remove piece
+                    if (!found3) throw new RuntimeException("Error f=cap&Promo, xside");
+                }
+                if (!found1) throw new RuntimeException("Error f=promo, clearPawn");
+                if (!found2) throw new RuntimeException("Error f=promo, freeslot");
             }
             case FLAG_CASTLE ->   makeCastle(from, to, piece, move);
             default -> throw new IllegalStateException("Unexpected value: " + flags);
@@ -440,9 +474,7 @@ public class Board  implements Cloneable{
         int value = piece.getValue();
         byte castles = getCastlingRights();
         assert(Math.abs(value) == 6 || Math.abs(value) == 4);
-
-        if (value == WHITE_ROOK.getValue()
-                || value == WHITE_KING.getValue()) {
+        if (piece.isWhite()) {
                 if (value == WHITE_KING.getValue()
                         && (canWhiteCastleKingside(castles)
                         || canWhiteCastleQueenside(castles))) {
@@ -485,7 +517,7 @@ public class Board  implements Cloneable{
                 rookTo = F_1;
             }
             else throw new IllegalArgumentException("invalid castle");
-            castles &= ~(WHITE_QUEENSIDE | WHITE_KINGSIDE);
+            castles &= ~(WHITE_QUEENSIDE | WHITE_KINGSIDE); // remove kside and qside castling
             setCastlingRights(castles);
         }
         else {
@@ -502,16 +534,19 @@ public class Board  implements Cloneable{
             castles &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
             setCastlingRights(castles);
         }
-        // move, piece, from, to, flags
-        // int move, PieceType p, int from, int to, int flag
+        int[] side = (sideToMove) ? whitePieceList : blackPieceList;
+        int fl = getPieceListFloor(WHITE_KING);
+        int cl = getPieceListCeiling(WHITE_KING);
+        int rfl = getPieceListFloor(WHITE_ROOK);
+        int rcl = getPieceListCeiling(WHITE_ROOK);
+        int val = (p.isWhite()) ? WHITE_ROOK.getValue() : BLACK_ROOK.getValue();
         makeMove(from, to, p); // for king
-        updatePieceList(move, p, from, to, FLAG_CASTLE);
-        updatePieceList(move, getPieceOnBoard(rookFr), rookFr, rookTo, FLAG_CASTLE); // BUGBUG:
-        assert(getPieceOnBoard(rookFr).getValue() == WHITE_ROOK.getValue());
         makeMove(rookFr, rookTo, getPieceOnBoard(rookFr)); // for rook
+        incrementalUpdate(side, fl, cl, from, (p.getValue() << RANK_8 | to));
+        assert(Math.abs(getPieceOnBoard(rookFr).getValue()) == WHITE_ROOK.getValue());
+        incrementalUpdate(side, rfl, rcl, rookFr, (val << RANK_8 | rookTo));
         // moved rook off to but still uses the piece on to (which is empty) and messes up the update list
     }
-
 
     private void addMoveToHistory(int move) {
         playHistory[ply] = move;
@@ -519,12 +554,8 @@ public class Board  implements Cloneable{
 
     private void updatePly(boolean b) {
         assert(ply >= OFF_BOARD);
-        if (b) {
-            ply++;
-        }
-        else {
-            ply--;
-        }
+        if (b)   ply++;
+        else    ply--;
     }
 
     private void addIrreversibleAspect(int enPassant, int castleRights, int halfMoveClock) {
@@ -546,75 +577,6 @@ public class Board  implements Cloneable{
         setHalfMoveClock(hM);
     }
 
-
-    private void updatePieceList(int move, PieceType p, int from, int to, int flag) {
-        if (p == null) throw new IllegalArgumentException("Piece is null");
-        int floor;
-        int ceil;
-        int square, xsquare;
-        boolean sideToPlay = p.isWhite();
-        int[] side = (sideToPlay) ? whitePieceList : blackPieceList;
-        int[] xside = (sideToPlay) ? blackPieceList : whitePieceList;
-        int promotedPiece = getPromotionPiece(move);
-        PieceType capturedPiece = getPieceType(getCapturedPiece(move));
-
-        // update piece list for promotion
-        if (flag == FLAG_PROMOTION) {
-            PieceType promo = getPieceType(promotedPiece);
-            floor = getPieceListFloor(promo);
-            ceil = getPieceListCeiling(promo);
-
-            for (int i = floor; i < ceil; i++) {
-                if (side[i] == RANK_1) { // place the piece encoding in next available position ( = 0)
-                    side[i] = ((promo.getValue() << RANK_8) | to);
-                    break;
-                }
-            }
-        }
-        // update opponent's list if opponent piece is captured
-        if (capturedPiece != EMPTY) {
-            int index = getPieceListFloor(capturedPiece);
-            int ceiling = getPieceListCeiling(capturedPiece);
-            for (; index < ceiling; index++) {
-                if (xside[index] != RANK_1) {
-                    xsquare = xside[index] & 0xff;
-                    // update piece's square to zero
-                    if (flag == FLAG_EN_PASSANT) {
-                        if (p.isWhite() && (xsquare == to + RANK_8)) xside[index] = RANK_1;
-                        else if (p.isBlack() && (xsquare == to - RANK_8)) xside[index] = RANK_1;
-                    }
-                    // set capture to zero for any other flag
-                    if (xsquare == to) {
-                        xside[index] = RANK_1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // update current side piecelist
-        floor = getPieceListFloor(p);
-        ceil = getPieceListCeiling(p);
-        boolean found = false;
-        for (int index = floor; index < ceil; index++) {
-            if (side[index] != RANK_1) { // check entry if it is not empty ( = 0)
-                square = side[index] & 0xff;
-                // update piece's square to targetSquare if it is the piece on the current index
-                if (square == from) {
-                    // if promotion is possible set the promoting pawn to a 0
-                    // else update it's current square
-                    side[index] = (flag == FLAG_PROMOTION) ? RANK_1 : ((p.getValue() << RANK_8) | to);
-                    found = true;
-                    break; // piece value in piece list adjusted
-                }
-            }
-            // do not update opponent list if it is a quiet move or double pawn push
-            // if (flag == FLAG_QUIET || flag == FLAG_DOUBLE_PAWN_PUSH || flag == FLAG_EN_PASSANT) return;
-        }
-        if (!found) throw new RuntimeException("Error: Piece encoding not found");
-        // this.sideToMove = !sideToMove; // update side to play
-    }
-
     // switch sides implementation;
     public void alternateSide() {
         sideToMove = !sideToMove;
@@ -624,14 +586,13 @@ public class Board  implements Cloneable{
         this.sideToMove = side;
     }
 
-
     /**
      * @param move 32 bit integer encoding of from square, target square, flags and captured piece
      */
     public void unmake(int move) {
         int flag = getFlags(move);
-        int to = getTargetSquare(move);
         int from = getFromSquare(move);
+        int to = getTargetSquare(move);
         int capturedPiece = getCapturedPiece(move);
         int promotion = getPromotionPiece(move);
         PieceType piece = board64[to]; // piece has moved to target square
@@ -641,40 +602,78 @@ public class Board  implements Cloneable{
         assert(playHistory[checkPly] == move);
         unaddIrreversibleAspect();
         updatePly(false);
-        if (flag == FLAG_PROMOTION) {
-            if (sideToMove == WHITE)
-                decrementalUpdate(move, WHITE_PAWN, from, to, flag);
-            else
-                decrementalUpdate(move, BLACK_PAWN, from, to, flag);
-        }
-        else if(flag != FLAG_CASTLE) {
-            decrementalUpdate(move, piece, from, to, flag);
-        }
+
+        // update side THAT moveD
+        int[] side =  (!sideToMove)  ? whitePieceList : blackPieceList;
+        int[] xside = (!sideToMove)  ? blackPieceList : whitePieceList;
+        int fl = getPieceListFloor(piece);
+        int ceil = getPieceListCeiling(piece);
 
         switch (flag) {
             case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
                 assert(board64[from] == EMPTY);
                 makeMove(to, from, piece);
+                boolean f = incrementalUpdate(side, fl, ceil, to,
+                        encode(piece.getValue(), from));
+                if (!f) throw new RuntimeException("Error unmaking f=quiet&dppush");
             }
             case FLAG_EN_PASSANT -> {
                 makeMove(to, from, piece);
                 PieceType cap = getPieceType(capturedPiece);
                 if (cap.isWhite()) board64[enPassant + RANK_8] = cap; // captured piece is a square above enpassant
                 else board64[enPassant - RANK_8] = cap;
+                boolean f1 = incrementalUpdate(side, fl, ceil, to,
+                        encode(piece.getValue(), from));
+                boolean f2 = incrementalUpdate(side,
+                        getPieceListFloor(cap),
+                        getPieceListCeiling(cap),
+                        0,
+                        encode(capturedPiece,
+                                (!sideToMove) ? enPassant - 8 : enPassant + 8));
+                if (!f1) throw new RuntimeException("Error updating ep capturing piece");
+                if (!f2) throw new RuntimeException("Error updating eP captured piece");
             }
             case FLAG_CAPTURE -> {
                 assert(board64[from] == EMPTY);
                 makeMove(to, from, piece);
-                board64[to] = getPieceType(capturedPiece);
+                PieceType capt = getPieceType(capturedPiece);
+                board64[to] = capt;
+                int xfl = getPieceListFloor(capt);
+                int xceil = getPieceListCeiling(capt);
+                boolean f1 = incrementalUpdate(side, fl, ceil, to, encode(piece.getValue(), from));
+                boolean f2 = incrementalUpdate(xside, xfl, xceil, 0, encode(piece.getValue(), to));
+                if (!f1) throw new RuntimeException("Error updating capturing pc");
+                if (!f2) throw new RuntimeException("Error updating captured pc");
             }
             case FLAG_PROMOTION -> {
                 assert(board64[from] == EMPTY);
-                if (sideToMove == WHITE) {
-                    makeMove(to, from, WHITE_PAWN);
-                } else makeMove(to, from, BLACK_PAWN);
-                if (capturedPiece != RANK_1) board64[to] = getPieceType(capturedPiece); // replace piece on board
+                if (!sideToMove) makeMove(to, from, WHITE_PAWN);
+                else makeMove(to, from, BLACK_PAWN);
+                int enc = (!sideToMove) ? WHITE_PAWN.getValue() : BLACK_PAWN.getValue();
+                boolean found = incrementalUpdate(side,
+                        getPieceListFloor(WHITE_PAWN),
+                        getPieceListCeiling(WHITE_PAWN), to,
+                        encode(enc, from));
+
+               if (capturedPiece != 0) {
+                   PieceType xPc = PieceType.getPieceType(capturedPiece);
+                  int xfl = getPieceListFloor(xPc);
+                  int xcl = getPieceListCeiling(xPc);
+                  // this has encoding would have been set to 0 in the make's incremental update
+                  boolean fd = incrementalUpdate(xside, xfl, xcl, 0, (xPc.getValue() << RANK_8 | to ));
+                  if (!fd) throw new RuntimeException("Error restoring prev captured f=Promotion");
+               }
+                PieceType pp = PieceType.getPieceType(promotion);
+                assert(Math.abs(pp.getValue()) != 1);
+                int pfl = getPieceListFloor(piece);
+                int pcl = getPieceListCeiling(piece);
+                boolean found1 = incrementalUpdate(side, pfl, pcl, to, 0);
+                // encodes previously removed pawn
+                boolean found2 = incrementalUpdate(side, fl, ceil, 0, ((piece.getValue() << 8) | to));
+                if (!found1) throw new RuntimeException("Error restoring prev captured f=Promotion");
+                if (!found2) throw new RuntimeException("Error restoring prev captured f=Promotion");
             }
-            case FLAG_CASTLE -> unmakeCastle(from, to, piece, move);
+            case FLAG_CASTLE -> unmakeCastle(from, to, side,fl,ceil);
             default -> throw new IllegalArgumentException();
         }
         if (piece.isBlack()) fullMoveCounter--;
@@ -682,51 +681,53 @@ public class Board  implements Cloneable{
         alternateSide();
     }
 
-    private void unmakeCastle(int from, int to, PieceType piece, int move) {
-        assert(from == E_8);
-        int rookFr = 0;
-        int rookTo = 0;
-        if (piece.isWhite()) {
-            if (to == C_1) { // long castles
-                board64[from] = getPieceOnBoard(C_1);
-                board64[C_1] = EMPTY;
-                assert(getPieceOnBoard(D_1) == WHITE_ROOK);
-                board64[A_1] = getPieceOnBoard(D_1);
-                board64[D_1] = EMPTY;
-                rookFr = A_1;
-                rookTo = D_1;
-            }
-            else if (to == G_1) { // short castles
-                board64[from] = getPieceOnBoard(G_1);
+    private int encode(int pc, int info) {
+        return (pc << RANK_8) | info;
+    }
+
+    private void unmakeCastle(int from, int to, int[] side, int fl, int ceil) {
+        boolean fRook;
+        if (!sideToMove) {
+            board64[E_1] = WHITE_KING;
+            if (to == G_1) { // short castles
                 board64[G_1] = EMPTY;
-                assert(getPieceOnBoard(F_1) == WHITE_ROOK);
-                board64[H_1] = getPieceOnBoard(F_1);
-                board64[F_1] = EMPTY;
-                rookFr = H_1;
-                rookTo = F_1;
+                board64[F_1] = EMPTY; // undo rook's move
+                board64[H_1] = WHITE_ROOK;
             }
+            else if (to == C_1) { // long castle
+                board64[C_1] = EMPTY; // undo king's move
+                board64[D_1] = EMPTY; // undo king's move
+                board64[A_1] = WHITE_ROOK;
+            }
+            fRook = incrementalUpdate(side, getPieceListFloor(WHITE_ROOK),
+                    getPieceListCeiling(WHITE_ROOK),
+                    (to == C_1) ? D_1 : F_1,
+                    encode(WHITE_ROOK.getValue(), (to == C_1) ? A_1 : H_1));
         }
         else {
-            if (to == C_8) { // long castles
-                board64[from] = getPieceOnBoard(C_8);
-                board64[C_8] = EMPTY;
-                board64[A_8] = getPieceOnBoard(D_8);
-                board64[D_8] = EMPTY;
-                rookFr = A_8;
-                rookTo = D_8;
+            board64[E_8] = BLACK_KING;
+            if (to == G_8) { // short castles
+                board64[G_8] = EMPTY; // undo rook's move
+                board64[F_8] = EMPTY; // undo rook's move
+                board64[H_8] = BLACK_ROOK;
             }
-            else if (to == G_8) { // short castles
-                board64[from] = getPieceOnBoard(G_8);
-                board64[G_8] = EMPTY;
-                board64[H_8] = getPieceOnBoard(F_8);
-                board64[F_8] = EMPTY;
-                rookFr = H_8;
-                rookTo = F_8;
+            else if (to == C_8) { // long castle
+                board64[C_8] = EMPTY; // undo rook's move
+                board64[D_8] = EMPTY; // undo rook's move
+                board64[A_8] = BLACK_ROOK; // put rook back on A_8
             }
+            fRook = incrementalUpdate(side,getPieceListFloor(BLACK_ROOK),
+                    getPieceListCeiling(BLACK_ROOK),
+                    (to == C_8) ? D_8 : F_8, // position after castling is either +1 / -1 of king's
+                    encode(BLACK_ROOK.getValue(),
+                            (to == C_8) ? A_8 : H_8)); // position before castling
+
         }
-       // int move, PieceType piece, int from, int to, int flag
-        decrementalUpdate(move, piece, from, to,FLAG_CASTLE); // dec king
-        decrementalUpdate(move, getPieceOnBoard(rookFr), rookFr, rookTo, FLAG_CASTLE);
+        if (!fRook) throw new RuntimeException("Error updating Rook f=castle");
+        int enc = (!sideToMove) ? WHITE_KING.getValue() : BLACK_KING.getValue();
+        boolean f1 = incrementalUpdate(side, fl, ceil, to,
+                encode(enc, from));
+        if (!f1) throw new RuntimeException("Error updating kingside");
     }
 
     private void makeMove(int from, int to, PieceType p) {
@@ -734,64 +735,18 @@ public class Board  implements Cloneable{
         board64[to] = p;
     }
 
-    //
-    private void decrementalUpdate(int move, PieceType piece, int from, int to, int flag) {
-        if (piece == null) throw new IllegalArgumentException("decremental updated invoked with null piece");
-        int floor = getPieceListFloor(piece);
-        int ceil = getPieceListCeiling(piece);
-        boolean sideToPlay = piece.isWhite();
-        int side[] = (sideToPlay) ? whitePieceList : blackPieceList;
-        int xside[] = (sideToPlay) ? blackPieceList : whitePieceList;
-        int promotedPiece = getPromotionPiece(move);
-        PieceType capturedPiece = getPieceType(getCapturedPiece(move));
 
-        // update opponent list
-        if (capturedPiece != EMPTY) {
-            int start = getPieceListFloor(capturedPiece);
-            int end = getPieceListCeiling(capturedPiece);
-            for (; start < end; start++) {
-                // put encoded piece in the first empty spot found;
-                if (xside[start] == RANK_1) {
-                    xside[start] = ((capturedPiece.getValue() << RANK_8) | to);
-                    break;
-                }
+    private boolean incrementalUpdate(int[] side, int start, int end, int target, int encode) {
+        boolean found = false;
+        for (; start < end; start++) {
+            int decode = side[start];
+            int square = (decode & 0xff);
+            if (square == target) {
+                side[start] = encode;
+                return true;
             }
         }
-        // update current side list
-            for (int index = floor; index < ceil; index++) {
-                if (flag != FLAG_PROMOTION) {
-                    // encode piece at next available index as long as it is not a promotion
-                    int tile = side[index] & 0xff;
-                    if (tile == to) {
-                        side[index] = ((piece.getValue() << RANK_8) | from); // encode piece
-                        break;
-                    }
-                }
-                else {
-                    if (side[index] == RANK_1) {
-                        side[index] = ((piece.getValue() << RANK_8) | from);
-                        break;
-                    }
-                }
-
-        }
-            // second update required for rook
-        if (flag == FLAG_CASTLE) { return; }
-
-        // second update required when promotion is available promotion piece and pawn
-        if (flag == FLAG_PROMOTION) {
-            int start = getPieceListFloor(getPieceType(promotedPiece));
-            int end = getPieceListCeiling(getPieceType(promotedPiece));
-            for (; start < end; start++) {
-                if (side[start] != RANK_1) {
-                    int tile = side[start] & 0xff;
-                    if (tile == to) {
-                        side[start] = RANK_1; // remove from piecelist
-                        break;
-                    }
-                }
-            }
-        }
+        return  found;
     }
 
     // intialize field variable Piecetype []
@@ -858,7 +813,8 @@ public class Board  implements Cloneable{
     }
 
     // retunrs string represntation of en passant square
-    public static String getEnpassantString(byte sq) {
+    public String getEnpassantString() {
+        byte sq = enPassant;
         if (sq == OFF_BOARD) return "-";
         if (sq < RANK_1 || sq >= BOARD_SIZE) throw new IllegalArgumentException();
         StringBuilder sb = new StringBuilder(2);
@@ -889,61 +845,67 @@ public class Board  implements Cloneable{
         return board.toString();
     }
 
+    /**
+     * @return combination of board representationg and board info
+     */
+    public String print() {
+        StringBuilder board = new StringBuilder();
+        int rank; int file;
+        String newline = "+---";
+        board.append('\t');
+        for (int i = 0; i < 8; i++) board.append(newline);
+        board.append("+\n");
+
+        for (rank = RANK_8; rank > RANK_1; rank--) {
+            board.append(rank).append('\t').append('|');
+            for (file = FILE_A; file < FILE_H; file++) {
+                char c = board64[(rank - 1) * RANK_8 + file].getName();
+                if (c == 'k' || c == 'K') board.append('[').append(c).append(']').append('|');
+                else board.append(' ').append(c).append(' ').append('|');
+            }
+            board.append("\n\t");
+            for (int c = FILE_A; c < FILE_H; c++)   {
+                board.append(newline);
+                if (c == FILE_H - 1) board.append('+');
+            }
+            board.append("\n");
+        }
+        board.append('\t');
+        for (file = 0; file < FILE_H; file++)  board.append("  ")
+                .append((char) ('a' + file)).append(" ");
+        return board.toString();
+    }
+
+    public String getBoardData() {
+        StringBuilder info = new StringBuilder();
+        info.append("\nEnPassant:\t").append(getEnpassantString()).append("\n");
+        info.append("Castles: ").append(FENParser.getCastlingRightsFENotation(this));
+        info.append("\n").append("fullCount = ").append(fullMoveCounter);
+        info.append("\n").append("halfMove = ").append(halfMoveClock);
+        return info.toString();
+    }
 
     public static void main(String[] args) {
-        //Board board;
-        //board = FENParser.parseFENotation(FEN_CASTLE_RIGHTS_KING_MOVE);
-        //System.out.println(board);
-        //// move testing
-        //System.out.println("MOVE GENERATION TEST");
-        //System.out.println(FENParser.getFENotation(board));
-        //int count = 0;
-         //boolean control = BLACK;
-        // boolean control = WHITE;
-        //Collection<Integer> omelist = King.possibleMoves(board, control);
-        ////Collection<Integer> somelist = PieceMove.validateMoves(board, (List<Integer>) omelist);
-        //System.out.println("Moves available: " + omelist.size() + "\n");
-        //for (int m : omelist) {
-            //// if (count++ != 9) continue;
-            //System.out.printf(++count +"\t" + printMove(m) + "\n");
-            //board.make(m);
-            //System.out.println(board);
-            //// System.out.println("ENpanssant " + board.getEnPassant() + "\t" + getEnpassantSquare(board.getEnPassant()));
-            //System.out.println(
-                    //"Kingside castle " +
-                            //((control) ?  board.canWhiteCastleKingside(board.getCastlingRights()) :
-                                    //board.canBlackCastleKingside(board.getCastlingRights()))   +
-                            //"\tqueen side castle " +
-                            //((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights())));
-//
-            //board.unmake(m);
-            //System.out.println("\n");
-            //System.out.println(board);
-            //System.out.println("\n");
-            //System.out.println(
-                    //"Kingside castle " +
-                            //((control) ? board.canWhiteCastleKingside(board.getCastlingRights()) : board.canBlackCastleKingside(board.getCastlingRights())) +
-                            //"\tqueen side castle " +
-                            //((control) ? board.canWhiteCastleQueenside(board.getCastlingRights()) : board.canBlackCastleQueenside(board.getCastlingRights()))
-            //);
-        //}
-//
-//
         int count = 0;
         String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
-        Board board = FENParser.parseFENotation(falseCap);
+        String blackAtckd = "rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1";
+        Board board = FENParser.parseFENotation("r3k2r/1b4bq/8/8/8/8/7B/R3K2R  KQkq - 0 1");
         System.out.println(board);
+        System.out.println(board.getBoardData());
 
-        Collection<Integer> wronEnPassant = Pawn.possibleMoves(board, WHITE);
+        List<Integer> wronEnPassant = PieceMove.pseudoLegal(board);
+        System.out.println(wronEnPassant.size());
 
         for (Integer m : wronEnPassant) {
             System.out.printf(++count +"\t" + printMove(m) + "\n");
             board.make(m);
             System.out.println(board);
-
-            board.unmake(m);
+            System.out.println(board.getBoardData());
+            System.out.println(m);
             System.out.println("\n");
+            board.unmake(m);
             System.out.println(board);
+            System.out.println(board.getBoardData());
             System.out.println("\n");
         }
 

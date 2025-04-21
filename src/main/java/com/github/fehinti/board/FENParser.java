@@ -42,7 +42,7 @@ public class FENParser {
     }
 
 
-    private static String getCastlingRightsFENotation(Board board) {
+    protected static String getCastlingRightsFENotation(Board board) {
         if (board == null) throw new IllegalArgumentException("Enpassant invoked with null board");
         StringBuilder notation = new StringBuilder();
 
@@ -170,9 +170,9 @@ public class FENParser {
         if (enPassant == null) throw new IllegalArgumentException("Null enPassant");
         byte encodeEnPass = 0;
         if (enPassant.equals("-")) return OFF_BOARD; // no enpassant available
-        int rank = enPassant.charAt(0) - 'a';
-        int file = Integer.parseInt(enPassant.charAt(1) + "");
-        return ((byte) (rank * FILE_H + file));
+        int file = enPassant.charAt(0) - 'a';
+        int rank = Integer.parseInt(enPassant.charAt(1) + "");
+        return ((byte) ((rank - 1) * FILE_H + file));
     }
 
     private static int parseHalfMoveClock(String halfMoveClock) {

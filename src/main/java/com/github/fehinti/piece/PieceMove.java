@@ -187,8 +187,8 @@ public class PieceMove {
                          && board.getPieceOnBoard(B_1) == EMPTY
                          && board.getPieceOnBoard(C_1) == EMPTY
                          && board.getPieceOnBoard(D_1) == EMPTY
-                   && !AttackMap.isSquareAttacked(board, C_1)
-                   && !AttackMap.isSquareAttacked(board, D_1)) {
+                   && !AttackMap.isSquareAttacked(board, C_1, AttackMap.BEFORE)
+                   && !AttackMap.isSquareAttacked(board, D_1, AttackMap.BEFORE)) {
                      assert(Math.abs(board.getPieceOnBoard(E_1).getValue()) == IS_KING);
                      assert(!AttackMap.isKingInCheck(board));
                      // move king towards rook
@@ -200,8 +200,8 @@ public class PieceMove {
                          && board.getPieceOnBoard(B_8) == EMPTY
                          && board.getPieceOnBoard(C_8) == EMPTY
                          && board.getPieceOnBoard(D_8) == EMPTY
-                         && !AttackMap.isSquareAttacked(board, D_8)
-                         && !AttackMap.isSquareAttacked(board, C_8)) {
+                         && !AttackMap.isSquareAttacked(board, D_8, AttackMap.BEFORE)
+                         && !AttackMap.isSquareAttacked(board, C_8, AttackMap.BEFORE)) {
                      assert(Math.abs(board.getPieceOnBoard(E_8).getValue()) == IS_KING);
                      assert(!AttackMap.isKingInCheck(board));// does not make sense
                      moves.add(Move.encodeMove(E_8, C_8, 0, 0, Move.FLAG_CASTLE));
@@ -214,8 +214,8 @@ public class PieceMove {
                  if (board.getPieceOnBoard(H_1) == WHITE_ROOK
                          && board.getPieceOnBoard(G_1) == EMPTY
                          && board.getPieceOnBoard(F_1) == EMPTY
-                         && !AttackMap.isSquareAttacked(board, G_1)
-                         && !AttackMap.isSquareAttacked(board, F_1)) {
+                         && !AttackMap.isSquareAttacked(board, G_1, AttackMap.BEFORE)
+                         && !AttackMap.isSquareAttacked(board, F_1, AttackMap.BEFORE)) {
                      assert(Math.abs(board.getPieceOnBoard(E_1).getValue()) == IS_KING);
                      assert(!AttackMap.isKingInCheck(board));
                      moves.add(Move.encodeMove(E_1, G_1, 0, 0, Move.FLAG_CASTLE));
@@ -226,8 +226,8 @@ public class PieceMove {
                          board.getPieceOnBoard(G_8) == EMPTY
                          && board.getPieceOnBoard(F_8) == EMPTY
                          // cannot castle through checks
-                         && !AttackMap.isSquareAttacked(board, G_8)
-                         && !AttackMap.isSquareAttacked(board, F_8)) {
+                         && !AttackMap.isSquareAttacked(board, G_8, AttackMap.BEFORE)
+                         && !AttackMap.isSquareAttacked(board, F_8, AttackMap.BEFORE)) {
                      assert(!AttackMap.isKingInCheck(board));// does not make sense
                      assert(Math.abs(board.getPieceOnBoard(E_8).getValue()) == IS_KING);
                      moves.add(Move.encodeMove(E_8, G_8, 0, 0, Move.FLAG_CASTLE));
@@ -242,10 +242,8 @@ public class PieceMove {
         int end = getPieceListCeiling(WHITE_PAWN); // same index and range for both black and white
         int ep = board.getEnPassant();
         int skip = EMPTY.getValue();
-        int singlePush =  sideToPlay == WHITE ? SINGLE_PUSH : -SINGLE_PUSH;
-        int doublePush =  sideToPlay == WHITE ? DOUBLE_PUSH : -DOUBLE_PUSH;
-        //int leftCapture =  sideToPlay == WHITE ? LEFTCAP : -LEFTCAP;
-        //int rightCapture = sideToPlay == WHITE ? RIGHTCAP : -RIGHTCAP;
+        int singlePush =  (sideToPlay == WHITE) ? SINGLE_PUSH : -SINGLE_PUSH;
+        int doublePush =  (sideToPlay == WHITE) ? DOUBLE_PUSH : -DOUBLE_PUSH;
         Predicate<Byte> isPromotingRank = (sideToPlay == WHITE) ?
                 BoardUtilities::isOnSeventhRank : BoardUtilities::isOnSecondRank;
         int empty = 0;

@@ -1,5 +1,4 @@
 package com.github.fehinti.board;
-
 import static com.github.fehinti.board.PieceType.BLACK_ROOK;
 import static com.github.fehinti.board.PieceType.WHITE_ROOK;
 

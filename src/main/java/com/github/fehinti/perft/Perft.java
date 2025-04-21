@@ -34,13 +34,19 @@ public class Perft {
    static Board board;
    static Stack<String> boardStack = new Stack<>();
   // static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\perft_init.txt";
-   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\perft_iso2.txt";
+   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\perfttest.txt";
    static File file;
    static BufferedWriter bufferedWriter; //  = new BufferedWriter(new FileWriter(file));
 
    static {
        // modified to debug with perftree
        board = new Board(); // comment out when debugging with perftree
+       // board = FENParser.parseFENotation("rnbqkbnr/pppppppp/8/8/8/2P5/PP1PPPPP/RNBQKBNR b KQkq - 0 1");
+       // board = FENParser.parseFENotation("rnbqkbnr/ppp1pppp/3p4/8/8/2P5/PP1PPPPP/RNBQKBNR w KQkq - 0 1");
+       // board = FENParser.parseFENotation("rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1");
+
+       // board = FENParser.parseFENotation("rnbqkbnr/2pppppp/p7/1p6/P7/N4N2/1PPPPPPP/R1BQKB1R b KQkq - 1 1");
+
        file = new File(FILEPATH); // exceptions not thrown when opening a file?
 
        try {
@@ -108,17 +114,10 @@ public class Perft {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
            board.make(move);
+           //System.out.println(board + "\n\n");
 
-           if (currentDepth == originalDepth - 2)  writeFENToFile(FENParser.getFENotation(board));
+           //if (currentDepth == 1)    writeFENToFile(i + "\t" + currentDepth + "\t" + originalDepth);
 
-           // boardStack.push(FENParser.getFENotation(board));
-           //System.out.println(board);
-           //// System.out.println(nodeCount);
-           //System.out.println(Move.printMove(move) + ":\t" + (board.getSideToMove() ? "WHITE" : "BLACK") + " to play"+
-           //"\nEnPassant: \t"+ Board.getEnpassantString(board.getEnPassant()) +
-                   //"\nCastling Rights: \t" + board.getCastlingRights()
-            //+ "\nFull Move Counter\t" + board.getFullMoveCounter()
-           //+ "\nHalf Move \t" + board.getHalfMoveClock());
            if (!AttackMap.isKingInCheck(board)) {
                // board.alternateSide();
                nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
@@ -127,7 +126,7 @@ public class Perft {
           // nodes += nodeCount;
            if (currentDepth == originalDepth) {
                System.out.println(Move.printMove(move) + " :\t" + nodeCount);
-               writeFENToFile(Move.printMove(move) + " :\t" + nodeCount + "\n");
+              // writeFENToFile(Move.printMove(move) + " :\t" + nodeCount + "\n");
            }
            board.unmake(moveList.get(i));
        }
@@ -154,10 +153,10 @@ public class Perft {
        int depth = Integer.parseInt(args[0]);
        System.out.println("go perft " + depth);
        long total = divide(depth, depth);
+       endTime = System.currentTimeMillis();
+        writeFENToFile("EndTime " + endTime +
+                "\n" + total + " nodes in " + (endTime - startTime) + "ms");
        closeWriter();
    //     long total = pseudoPerformanceTest(depth);
-       endTime = System.currentTimeMillis();
-       System.out.println("EndTime " + endTime +
-               "\n" + total + " nodes in " + (endTime - startTime) + "ms");
     }
 }

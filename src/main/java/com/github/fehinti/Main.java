@@ -40,6 +40,7 @@ public class Main {
                         1L       | 1L << 1  | 1L << 2  |
                         1L << 7  |            1L << 9  |
                         1L << 15 | 1L << 16 | 1L << 17;
+        System.out.println(10 % -1);
 
         //printLongAsBitboard(KING_ON_B2);
         //// long board = 0b0000_0001;

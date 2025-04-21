@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.github.fehinti.board.Board;
+import com.github.fehinti.board.FENParser;
 import com.github.fehinti.board.PieceType;
-import com.github.fehinti.piece.PieceMove;
 
 import static com.github.fehinti.board.Board.getMailbox120Number;
 import static com.github.fehinti.board.Board.getMailbox64Number;
@@ -34,7 +34,6 @@ import static com.github.fehinti.board.BoardUtilities.OFF_BOARD;
  ***********************************************************************************/
 
 public class AttackMap {
-
 
     public static final int ATTACK_NONE = 0; // no piece can attack the square
     public static final int ATTACK_KQR = 1; // King Rook and Queen can attack
@@ -158,6 +157,8 @@ public class AttackMap {
         }
     }
 
+    public static final boolean  AFTER = true;
+    public static final boolean  BEFORE = false;
     /**
      * @param board current position after a move has been played, verifying move legality
      *           depending on side to move we look at the opposite side because that is the side
@@ -173,15 +174,16 @@ public class AttackMap {
         assert(kingPosition != 0);
         int kingSquare = kingPosition & 0xff; // extract last bits  - index (0 .. 63)
         assert(kingSquare < BOARD_SIZE);
-        return isSquareAttacked(board, kingSquare);
+        return isSquareAttacked(board, kingSquare, AFTER); // this checks  and validates the move PLAYED on the board
     }
+
 
     /**
      * @param board current position to be evaluated
      * @param attackedIndex check if this board index is attacked
      * @return   true if the square can be attacked,  false if that square is not attacked
      */
-    public static boolean isSquareAttacked(Board board, int attackedIndex) {
+    public static boolean isSquareAttacked(Board board, int attackedIndex, boolean after) {
         if (attackedIndex < 0 || attackedIndex >= BOARD_SIZE) {
             throw new IllegalArgumentException("Invalid attacking index: " + attackedIndex);
         }
@@ -190,90 +192,104 @@ public class AttackMap {
         }
         // for each piece attack map , see if we can reach the king square
         for (int pc = KNIGHT; pc <= PAWN; pc++) {
-            if (isInComputedAttackMap(board, attackedIndex, pc)) {
+            if (isInComputedAttackMap(board, attackedIndex, pc, after)) {
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean isInComputedAttackMap(Board board, int attackedIndex, int piece) {
+
+    private static boolean isInComputedAttackMap(Board board, int attackedIndex, int piece, boolean after) {
         int[][] attackMap = computedAttackMaps(piece);
         int length = attackMap[attackedIndex].length;
         for (int sq = 0; sq < length; sq++) {
             // reverse board.getSideTomove() to correctly check the side that "MOVED" not side
             // to play
-            if (canReachSquare(board, attackedIndex,
-                    attackMap[attackedIndex][sq], !board.getSideToMove(), piece))  {
-                return true;
+            if (after) {
+                if (traceRayToSquare(board, attackedIndex,
+                        attackMap[attackedIndex][sq],
+                        !board.getSideToMove(),
+                        piece))  {
+                    return true;
+                }
+            }
+            else {
+                if (traceRayToSquare(board, attackedIndex,
+                        attackMap[attackedIndex][sq],
+                        board.getSideToMove(),
+                        piece))  {
+                    return true;
+                }
             }
         }
        return false;
     }
 
-    /**
+   /**
      * @param board current position
      * @param attacked index between 0..63 that is checked to see if we can reach this index
      * @param attacking  the origin index
      * @param side  side to play
-     * @param pc    piece value , optimizes function  ignoring redundant lookups
-     * @return   true / false if piece on attacking can reach attacked index.
+     * @param piece  piece value, optimizes function  ignoring redundant lookups
+     * @return      true / false if piece on attacking can reach attacked index.
      */
-    public static boolean canReachSquare(Board board, int attacked, int attacking, boolean side, int pc) { // raytracing
-        PieceType attackingPiece = board.getPieceOnBoard(attacking);
-        // is the attacking square on the same side as attacked or empty?
-        if (attackingPiece == PieceType.EMPTY) { return false; }
-        else if (attackingPiece.isWhite() == side) return false;
-        // if it is an opponent piece but cannot traverse through current searching piece ray's directions
-        // then ignore e.g (if we find a rook instead of a bishop , no need looping back to attacked
-        // since no ray directions shared.
-        else if (!traverseRayDirections(pc, attackingPiece)) return false;
+    public static boolean traceRayToSquare(Board board, int attacked,  int attacking, boolean side, int piece) {
+        PieceType attackingPc = board.getPieceOnBoard(attacking);
+        if (attackingPc == PieceType.EMPTY || attackingPc.isWhite() == side) return false;
+        int index = Math.abs(attackingPc.getValue()) - 1;
+        int ray = calculateRay(getMailbox64Number(attacking), getMailbox64Number(attacked),
+                PieceMove.OFFSET_VECTOR_COORDINATES[index]);
+        if (ray == 0) return false;
+        else if (!canTraverseRay(piece, attackingPc)) return false;
         else {
-            int piece = Math.abs(attackingPiece.getValue()) - 1;
-            int directions = PieceMove.DIRECTIONS[piece];
-            // int[] vector120 = PieceMove.OFFSET_VECTOR_COORDINATES[directions];
-            int start, square = attacking;
-            boolean slides = PieceMove.IS_SLIDING[piece];
-            int newSquare;
-            for (int i = 0; i < directions; i++) {
-                // ignore any coordinates that leads to index of pieces that may not contain the piece
-                // if the attacked index is less than the attacking, we only need to look at index lower
-                // than attacking, alternate for the opposite
-                if (PieceMove.OFFSET_VECTOR_COORDINATES[piece][i] < 0 && attacking < attacked ) {
-                    continue;
+            boolean slides = PieceMove.IS_SLIDING[index];
+            int square = attacking;
+            while (true) {
+                square = getMailbox120Number(getMailbox64Number(square) + ray);
+                if (square == OFF_BOARD) return false;
+                if (square == attacked) return true;
+                PieceType currentPiece = board.getPieceOnBoard(square);
+                if (currentPiece == PieceType.EMPTY) {
+                    if (!slides) break;
                 }
-                else if (PieceMove.OFFSET_VECTOR_COORDINATES[piece][i] > 0 && attacking > attacked) {
-                    continue;
-                }
-                while (true) {
-                    newSquare = getMailbox120Number(getMailbox64Number(square)
-                    + PieceMove.OFFSET_VECTOR_COORDINATES[piece][i]);
-                    if (newSquare == OFF_BOARD) break;
-                    if (newSquare == attacked) return true; // attack square reached
-                    PieceType currentPiece = board.getPieceOnBoard(newSquare);
-                    if (currentPiece == PieceType.EMPTY) { // advance to next square
-                        // if (newSquare == attacked) return true; // attack square reached
-                        if (!slides) break; // it's not a sliding piece move to next direction
-                        square = newSquare;
-                    }
-                   // if (newSquare == attacked) return true; // attack square reached
-                    else { // there is a blocking piece
-                        break;
-                    }
-                }
+                else return false; // there is a piece blocking us
             }
         }
         return false;
     }
 
     // allow queen to travers rook rays and bishop rays (maybe vice versa)???
-    private static boolean traverseRayDirections(int searcher, PieceType p) {
+    private static boolean canTraverseRay(int searcher, PieceType p) {
         // create pairs for bishop queen and rookqueen and maybe kingqueen
         int value = Math.abs(p.getValue());
         if (searcher == BISHOP && (value-1 == QUEEN || value-1 == BISHOP)) return true;
         else if (searcher == ROOK && (value-1 == QUEEN || value-1 == ROOK)) return true;
         if (value == 1 && searcher == PAWN) return true;
         return (searcher == --value);
+    }
+
+    // calculate ray that can reach attackedsquare from attacking square
+    // 0 if it cannot
+    private static int calculateRay(final int attacking, final int attacked, int[] rays) {
+        assert(attacking != attacked);
+        int distance = attacked - attacking;
+        int sz = rays.length;
+        int current = 0;
+        int steps = 65; // helps decide which ray is faster to follow, 65 because 64 squares
+        for (int i = 0; i < sz; i++) {
+            int ray = rays[i];
+            if (ray == 0) break;
+            // look for a -ve ray, if attacked is < attacking
+            if (ray > 0 && attacking > attacked) continue;
+            // look for a +ve ray if attacked is > attacking
+            if (ray < 0  && attacking < attacked) continue;
+            else if (distance % ray == 0 && (distance / ray) < steps) {
+                current = ray;
+                steps = distance / ray;
+            }
+        }
+        return current;
     }
 
     public static void pprint() {
@@ -313,17 +329,9 @@ public class AttackMap {
 
     // attack maps for sliding pieces
     public static  void main(String[] args) {
-        pprint();
-        int attacked_square = 25;
-        int attacking_square = 28;
-//
-        int index =  attacking_square - attacked_square  + 120;
-        System.out.println(index);
-        System.out.println(ATTACK_ARRAY[index]);
-//
-        int attacked = 74; // d4
-        int attacking = 55; // g7
-        System.out.println(AttackMap.isSquareAttacked(attacked, attacking)); // true for bishop or queen
-
+        Board b = FENParser.parseFENotation("r3r1k1/1pq2pp1/2p2n2/1PNn4/2QN2b1/6P1/3RPP2/2R3KB b - - 0 1");
+        // boolean reachable = traceRayToSquare(b, 60, 12, true, 3);
+        boolean reachable = isKingInCheck(b);
+        System.out.println(reachable);
     }
 }
