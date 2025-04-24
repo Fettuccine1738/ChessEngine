@@ -12,19 +12,14 @@
  */
 package com.github.fehinti.board;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Stack;
 
 import static com.github.fehinti.board.BoardUtilities.*;
 import static com.github.fehinti.board.Move.*;
 import static com.github.fehinti.board.PieceType.*;
-import com.github.fehinti.piece.King;
-import com.github.fehinti.piece.Pawn;
+
 import com.github.fehinti.piece.PieceMove;
-import com.github.fehinti.piece.Queen;
 
 
 public class Board  implements Cloneable{
@@ -369,14 +364,14 @@ public class Board  implements Cloneable{
      */
     public void make(int move) {
         // if (move == null) throw new IllegalArgumentException("moves must not be null");
-        int flags = getFlags(move);
+        int flag = getFlag(move);
         int to = getTargetSquare(move);
         int from = getFromSquare(move);
         int capturedPiece = getCapturedPiece(move);
         int promotion = getPromotionPiece(move);
         PieceType piece = board64[from];
-
         assert(piece != EMPTY);
+
         addIrreversibleAspect(enPassant, castlingRights, halfMoveClock);
         addMoveToHistory(move);
         updatePly(true);
@@ -384,7 +379,7 @@ public class Board  implements Cloneable{
         // remove castles for rooks
         int isRookOrKing = Math.abs(piece.getValue());
         if (isRookOrKing == WHITE_KING.getValue() || isRookOrKing == WHITE_ROOK.getValue()
-        && flags != FLAG_CASTLE) onRookMove(from, to, piece, flags);
+        && flag != FLAG_CASTLE) onRookMove(from, to, piece, flag);
 
         int[] side = (sideToMove) ? whitePieceList : blackPieceList;
         int[] xside = (sideToMove) ? blackPieceList : whitePieceList;
@@ -400,7 +395,9 @@ public class Board  implements Cloneable{
             xceil = getPieceListCeiling(xpiece);
         }
 
-        switch (flags) {
+        // reset enpassant if a non enpassant capturing move is made
+       // if (enPassant != OFF_BOARD && ) enPassant = OFF_BOARD;
+        switch (flag) {
             case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
                 assert(board64[to] == EMPTY);
                 makeMove(from, to, piece);
@@ -408,32 +405,30 @@ public class Board  implements Cloneable{
                 halfMoveClock++;
                 boolean found = incrementalUpdate(side, floor, ceil, from, (val << RANK_8 | to));
                 if (!found) throw new RuntimeException("Error f=quiet&dpPush");
-                if (flags == FLAG_DOUBLE_PAWN_PUSH) {
+                if (flag == FLAG_DOUBLE_PAWN_PUSH) {
                     if (piece.isWhite()) setEnPassant((byte) (to - RANK_8));
                     else setEnPassant((byte) (to + RANK_8));
                 }
             }
             case FLAG_EN_PASSANT -> {
                 assert(board64[to] == EMPTY);
-                assert(enPassant != OFF_BOARD);
+                assert(to == enPassant && enPassant != OFF_BOARD);
                 makeMove(from, to, piece);
                 int xpos = OFF_BOARD;
                 if (piece.isWhite()) {// enPassant capture happens at double push - 8
-                    assert(board64[to - RANK_8] == BLACK_PAWN);
                     xpos = to - RANK_8;
-                    board64[xpos] = EMPTY;
+                    assert(board64[xpos] == BLACK_PAWN);
                 }
                 else {// enPassant capture happens at double push + 8
-                    assert(board64[to + RANK_8] == WHITE_PAWN);
                     xpos = to + RANK_8;
-                    board64[xpos] = EMPTY;
+                    assert(board64[xpos] == WHITE_PAWN);
                 }
-                setEnPassant(OFF_BOARD); // reset enPassant to offboard
+                board64[xpos] = EMPTY;
                 halfMoveClock = RANK_1; // reset to 0 with every capture.
                 boolean found1 = incrementalUpdate(side, floor, ceil, from, (val << RANK_8 | to));
                 boolean found2 = incrementalUpdate(xside, xfloor, xceil, xpos, 0); // remove piece
-                if (!found1) throw new RuntimeException("Error f=ep, side");
-                if (!found2) throw new RuntimeException("Error f=ep, xside");
+                if (!found1) throw new RuntimeException("Error f=ep, side" + sideToMove);
+                if (!found2) throw new RuntimeException("Error f=ep, xside  " + sideToMove);
             }
             case FLAG_CAPTURE -> {
                 assert(board64[to] != EMPTY);
@@ -462,8 +457,9 @@ public class Board  implements Cloneable{
                 if (!found2) throw new RuntimeException("Error f=promo, freeslot");
             }
             case FLAG_CASTLE ->   makeCastle(from, to, piece, move);
-            default -> throw new IllegalStateException("Unexpected value: " + flags);
+            default -> throw new IllegalStateException("Unexpected value: " + flag);
         }
+        setEnPassant(OFF_BOARD); // reset enPassant to offboard
         if (piece.isBlack()) fullMoveCounter++;
         alternateSide();
     }
@@ -590,7 +586,7 @@ public class Board  implements Cloneable{
      * @param move 32 bit integer encoding of from square, target square, flags and captured piece
      */
     public void unmake(int move) {
-        int flag = getFlags(move);
+        int flag = getFlag(move);
         int from = getFromSquare(move);
         int to = getTargetSquare(move);
         int capturedPiece = getCapturedPiece(move);
@@ -618,18 +614,15 @@ public class Board  implements Cloneable{
                 if (!f) throw new RuntimeException("Error unmaking f=quiet&dppush");
             }
             case FLAG_EN_PASSANT -> {
-                makeMove(to, from, piece);
+                makeMove(to, from, piece); //reverse capturing pawn to its previous square
                 PieceType cap = getPieceType(capturedPiece);
+                assert(Math.abs(cap.getValue()) == WHITE_PAWN.getValue());
                 if (cap.isWhite()) board64[enPassant + RANK_8] = cap; // captured piece is a square above enpassant
                 else board64[enPassant - RANK_8] = cap;
                 boolean f1 = incrementalUpdate(side, fl, ceil, to,
                         encode(piece.getValue(), from));
-                boolean f2 = incrementalUpdate(side,
-                        getPieceListFloor(cap),
-                        getPieceListCeiling(cap),
-                        0,
-                        encode(capturedPiece,
-                                (!sideToMove) ? enPassant - 8 : enPassant + 8));
+                boolean f2 = incrementalUpdate(xside,
+                        fl, ceil, 0, encode(capturedPiece, (!sideToMove) ? enPassant - 8 : enPassant + 8));
                 if (!f1) throw new RuntimeException("Error updating ep capturing piece");
                 if (!f2) throw new RuntimeException("Error updating eP captured piece");
             }
@@ -861,6 +854,7 @@ public class Board  implements Cloneable{
             for (file = FILE_A; file < FILE_H; file++) {
                 char c = board64[(rank - 1) * RANK_8 + file].getName();
                 if (c == 'k' || c == 'K') board.append('[').append(c).append(']').append('|');
+                else if (c == '.')board.append(' ').append(' ').append(' ').append('|');
                 else board.append(' ').append(c).append(' ').append('|');
             }
             board.append("\n\t");
@@ -889,7 +883,7 @@ public class Board  implements Cloneable{
         int count = 0;
         String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
         String blackAtckd = "rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1";
-        Board board = FENParser.parseFENotation("r3k2r/1b4bq/8/8/8/8/7B/R3K2R  KQkq - 0 1");
+        Board board = FENParser.parseFENotation("8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1");
         System.out.println(board);
         System.out.println(board.getBoardData());
 

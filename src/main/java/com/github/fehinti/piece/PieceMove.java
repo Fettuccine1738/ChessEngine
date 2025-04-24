@@ -296,9 +296,10 @@ public class PieceMove {
                     // prevent black from capturing en Passant
                     if (side == BLACK && BoardUtilities.isOnSeventhRank((byte) from)) continue;
                     PieceType epPiece;
-                    if (side == WHITE) epPiece = board.getPieceOnBoard(cap - SINGLE_PUSH64);
-                    else epPiece = board.getPieceOnBoard(cap + SINGLE_PUSH64);
-                    moves.add(Move.encodeMove(from, cap, epPiece.getValue(), 0, Move.FLAG_EN_PASSANT));
+                    if (side == WHITE) epPiece = board.getPieceOnBoard(ep - SINGLE_PUSH64);
+                    else epPiece = board.getPieceOnBoard(ep + SINGLE_PUSH64);
+                    assert(epPiece != EMPTY);
+                    moves.add(Move.encodeMove(from, ep, epPiece.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
             }
         }

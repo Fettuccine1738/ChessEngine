@@ -1,6 +1,4 @@
 package com.github.fehinti.board;
-import static com.github.fehinti.board.PieceType.BLACK_ROOK;
-import static com.github.fehinti.board.PieceType.WHITE_ROOK;
 
 public class Move {
 
@@ -41,7 +39,7 @@ public class Move {
         return (piece > 8)  ? mapCapturedPieceToBlack(piece) : piece; // bits 12 - 15
     }
 
-    public static int getFlags(int move) {
+    public static int getFlag(int move) {
         return (move >> 20) & 0xf; // bits 12 - 15
     }
 
@@ -98,7 +96,7 @@ public class Move {
         System.out.println("To square: " + getTargetSquare(move));     // Output: 28
         System.out.println("Captured: " + getCapturedPiece(move)); // Output: 0
         System.out.println("Promotion: " + getPromotionPiece(move)); // Output: 0
-        System.out.println("Flags: " + getFlags(move));            // Output: 1
+        System.out.println("Flags: " + getFlag(move));            // Output: 1
         int m1 = encodeMove(convertsFileRankToIndex("a1"),
                 convertsFileRankToIndex("b1"),
                 0,

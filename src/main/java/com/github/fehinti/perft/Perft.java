@@ -40,19 +40,14 @@ public class Perft {
 
    static {
        // modified to debug with perftree
-       board = new Board(); // comment out when debugging with perftree
-       // board = FENParser.parseFENotation("rnbqkbnr/pppppppp/8/8/8/2P5/PP1PPPPP/RNBQKBNR b KQkq - 0 1");
-       // board = FENParser.parseFENotation("rnbqkbnr/ppp1pppp/3p4/8/8/2P5/PP1PPPPP/RNBQKBNR w KQkq - 0 1");
-       // board = FENParser.parseFENotation("rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1");
-
-       // board = FENParser.parseFENotation("rnbqkbnr/2pppppp/p7/1p6/P7/N4N2/1PPPPPPP/R1BQKB1R b KQkq - 1 1");
-
+       // board = FENParser.parseFENotation("rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b KQkq - 1 1" ); // comment out when debugging with perftree
+       board = FENParser.startPos();
+       System.out.println(board.print());
        file = new File(FILEPATH); // exceptions not thrown when opening a file?
 
        try {
            bufferedWriter = Files.newBufferedWriter(Paths.get(FILEPATH));
        } catch(IOException e) {
-           // e.printStackTrace();
            System.out.println(e.getMessage());
        }
    }
@@ -105,25 +100,20 @@ public class Perft {
            return 1;
        }
        long nodes = 0L;
-       // board.alternateSide();
        List<Integer> moveList = PieceMove.pseudoLegal(board);
        int N = moveList.size();
        int move, i;
+
        // generate legal moves
        for(i = 0; i < N; i++) {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
            board.make(move);
-           //System.out.println(board + "\n\n");
-
-           //if (currentDepth == 1)    writeFENToFile(i + "\t" + currentDepth + "\t" + originalDepth);
-
            if (!AttackMap.isKingInCheck(board)) {
-               // board.alternateSide();
                nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
                nodes += nodeCount;
            }
-          // nodes += nodeCount;
+           else writeFENToFile(FENParser.getFENotation(board));
            if (currentDepth == originalDepth) {
                System.out.println(Move.printMove(move) + " :\t" + nodeCount);
               // writeFENToFile(Move.printMove(move) + " :\t" + nodeCount + "\n");
@@ -154,7 +144,7 @@ public class Perft {
        System.out.println("go perft " + depth);
        long total = divide(depth, depth);
        endTime = System.currentTimeMillis();
-        writeFENToFile("EndTime " + endTime +
+        System.out.println("EndTime " + endTime +
                 "\n" + total + " nodes in " + (endTime - startTime) + "ms");
        closeWriter();
    //     long total = pseudoPerformanceTest(depth);

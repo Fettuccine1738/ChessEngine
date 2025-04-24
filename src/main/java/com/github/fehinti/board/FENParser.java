@@ -6,6 +6,11 @@ import static com.github.fehinti.board.BoardUtilities.*;
 import static com.github.fehinti.board.PieceType.EMPTY;
 
 public class FENParser {
+    private static final String INIT_BOARD = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+    public static Board startPos() {
+        return parseFENotation(INIT_BOARD);
+    }
     /**
      * @param board board to scan for piece and corresponding position
      * @return a string that is the Forsyth Edward Notation of the board
