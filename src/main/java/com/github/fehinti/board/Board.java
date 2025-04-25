@@ -18,6 +18,7 @@ import java.util.List;
 import static com.github.fehinti.board.BoardUtilities.*;
 import static com.github.fehinti.board.Move.*;
 import static com.github.fehinti.board.PieceType.*;
+import static com.github.fehinti.board.ZobristHash.*;
 
 import com.github.fehinti.piece.Pawn;
 import com.github.fehinti.piece.PieceMove;
@@ -112,7 +113,7 @@ public class Board  implements Cloneable{
     private int halfMoveClock; // ply : move of one side only
     private byte castlingRights;
     private byte enPassant; // single bit to encode King and Queen side castle fro black and white
-    private long positionHash; // hashKey for a single position
+    private long zobristKey; // hashKey for a single position
 
     // additional piece list for each type : efficient lookup for move generation instead of scanning the board for moves
     // implemented according to Fritz Reul architecture, with each piece having it's own lookup table
@@ -135,6 +136,7 @@ public class Board  implements Cloneable{
         irreversibleAspect    = new int[1000];
         ply = RANK_1;
         fillPieceList();
+        zobristKey = ZobristHash.hash(this);
     }
 
     /**
@@ -175,7 +177,7 @@ public class Board  implements Cloneable{
         this.blackPieceList = board.getBlackPieceList();
         this.playHistory = board.getPlayHistory();
         this.irreversibleAspect = board.getIrreversibleAspect();
-        this.positionHash = board.positionHash;
+        this.zobristKey = board.zobristKey;
         this.ply = board.ply;
     }
 
@@ -881,7 +883,7 @@ public class Board  implements Cloneable{
         String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
         String blackAtckd = "rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1";
         // Board board = FENParser.parseFENotation("8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1");
-        Board b = FENParser.parseFENotation("r1bqkbnr/pppp1ppp/n7/8/3p4/2K5/PPP1PPPP/RNBQ1BNR w kq - 0 1");
+        Board b = FENParser.parseFENotation("rnbqkbnr/pp2pppp/8/1Npp4/8/8/PPPPPPPP/R1BQKBNR w KQkq d6 3 1");
         System.out.println(b.print());
 
        // List<Integer> wronEnPassant = PieceMove.pseudoLegal(board);

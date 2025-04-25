@@ -40,8 +40,8 @@ public class Perft {
 
    static {
        // modified to debug with perftree
-       board = FENParser.parseFENotation("rnbq1bnr/pppkpppp/8/3P4/8/N7/PPPP1PPP/R1BQKBNR b KQ - 0 3" ); // comment out when debugging with perftree
-       // board = FENParser.startPos();
+       // board = FENParser.parseFENotation("rnbqkbnr/ppp1pppp/8/1N1p4/8/8/PPPPPPPP/R1BQKBNR b KQkq - 3 1" ); // comment out when debugging with perftree
+       board = FENParser.startPos();
        System.out.println(board.print());
        file = new File(FILEPATH); // exceptions not thrown when opening a file?
 
