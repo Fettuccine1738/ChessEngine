@@ -40,8 +40,8 @@ public class Perft {
 
    static {
        // modified to debug with perftree
-       // board = FENParser.parseFENotation("rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b KQkq - 1 1" ); // comment out when debugging with perftree
-       board = FENParser.startPos();
+       board = FENParser.parseFENotation("rnbq1bnr/pppkpppp/8/3P4/8/N7/PPPP1PPP/R1BQKBNR b KQ - 0 3" ); // comment out when debugging with perftree
+       // board = FENParser.startPos();
        System.out.println(board.print());
        file = new File(FILEPATH); // exceptions not thrown when opening a file?
 
@@ -113,7 +113,7 @@ public class Perft {
                nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
                nodes += nodeCount;
            }
-           else writeFENToFile(FENParser.getFENotation(board));
+           // else writeFENToFile(FENParser.getFENotation(board));
            if (currentDepth == originalDepth) {
                System.out.println(Move.printMove(move) + " :\t" + nodeCount);
               // writeFENToFile(Move.printMove(move) + " :\t" + nodeCount + "\n");

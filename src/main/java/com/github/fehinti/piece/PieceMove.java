@@ -172,7 +172,7 @@ public class PieceMove {
     /**
      * @param board  current position.
      * @param side   side to move BLACK or WHITE.
-     * @param moves  list of Ints to put moves in.
+     * @param moves  list of move information encoded into integers
      */
     private static void generateCastle(Board board, boolean side, List<Integer> moves) {
          byte rights = board.getCastlingRights();
@@ -261,8 +261,8 @@ public class PieceMove {
     private static void generateQuietPawnMoves(
             Board board, List<Integer> moves,
             int sq, int singlePush, int doublePush, boolean sideToPlay, Predicate<Byte> isPromotingRank) {
-        int to = getMailbox120Number(getMailbox64Number(sq) + singlePush);
-        if (to != OFF_BOARD && !isPromotingRank.test((byte) sq) && board.getPieceOnBoard(to) == EMPTY) {
+            int to = getMailbox120Number(getMailbox64Number(sq) + singlePush);
+            if (to != OFF_BOARD && !isPromotingRank.test((byte) sq) && board.getPieceOnBoard(to) == EMPTY) {
             moves.add(Move.encodeMove(sq, to, 0, 0, Move.FLAG_QUIET));
 
             if (isOnStartingRank(sq, sideToPlay)) {

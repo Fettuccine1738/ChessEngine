@@ -1,6 +1,6 @@
 package com.github.fehinti.piece;
 
-import java.util.Collection;
+import java.util.List;
 
 import com.github.fehinti.board.Board;
 import com.github.fehinti.board.PieceType;
@@ -10,7 +10,7 @@ import static com.github.fehinti.board.PieceType.WHITE_PAWN;
 
 public class Pawn {
 
-    public static Collection<Integer> possibleMoves(Board board,  boolean sideToPlay) {
+    public static List<Integer> possibleMoves(Board board,  boolean sideToPlay) {
         if (board == null) throw new IllegalArgumentException("possible King moves invoked with null");
         int floor   = getPieceListFloor(WHITE_PAWN);
         int ceiling = getPieceListCeiling(BLACK_PAWN);
@@ -28,7 +28,7 @@ public class Pawn {
     // castling ??
 
     // direct testing
-    private static Collection<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
+    private static List<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
         return PieceMove.generatePseudoLegal(board, sideToPlay, floor, ceiling, piece);
     }
 

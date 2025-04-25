@@ -60,7 +60,6 @@ public class AttackMap {
     private static final int[][] QUEEN_ATT_MAP = new int[BOARD_SIZE][];
     private static final int[][] KNIGHT_ATT_MAP = new int[BOARD_SIZE][];
     private static final int[][] KING_ATT_MAP = new int[BOARD_SIZE][];
-    private static final int[][] PAWN_ATT_MAP = new int[BOARD_SIZE][];
 
     static {
         for (int sq = 0; sq < BOARD_SIZE; sq++) {
@@ -69,7 +68,6 @@ public class AttackMap {
             ROOK_ATT_MAP[sq] = computePieceMap(sq, ROOK);
             QUEEN_ATT_MAP[sq] = computePieceMap(sq, QUEEN);
             KING_ATT_MAP[sq] = computePieceMap(sq, KING);
-            PAWN_ATT_MAP[sq] = computePieceMap(sq, PAWN);
         }
     }
 
@@ -152,7 +150,6 @@ public class AttackMap {
             case ROOK -> { return ROOK_ATT_MAP; }
             case QUEEN -> { return QUEEN_ATT_MAP; }
             case KING -> { return KING_ATT_MAP; }
-            case PAWN -> { return PAWN_ATT_MAP; }
             default -> throw new IllegalArgumentException("Invalid piece: " + piece);
         }
     }
@@ -181,6 +178,7 @@ public class AttackMap {
     /**
      * @param board current position to be evaluated
      * @param attackedIndex check if this board index is attacked
+     * @param after determines checking if the side to play's or side that played square is being attacked
      * @return   true if the square can be attacked,  false if that square is not attacked
      */
     public static boolean isSquareAttacked(Board board, int attackedIndex, boolean after) {
@@ -190,7 +188,7 @@ public class AttackMap {
         if (board == null) {
             throw new NullPointerException("Null board");
         }
-        // for each piece attack map , see if we can reach the king square
+        // for each piece (except pawns)attack map , see if we can reach the king square
         for (int pc = KNIGHT; pc <= PAWN; pc++) {
             if (isInComputedAttackMap(board, attackedIndex, pc, after)) {
                 return true;
@@ -201,29 +199,38 @@ public class AttackMap {
 
 
     private static boolean isInComputedAttackMap(Board board, int attackedIndex, int piece, boolean after) {
+        boolean checkSide = after != board.getSideToMove();
+        if (piece == PAWN) {
+            return isSquareAttackedByPawn(board, attackedIndex, checkSide);
+        }
         int[][] attackMap = computedAttackMaps(piece);
         int length = attackMap[attackedIndex].length;
         for (int sq = 0; sq < length; sq++) {
             // reverse board.getSideTomove() to correctly check the side that "MOVED" not side
             // to play
-            if (after) {
                 if (traceRayToSquare(board, attackedIndex,
                         attackMap[attackedIndex][sq],
-                        !board.getSideToMove(),
+                        checkSide,
                         piece))  {
                     return true;
                 }
-            }
-            else {
-                if (traceRayToSquare(board, attackedIndex,
-                        attackMap[attackedIndex][sq],
-                        board.getSideToMove(),
-                        piece))  {
-                    return true;
-                }
-            }
         }
        return false;
+    }
+
+    // pawn checks are handled on the fly no need for the precomputed map
+    private static boolean isSquareAttackedByPawn(Board board, int attackedIndex, boolean side) {
+        // black is being checked
+        int[] square = (side) ?  PieceMove.WHITE_CAPTURES : PieceMove.BLACK_CAPTURES;
+        for (int s : square) {
+            int cap = getMailbox120Number(getMailbox64Number(attackedIndex) + s);
+            if (cap != OFF_BOARD) {
+                PieceType xpawn = board.getPieceOnBoard(cap);
+                if (xpawn == PieceType.EMPTY || Math.abs(xpawn.getValue()) != 1) continue;
+                if (xpawn.isWhite() != side) return true;
+            }
+        }
+        return false;
     }
 
    /**
@@ -321,17 +328,15 @@ public class AttackMap {
         for (int[] arr : KING_ATT_MAP) {
             System.out.println(Arrays.toString(arr));
         }
-        System.out.println("\nPAwn\n");
-        for (int[] arr : PAWN_ATT_MAP) {
-            System.out.println(Arrays.toString(arr));
-        }
     }
 
     // attack maps for sliding pieces
     public static  void main(String[] args) {
-        Board b = FENParser.parseFENotation("r3r1k1/1pq2pp1/2p2n2/1PNn4/2QN2b1/6P1/3RPP2/2R3KB b - - 0 1");
         // boolean reachable = traceRayToSquare(b, 60, 12, true, 3);
+        Board b = FENParser.parseFENotation("rnbq1bnr/ppp1pppp/2k5/3P4/8/N7/PPPP1PPP/R1BQKBNR b KQ - 0 3");
+        System.out.println(b.print());
+        long now = System.currentTimeMillis();
         boolean reachable = isKingInCheck(b);
-        System.out.println(reachable);
+        System.out.println(reachable + "\t " + (System.currentTimeMillis() - now));
     }
 }

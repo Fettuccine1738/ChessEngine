@@ -19,6 +19,7 @@ import static com.github.fehinti.board.BoardUtilities.*;
 import static com.github.fehinti.board.Move.*;
 import static com.github.fehinti.board.PieceType.*;
 
+import com.github.fehinti.piece.Pawn;
 import com.github.fehinti.piece.PieceMove;
 
 
@@ -363,7 +364,6 @@ public class Board  implements Cloneable{
      * @param move 32 bit encoding of move information: from square, target square, flags etc
      */
     public void make(int move) {
-        // if (move == null) throw new IllegalArgumentException("moves must not be null");
         int flag = getFlag(move);
         int to = getTargetSquare(move);
         int from = getFromSquare(move);
@@ -395,8 +395,6 @@ public class Board  implements Cloneable{
             xceil = getPieceListCeiling(xpiece);
         }
 
-        // reset enpassant if a non enpassant capturing move is made
-       // if (enPassant != OFF_BOARD && ) enPassant = OFF_BOARD;
         switch (flag) {
             case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
                 assert(board64[to] == EMPTY);
@@ -458,8 +456,8 @@ public class Board  implements Cloneable{
             }
             case FLAG_CASTLE ->   makeCastle(from, to, piece, move);
             default -> throw new IllegalStateException("Unexpected value: " + flag);
-        }
-        setEnPassant(OFF_BOARD); // reset enPassant to offboard
+        }// enPassant no longer valid after every (non-double pawn push)move
+        if (flag != FLAG_DOUBLE_PAWN_PUSH) setEnPassant(OFF_BOARD);
         if (piece.isBlack()) fullMoveCounter++;
         alternateSide();
     }
@@ -541,7 +539,6 @@ public class Board  implements Cloneable{
         incrementalUpdate(side, fl, cl, from, (p.getValue() << RANK_8 | to));
         assert(Math.abs(getPieceOnBoard(rookFr).getValue()) == WHITE_ROOK.getValue());
         incrementalUpdate(side, rfl, rcl, rookFr, (val << RANK_8 | rookTo));
-        // moved rook off to but still uses the piece on to (which is empty) and messes up the update list
     }
 
     private void addMoveToHistory(int move) {
@@ -586,6 +583,7 @@ public class Board  implements Cloneable{
      * @param move 32 bit integer encoding of from square, target square, flags and captured piece
      */
     public void unmake(int move) {
+        alternateSide();
         int flag = getFlag(move);
         int from = getFromSquare(move);
         int to = getTargetSquare(move);
@@ -600,8 +598,8 @@ public class Board  implements Cloneable{
         updatePly(false);
 
         // update side THAT moveD
-        int[] side =  (!sideToMove)  ? whitePieceList : blackPieceList;
-        int[] xside = (!sideToMove)  ? blackPieceList : whitePieceList;
+        int[] side =  (sideToMove)  ? whitePieceList : blackPieceList;
+        int[] xside = (sideToMove)  ? blackPieceList : whitePieceList;
         int fl = getPieceListFloor(piece);
         int ceil = getPieceListCeiling(piece);
 
@@ -622,7 +620,7 @@ public class Board  implements Cloneable{
                 boolean f1 = incrementalUpdate(side, fl, ceil, to,
                         encode(piece.getValue(), from));
                 boolean f2 = incrementalUpdate(xside,
-                        fl, ceil, 0, encode(capturedPiece, (!sideToMove) ? enPassant - 8 : enPassant + 8));
+                        fl, ceil, 0, encode(capturedPiece, (sideToMove) ? enPassant - 8 : enPassant + 8));
                 if (!f1) throw new RuntimeException("Error updating ep capturing piece");
                 if (!f2) throw new RuntimeException("Error updating eP captured piece");
             }
@@ -640,9 +638,9 @@ public class Board  implements Cloneable{
             }
             case FLAG_PROMOTION -> {
                 assert(board64[from] == EMPTY);
-                if (!sideToMove) makeMove(to, from, WHITE_PAWN);
+                if (sideToMove) makeMove(to, from, WHITE_PAWN);
                 else makeMove(to, from, BLACK_PAWN);
-                int enc = (!sideToMove) ? WHITE_PAWN.getValue() : BLACK_PAWN.getValue();
+                int enc = (sideToMove) ? WHITE_PAWN.getValue() : BLACK_PAWN.getValue();
                 boolean found = incrementalUpdate(side,
                         getPieceListFloor(WHITE_PAWN),
                         getPieceListCeiling(WHITE_PAWN), to,
@@ -671,7 +669,6 @@ public class Board  implements Cloneable{
         }
         if (piece.isBlack()) fullMoveCounter--;
         // update side to play
-        alternateSide();
     }
 
     private int encode(int pc, int info) {
@@ -883,23 +880,25 @@ public class Board  implements Cloneable{
         int count = 0;
         String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
         String blackAtckd = "rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1";
-        Board board = FENParser.parseFENotation("8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1");
-        System.out.println(board);
-        System.out.println(board.getBoardData());
+        // Board board = FENParser.parseFENotation("8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1");
+        Board b = FENParser.parseFENotation("r1bqkbnr/pppp1ppp/n7/8/3p4/2K5/PPP1PPPP/RNBQ1BNR w kq - 0 1");
+        System.out.println(b.print());
 
-        List<Integer> wronEnPassant = PieceMove.pseudoLegal(board);
-        System.out.println(wronEnPassant.size());
+       // List<Integer> wronEnPassant = PieceMove.pseudoLegal(board);
+        List<Integer> list = PieceMove.pseudoLegal(b);
+        System.out.println(list.size());
+        list = PieceMove.validateMoves(b, list);
 
-        for (Integer m : wronEnPassant) {
+        for (Integer m : list) {
             System.out.printf(++count +"\t" + printMove(m) + "\n");
-            board.make(m);
-            System.out.println(board);
-            System.out.println(board.getBoardData());
+            b.make(m);
+            System.out.println(b);
+            System.out.println(b.getBoardData());
             System.out.println(m);
             System.out.println("\n");
-            board.unmake(m);
-            System.out.println(board);
-            System.out.println(board.getBoardData());
+            b.unmake(m);
+            System.out.println(b);
+            System.out.println(b.getBoardData());
             System.out.println("\n");
         }
 
