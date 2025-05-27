@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Stack;
 
 import com.github.fehinti.board.Board;
 import com.github.fehinti.board.Move;
@@ -26,24 +25,26 @@ import com.github.fehinti.piece.AttackMap;
  * it's possible to compare the performance of different move generators or the same
  * generator on different machines, though this must be done with caution since
  * there are variations to perft.
- *
  **********************************************************************************/
 public class Perft {
    static long startTime;
    static long endTime;
    static Board board;
-   static Stack<String> boardStack = new Stack<>();
   // static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\perft_init.txt";
-   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\perfttest.txt";
+   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\dummy.txt";
    static File file;
    static BufferedWriter bufferedWriter; //  = new BufferedWriter(new FileWriter(file));
+   static int COUNT = 0;
+   static int CHECKS = 0;
+   static int EnP = 0;
+   static int castles = 0;
 
    static {
-       // modified to debug with perftree
-       // board = FENParser.parseFENotation("rnbqkbnr/ppp1pppp/8/1N1p4/8/8/PPPPPPPP/R1BQKBNR b KQkq - 3 1" ); // comment out when debugging with perftree
+       //board = FENParser.parseFENotation("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1" ); // comment out when debugging with perftree
        board = FENParser.startPos();
        System.out.println(board.print());
-       file = new File(FILEPATH); // exceptions not thrown when opening a file?
+       System.out.println(board.getBoardData());
+       file = new File(FILEPATH);
 
        try {
            bufferedWriter = Files.newBufferedWriter(Paths.get(FILEPATH));
@@ -68,57 +69,66 @@ public class Perft {
        }
    }
 
-   // this routine avoids checking legal moves twice, because our
-    // program plays a move first to determine legality and undoes the move if it fails
-    // the legality test.
-   static long pseudoPerformanceTest(int depth) {
-       if (depth > 8) {
-           throw new IllegalArgumentException("depth must be between 1 and 8");
-       }
-       if (depth == 0) return 1; // leaf node reached
-       List<Integer> moveList = PieceMove.pseudoLegal(board);
-       long nodes = 0L;
-
-       for (int move : moveList) {
-           // long nodeCount = 0L;
-           // avoid traveling down an Illegal node
-           board.make(move);
-           if (!AttackMap.isKingInCheck(board)) {
-               nodes += pseudoPerformanceTest(depth - 1);
-           }
-           board.unmake(move);
-       }
-       return nodes;
-   }
 
    static long divide(int currentDepth, int originalDepth) {
        if (originalDepth > 8) {
            throw new IllegalArgumentException("depth must be between 1 and 8");
        }
-        // if (currentDepth == 1) {return size } ???
        if (currentDepth == 0) { // returns on leaf nodes
            return 1;
        }
        long nodes = 0L;
        List<Integer> moveList = PieceMove.pseudoLegal(board);
+      // List<Integer> moveList = PieceMove.generateLegalMoves(board, list);
        int N = moveList.size();
        int move, i;
 
-       // generate legal moves
        for(i = 0; i < N; i++) {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
            board.make(move);
+           //int captures = Move.getCapturedPiece(move);
+           //if (captures != 0) {
+               //if (currentDepth == 1) COUNT++;
+           //}
+           //int flag = Move.getFlag(move);
+           //if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
+           //else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
+           //if (AttackMap.isSquareAttacked(board,
+                   //(board.getSideToMove()) ? board.getWhiteKingSq() : board.getBlackKingSq(),
+                   //AttackMap.BEFORE) && currentDepth == 1) CHECKS++;
+           //nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
+           //nodes += nodeCount;
+           //board.unmake(move);
+           //if (currentDepth == originalDepth) {
+               //System.out.println(Move.printMove(move) + " :\t" + nodeCount);
+           //}
+
            if (!AttackMap.isKingInCheck(board)) {
+               // writeFENToFile(FENParser.getFENotation(board));
+               int captures = Move.getCapturedPiece(move);
+               if (captures != 0) {
+                   if (currentDepth == 1) {
+                       COUNT++;
+                       writeFENToFile(FENParser.getFENotation(board));
+                   }
+                  // if (currentDepth == 2) writeFENToFile(FENParser.getFENotation(board));
+               }
+               int flag = Move.getFlag(move);
+               if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
+               else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
+               if (AttackMap.isSquareAttacked(board,
+                       (board.getSideToMove()) ? board.getWhiteKingSq() : board.getBlackKingSq(),
+                        AttackMap.BEFORE) && currentDepth == 1) CHECKS++;
+
                nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
                nodes += nodeCount;
            }
-           // else writeFENToFile(FENParser.getFENotation(board));
+           board.unmake(move);
            if (currentDepth == originalDepth) {
                System.out.println(Move.printMove(move) + " :\t" + nodeCount);
-              // writeFENToFile(Move.printMove(move) + " :\t" + nodeCount + "\n");
+               writeFENToFile(Move.printMove(move) + " :\t" + nodeCount);
            }
-           board.unmake(moveList.get(i));
        }
        return nodes;
    }
@@ -134,6 +144,7 @@ public class Perft {
        }
    }
 
+
     public static void main(String[] args) {
        startTime = System.currentTimeMillis();
        if (args.length != 1) { // adjust length to 2 when debugging with perftree
@@ -146,6 +157,10 @@ public class Perft {
        endTime = System.currentTimeMillis();
         System.out.println("EndTime " + endTime +
                 "\n" + total + " nodes in " + (endTime - startTime) + "ms");
+        System.out.println("captures " + COUNT);
+        System.out.println("Checks: " + CHECKS);
+        System.out.println("Enpassant " + EnP);
+        System.out.println("Castles: " + castles);
        closeWriter();
    //     long total = pseudoPerformanceTest(depth);
     }

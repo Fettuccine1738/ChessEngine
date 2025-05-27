@@ -13,7 +13,9 @@ public class FENParser {
      *  both side have long and short castles and no enpassant on the board
      */
     public static Board startPos() {
-        return parseFENotation(START_POS);
+        Board initpos =  parseFENotation(START_POS);
+        ZobristHash.hash(initpos);
+        return initpos;
     }
 
     /**
@@ -26,7 +28,7 @@ public class FENParser {
         PieceType piece;
         notation = new StringBuilder();
         // start from black side
-        for (int i = RANK_8; i > RANK_1; i--) {
+        for (int i = RANK_8; i > EMPT_SQ; i--) {
             emptyCount = 0;
             for (int j = 0; j < FILE_H; j++) {
                 piece = board.getPieceOnBoard((i -  1) * FILE_H + j);
@@ -127,7 +129,7 @@ public class FENParser {
         String[] lastToken = tokens[RANK_8 - 1].split(" ");
         if (lastToken.length != 6) throw new IllegalArgumentException("Last row invalid in FEN" + lastToken.length);
         // parse first rank of the board
-        parseRankandFile(lastToken[0], pieces, RANK_1);
+        parseRankandFile(lastToken[0], pieces, EMPT_SQ);
         // side to move not required
         side             = parseSideToMove(lastToken[1]);
         castlingRights   = parseCastlingRights(lastToken[2]);
@@ -141,7 +143,7 @@ public class FENParser {
     private static void parseRankandFile(String rankAndFile, PieceType[] pieceTypes, int index) {
         if (rankAndFile == null || pieceTypes == null)
             throw new IllegalArgumentException("Null rank and file notation");
-        if (index < RANK_1 || index >= RANK_8) throw new IllegalArgumentException("Invalid rank: " + index);
+        if (index < EMPT_SQ || index >= RANK_8) throw new IllegalArgumentException("Invalid rank: " + index);
         int file = 0;
         for (char ch : rankAndFile.toCharArray()) {
             if (Character.isDigit(ch)) {

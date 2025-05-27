@@ -35,6 +35,7 @@ public class BoardUtilities {
     public final static boolean WHITE         = true;
 
     // rank
+    public final static int EMPT_SQ = 0;
     public final static int RANK_1 = 0;
     public final static int RANK_8 = 8;
 

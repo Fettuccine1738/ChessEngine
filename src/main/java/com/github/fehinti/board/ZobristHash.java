@@ -1,14 +1,23 @@
 package com.github.fehinti.board;
 
 import java.util.Random;
-
+/*
+* Zobrist hashing starts by randomly generating bitstrings for each possible
+*  element of a board game,
+* i.e. for each combination of a piece and a position (in the game of chess,
+* that's 6 pieces × 2 colors × 64 board positions, with a constant number
+* of additional bitstrings for castling rights, pawns that may
+* capture en passant, and which player moves next).
+* Now any board configuration can be broken up into independent piece/position components,
+* which are mapped to the random bitstrings generated earlier. The final Zobrist hash is
+*  computed by combining those bitstrings using bitwise XOR.
+ */
 public class ZobristHash {
 
     private static final Random random = new Random();
 
     private static final long[][] table = new long[64][12];
     private static final long BLACK_BIT_STRING;
-
 
     static {
         BLACK_BIT_STRING = random.nextLong();
@@ -32,7 +41,7 @@ public class ZobristHash {
     }
 
     public static long hash(Board board) {
-        long h = 0L;
+        long h = (board.getSideToMove()) ? 0L : BLACK_BIT_STRING;
         for (int i = 0; i < 64; i++) {
             PieceType p = board.getPieceOnBoard(i);
             if (p != PieceType.EMPTY) {
@@ -46,8 +55,7 @@ public class ZobristHash {
 
     public static long zobrist(int square, int pieceVal) {
         if (pieceVal == 0) throw new IllegalArgumentException();
-        if (pieceVal < 0) mapBlackToPositiveInt(pieceVal);
-        return table[square][pieceVal];
+        return table[square][(pieceVal > 0) ? pieceVal - 1 : mapBlackToPositiveInt(pieceVal)];
     }
 
 }

@@ -154,8 +154,8 @@ public class AttackMap {
         }
     }
 
-    public static final boolean  AFTER = true;
-    public static final boolean  BEFORE = false;
+    public static final boolean  AFTER = true; // checks if own king is attacked, does this move leave own king in check
+    public static final boolean  BEFORE = false; // also checks if own king is in check
     /**
      * @param board current position after a move has been played, verifying move legality
      *           depending on side to move we look at the opposite side because that is the side
@@ -188,7 +188,7 @@ public class AttackMap {
         if (board == null) {
             throw new NullPointerException("Null board");
         }
-        // for each piece (except pawns)attack map , see if we can reach the king square
+        // for each piece attack map , check if we can reach the king square
         for (int pc = KNIGHT; pc <= PAWN; pc++) {
             if (isInComputedAttackMap(board, attackedIndex, pc, after)) {
                 return true;

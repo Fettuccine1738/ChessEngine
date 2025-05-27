@@ -29,6 +29,39 @@ class BoardTest {
     static String FEN_Q =  "8/8/8/3p1q2/2Q3P1/4P3/8/8 w - - 0 1"; // queen move generation test
     static String FEN_P =  "8/8/3p4/2P1p3/8/3P4/4P3/8 w - - 0 1"; // pawn move testing
     static String FEN_N = "8/3p4/8/4N3/3n1P2/8/4P3/8 w - - 0 1"; // knight move test
+    // tests pawn moves, pseudo generation and undo
+    // 23 for black, 12 for white
+    static String FEN_P2 = "rnbqkbnr/p1p1p3/3p3p/1p6/2P1Pp2/8/PP1P1PpP/RNBQKB1R b - - 0 1";
+
+
+    static String FEN_TESTPINS = "1R1K2R1/PPPPPPPP/8/6b1/3r4/8/8/8 w - - 0 1";
+    static String FEN_PINS = "8/8/8/3r4/6b1/8/PPPPPPPP/1R1K2R1 w - - 0 1";
+    static String FEN_ONE_PIN = "8/8/8/3r4/8/5b2/PPPP1PPP/2RKR3 w - - 0 1";
+    // check if pseudo move generates pieces capture king
+    // static String FEN_NO_WKING_CAP = "3b4/1n6/1p6/K7/8/8/8/r3q3 w - - 0 1";
+    static String FEN_NO_WKING_CAP = "3b4/1n6/8/K7/8/8/8/r3q3 w - - 0 1"; // removes pawn blocking bishop
+    // static String FEN_NO_BKING_CAP = "R3Q3/8/8/8/k7/1P6/1N6/3B4 b - - 0 1";
+    static String FEN_NO_BKING_CAP = "R3Q3/8/8/8/k7/8/1N6/3B4 b - - 0 1";
+
+    // white/black king long& shrt castles available
+    static String FEN_CASTLE_RIGHTS_KING_MOVE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3K2R b KQkq - 5 7";
+    // black king castles both sides white has none(already castled)
+    static String FEN_CASTLE_RIGHTS_BKING_MOVE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/2KR3R b kq - 6 7";
+    // white castles only king side
+    static String FEN_WK_QUEENSIDE = "r3k2r/pppbqppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3K1R1 w Qkq - 5 7";
+    // king side blocked by white's pieces
+    static String FEN_WQ = "r3k2r/ppp1qppp/2n2n2/3pp3/3PP3/2N2N2/PPPBQPPP/R3KBNR b KQkq - 5 7";
+    // white king side clear
+    static String FEN_WK_CLR = "r3k2r/ppp1qppp/2n2n2/3pp3/3PP3/2NB1N2/PPPBQPPP/RN2K2R b KQkq - 5 7";
+    // castling with check scenarios
+    static String FEN_CHK_1 = "r3k2r/ppp1qp1p/2n3p1/3pp3/3PP3/2NQ1b2/PPPB1PPP/R3K2R w KQkq - 5 7";
+    static String FEN_CHK_2 = "r3k2r/ppp1qp1p/2n3p1/3pp3/3PP3/2N5/PPPBQbPP/R3K2R w KQkq - 5 7"; // king in check, cannot castle for white, has to capture
+    static String FEN_CHK_3 = "r3k2r/ppp2ppp/2n5/3pp3/3PP3/2N2N2/PPPBQPbP/R3K2R w KQkq - 5 7"; // rook being attacked, no kingside castle for white
+    static String FEN_CHK4 = "r3k2r/ppp2ppp/8/3pp3/3PP3/2N2N2/PPPBQPPq/R3K2R w KQkq - 5 7"; // h file rook attacked no kingside castles for white
+    // minimal material easy testing for both black and white
+    static String FEN_MIN1 = "4k2r/8/8/8/8/8/8/R3K3 w Qk - 0 1"; // blakc kingside and white queenside
+    static String FEN_MIN2 = "r3k3/8/8/8/8/8/8/4K2R b Kq - 0 1"; // white kingside and black queen side available
+
 
     private Board board;
     private static Board globalBoard;

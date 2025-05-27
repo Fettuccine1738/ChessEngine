@@ -55,7 +55,7 @@ public class PieceMove {
      * @param moves list of integers encoding move information
      * @return pruned move list with moves that leave king in check (illegal moves ) removed. list contains only legal moves.
      */
-    public static List<Integer> validateMoves(Board board, List<Integer> moves) {
+    public static List<Integer> generateLegalMoves(Board board, List<Integer> moves) {
         if (moves.isEmpty() || board == null) throw new IllegalArgumentException("validate moves invoked with " +
                 " null or empty board");
         int count = 0;
@@ -64,19 +64,16 @@ public class PieceMove {
         while (iterator.hasNext()) {
             m = iterator.next();
             board.make(m);
-            //System.out.println(board + "\n");
             if (AttackMap.isKingInCheck(board)) {
                 iterator.remove(); // avoid concurrent Modification
-              //   System.out.println("\n" + m + " leaves king in check");
             }
             board.unmake(m);
-            // System.out.println(board + "\n");
         }
         return moves;
     }
 
-    final static PieceType[] WHITE_PIECES  = {WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING};
-    final static PieceType[] BLACK_PIECES  = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING};
+    final static PieceType[] WHITE_PIECES  = { WHITE_KING, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN};
+    final static PieceType[] BLACK_PIECES  = { BLACK_KING, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN};
     private final static int IS_KING = 6;
 
      public static List<Integer> pseudoLegal(Board board) {
@@ -128,7 +125,7 @@ public class PieceMove {
 
         int pos, square = 0, encoding, mailbox64 = 0, mailbox120 = 0;
         // null move, add current square as a move
-        for (int index = floor; index < ceiling; index++) { //iterate through piece list
+        for (int index = floor; index < ceiling; index++) { //loop through piece list
             encoding = piecelist[index];
             if (encoding != empty) {
                 pos    = encoding >> 8; // equivalent to from PieceType.Piece.getValue()
@@ -157,7 +154,7 @@ public class PieceMove {
                             break;
                         }
                         else {
-                            moves.add(Move.encodeMove(from, newSquare, pieceOnBoard.getValue(), 0, Move.FLAG_QUIET));
+                            moves.add(Move.encodeMove(from, newSquare,0, 0, Move.FLAG_QUIET));
                         }
                         if(!slides) break;
                         square = newSquare; // advance square
@@ -175,11 +172,10 @@ public class PieceMove {
      * @param moves  list of move information encoded into integers
      */
     private static void generateCastle(Board board, boolean side, List<Integer> moves) {
+         if (!board.canSideCastle(side)) return;
          byte rights = board.getCastlingRights();
-         if (rights < 5) return; // no  possible castling rights
          boolean longCastle = (side) ? board.canWhiteCastleQueenside(rights) : board.canBlackCastleQueenside(rights);
          boolean shortCastle = (side) ? board.canWhiteCastleKingside(rights) : board.canBlackCastleKingside(rights);
-         if (AttackMap.isKingInCheck(board)) return;
 
          if (longCastle) {
              if (side == WHITE) {
@@ -242,9 +238,9 @@ public class PieceMove {
         int end = getPieceListCeiling(WHITE_PAWN); // same index and range for both black and white
         int ep = board.getEnPassant();
         int skip = EMPTY.getValue();
-        int singlePush =  (sideToPlay == WHITE) ? SINGLE_PUSH : -SINGLE_PUSH;
-        int doublePush =  (sideToPlay == WHITE) ? DOUBLE_PUSH : -DOUBLE_PUSH;
-        Predicate<Byte> isPromotingRank = (sideToPlay == WHITE) ?
+        int singlePush =  (sideToPlay) ? SINGLE_PUSH : -SINGLE_PUSH;
+        int doublePush =  (sideToPlay) ? DOUBLE_PUSH : -DOUBLE_PUSH;
+        Predicate<Byte> isPromotingRank = (sideToPlay) ?
                 BoardUtilities::isOnSeventhRank : BoardUtilities::isOnSecondRank;
         int empty = 0;
 
@@ -279,7 +275,6 @@ public class PieceMove {
 
     private static void generatePawnCaptures(Board board, List<Integer> moves, int from,
                                             int ep, boolean side, Predicate<Byte> isPromotingRank) {
-        // int[] captures = (side) ? new int[]{LEFTCAP, RIGHTCAP} : new int[]{ -LEFTCAP, -RIGHTCAP};
         for (int c : (side) ? WHITE_CAPTURES : BLACK_CAPTURES) {
             int cap = getMailbox120Number(getMailbox64Number(from) + c);
             // generate non promotion captures
@@ -298,7 +293,7 @@ public class PieceMove {
                     PieceType epPiece;
                     if (side == WHITE) epPiece = board.getPieceOnBoard(ep - SINGLE_PUSH64);
                     else epPiece = board.getPieceOnBoard(ep + SINGLE_PUSH64);
-                    assert(epPiece != EMPTY);
+                    assert(Math.abs(epPiece.getValue()) == 1);
                     moves.add(Move.encodeMove(from, ep, epPiece.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
             }
@@ -306,9 +301,11 @@ public class PieceMove {
         if (isOnPromoteRank(from, side)) generatePromotions(board, moves, from, side);
     }
 
+
     private static void generatePromotions(Board board, List<Integer> moves, int from, boolean side) {
         int sp = (side) ? SINGLE_PUSH : -SINGLE_PUSH;
         int promote = getMailbox120Number(getMailbox64Number(from) + sp);
+
         for (int offset : (side) ? WHITE_CAPTURES : BLACK_CAPTURES) {
             int cap = getMailbox120Number(getMailbox64Number(from) + offset);
             if (cap != OFF_BOARD) {
