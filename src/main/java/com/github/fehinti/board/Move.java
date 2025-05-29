@@ -10,14 +10,30 @@ public class Move {
     public static final int FLAG_CAPTURE = 4;
     public static final int FLAG_PROMOTION = 5;
 
-    public static int encodeMove(int from, int to, int captured, int promoted, int flag) {
+    // ? last flag bytes only needs 3 bytes to so bit 23 to 31 is still avilable
+    // ? may need switch to 64 bytes encoding in the future
+    // TODO: use 5 bits to store indexes and maintain move generation ordering
+    /**
+     * @param from
+     * @param to
+     * @param captured
+     * @param promoted
+     * @param flag
+     * @param index  0..15 index in the piece list to preserve move generation ordering.
+     * @return
+     */
+    public static int encodeMove(int from, int to, int captured, int promoted, int flag, int index) {
         int cap = captured;
         int pro = promoted;
         if (captured < 0) { // adjust black piece value to an unsigned int
             cap = mapBlackToUnsignedInt(captured);
         }
         if (promoted < 0) pro = mapBlackToUnsignedInt(promoted);
-        return (from) | (to << 6) | (cap << 12) | (pro << 16) | (flag << 20);
+        return (from) | (to << 6) | (cap << 12) | (pro << 16) | (flag << 20) | (index << 23);
+    }
+
+    public static int getIndex(int move) {
+        return  (move >> 23) & 0xf; // extract bits 23 - 26
     }
 
     public static int getFromSquare(int move) {
@@ -29,7 +45,7 @@ public class Move {
     }
 
     public static int getCapturedPiece(int move) {
-        int piece =  (move >> 12) & 0xf; // extract bits 6 - 11
+        int piece =  (move >> 12) & 0xf;
         if (piece > 8) return mapCapturedPieceToBlack(piece);
         else return piece;
     }
@@ -40,7 +56,7 @@ public class Move {
     }
 
     public static int getFlag(int move) {
-        return (move >> 20) & 0xf; // bits 12 - 15
+        return (move >> 20) & 0x7;
     }
 
     public static int mapBlackToUnsignedInt(int piece) {
@@ -89,21 +105,6 @@ public class Move {
     }
 
     public static void main(String[] args) {
-        int move = encodeMove(12, 28,0, 0, FLAG_EN_PASSANT);
-
-        System.out.println();
-        System.out.println("From square: " + getFromSquare(move)); // Output: 12
-        System.out.println("To square: " + getTargetSquare(move));     // Output: 28
-        System.out.println("Captured: " + getCapturedPiece(move)); // Output: 0
-        System.out.println("Promotion: " + getPromotionPiece(move)); // Output: 0
-        System.out.println("Flags: " + getFlag(move));            // Output: 1
-        int m1 = encodeMove(convertsFileRankToIndex("a1"),
-                convertsFileRankToIndex("b1"),
-                0,
-                0, Move.FLAG_QUIET);
-        System.out.println(m1);
-
-
 
     }
 

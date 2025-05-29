@@ -1,6 +1,6 @@
-package com.github.fehinti.board;
+package com.github.fehinti.piece;
 
-public enum PieceType {
+public enum Piece {
     EMPTY(0, '.'),
     WHITE_PAWN(1, 'P'),
     WHITE_KNIGHT(2, 'N'),
@@ -18,7 +18,7 @@ public enum PieceType {
     private final int value;
     private final char name;
 
-    PieceType(int value, char name) {
+    Piece(int value, char name) {
         this.value = value;
         this.name = name;
     }
@@ -40,17 +40,17 @@ public enum PieceType {
     }
 
     // utility method to check if piece is valid get piece type from char representation of piece
-    public static PieceType getPieceType(char value) {
-        for (PieceType pieceType : PieceType.values()) {
-            if (pieceType.getName() == value) return pieceType;
+    public static Piece getPiece(char value) {
+        for (Piece Piece : Piece.values()) {
+            if (Piece.getName() == value) return Piece;
         }
-        throw new IllegalArgumentException("get PieceType in Enum Class invoked with " + value);
+        throw new IllegalArgumentException("get Piece in Enum Class invoked with " + value);
     }
 
-    public static PieceType getPieceType(int value) {
-        for (PieceType pieceType : PieceType.values()) {
-            if (pieceType.getValue() == value) return pieceType;
+    public static Piece getPiece(int value) {
+        for (Piece Piece : Piece.values()) {
+            if (Piece.getValue() == value) return Piece;
         }
-        throw new IllegalArgumentException("get PieceType in Enum Class invoked with " + value);
+        throw new IllegalArgumentException("get Piece in Enum Class invoked with " + value);
     }
 }

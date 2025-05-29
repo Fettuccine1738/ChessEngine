@@ -21,7 +21,7 @@
                 int to = getMailbox120Number(getMailbox64Number(currentSq) + SINGLE_PUSH);
                 // if we are not off board or on the seventh rank(promotion)
                 if (to != OFF_BOARD && !isOnSeventhRank((byte) currentSq)) {
-                    PieceType pieceOnBoard = board.getPieceOnBoard(to);
+                    Piece pieceOnBoard = board.getPieceOnBoard(to);
                     if (pieceOnBoard == EMPTY) {
                         moves.add(Move.encodeMove(currentSq, to, 0, 0, Move.FLAG_QUIET));
                         // if on second rank add a double push
@@ -39,7 +39,7 @@
                 int to = getMailbox120Number(getMailbox64Number(currentSq) - SINGLE_PUSH);
                 // if we are not off board or on the seventh rank(promotion)
                 if (to != OFF_BOARD && !isOnSecondRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(to);
+                    Piece piece = board.getPieceOnBoard(to);
                     if (piece == EMPTY) {
                         moves.add(Move.encodeMove(currentSq, to, 0, 0, Move.FLAG_QUIET));
                         // if on seventh rank add a double push
@@ -58,24 +58,24 @@
                 // capture left
                 int cap = getMailbox120Number(getMailbox64Number(currentSq) + LEFTCAP);
                 if (cap != OFF_BOARD && !isOnSeventhRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
+                    Piece piece = board.getPieceOnBoard(cap);
                     if (piece.isBlack()) {
                         moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                     }
                 }
                 if (ep != OFF_BOARD && cap == ep) { // generate enPasant
-                    PieceType p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
+                    Piece p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
                     moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
                 cap = getMailbox120Number(getMailbox64Number(currentSq) + RIGHTCAP);
                 if (cap != OFF_BOARD && !isOnSeventhRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
+                    Piece piece = board.getPieceOnBoard(cap);
                     if (piece.isBlack()) {
                         moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                     }
                 }
                 if (ep != OFF_BOARD && cap == ep) { // generate enPassant
-                    PieceType p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
+                    Piece p = board.getPieceOnBoard(cap - SINGLE_PUSH64);
                     moves.add(Move.encodeMove(currentSq, ep, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
             }
@@ -83,25 +83,25 @@
                 // capture left
                 int cap = getMailbox120Number(getMailbox64Number(currentSq) - LEFTCAP);
                 if (cap != OFF_BOARD && !isOnSecondRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
+                    Piece piece = board.getPieceOnBoard(cap);
                     if (piece.isWhite()) {
                         moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                     }
                 }
                 if (ep != OFF_BOARD && cap == ep) {
-                    PieceType p = board.getPieceOnBoard(cap + SINGLE_PUSH64);
+                    Piece p = board.getPieceOnBoard(cap + SINGLE_PUSH64);
                     assert(p.getValue() == WHITE_PAWN.getValue());
                     moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
                 cap = getMailbox120Number(getMailbox64Number(currentSq) - RIGHTCAP);
                 if (cap != OFF_BOARD && !isOnSecondRank((byte) currentSq)) {
-                    PieceType piece = board.getPieceOnBoard(cap);
+                    Piece piece = board.getPieceOnBoard(cap);
                     if (piece.isWhite()) {
                         moves.add(Move.encodeMove(currentSq, cap, piece.getValue(), 0, Move.FLAG_CAPTURE));
                     }
                 }
                 if (ep != OFF_BOARD && cap == ep) { // capture enpassant
-                    PieceType p = board.getPieceOnBoard(cap + SINGLE_PUSH64);
+                    Piece p = board.getPieceOnBoard(cap + SINGLE_PUSH64);
                     assert(p.getValue() == WHITE_PAWN.getValue());
                     moves.add(Move.encodeMove(currentSq, cap, p.getValue(), 0, Move.FLAG_EN_PASSANT));
                 }
@@ -115,7 +115,7 @@
                 assert(rightCapture != OFF_BOARD);
                 assert(push != OFF_BOARD);
                 if (leftCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(leftCapture);
+                    Piece piece = board.getPieceOnBoard(leftCapture);
                     if (piece.isBlack()) { // add promotion to all major piece
                         moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
                                 WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
@@ -128,7 +128,7 @@
                     }
                 }
                 if (rightCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(rightCapture);
+                    Piece piece = board.getPieceOnBoard(rightCapture);
                     if (piece.isBlack()) { // add promotion to all major piece
                         moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
                                 WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
@@ -141,7 +141,7 @@
                     }
                 }
                 if (push != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(rightCapture);
+                    Piece piece = board.getPieceOnBoard(rightCapture);
                     if (piece == EMPTY) { // add promotion to all major piece
                         moves.add(Move.encodeMove(currentSq, push, 0,
                                 WHITE_KNIGHT.getValue(), Move.FLAG_PROMOTION));
@@ -163,7 +163,7 @@
                 assert(rightCapture != OFF_BOARD);
                 assert(push != OFF_BOARD);
                 if (leftCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(leftCapture);
+                    Piece piece = board.getPieceOnBoard(leftCapture);
                     if (piece.isWhite()) { // add promotion to all major piece
                         moves.add(Move.encodeMove(currentSq, leftCapture, piece.getValue(),
                                 BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
@@ -176,7 +176,7 @@
                     }
                 }
                 if (rightCapture != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(rightCapture);
+                    Piece piece = board.getPieceOnBoard(rightCapture);
                     if (piece.isWhite()) { // add promotion to all major piece
                         moves.add(Move.encodeMove(currentSq, rightCapture, piece.getValue(),
                                 BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));
@@ -189,7 +189,7 @@
                     }
                 }
                 if (push != OFF_BOARD) {
-                    PieceType piece = board.getPieceOnBoard(push);
+                    Piece piece = board.getPieceOnBoard(push);
                     if (piece == EMPTY) { // add promotion to all major piece
                         moves.add(Move.encodeMove(currentSq, push, 0,
                                 BLACK_KNIGHT.getValue(), Move.FLAG_PROMOTION));

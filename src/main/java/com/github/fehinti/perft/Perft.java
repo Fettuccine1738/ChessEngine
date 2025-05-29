@@ -78,7 +78,7 @@ public class Perft {
            return 1;
        }
        long nodes = 0L;
-       List<Integer> moveList = PieceMove.pseudoLegal(board);
+       List<Integer> moveList = PieceMove.generatePseudoLegal(board);
       // List<Integer> moveList = PieceMove.generateLegalMoves(board, list);
        int N = moveList.size();
        int move, i;

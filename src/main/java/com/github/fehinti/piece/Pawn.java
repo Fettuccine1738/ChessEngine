@@ -3,10 +3,10 @@ package com.github.fehinti.piece;
 import java.util.List;
 
 import com.github.fehinti.board.Board;
-import com.github.fehinti.board.PieceType;
+import com.github.fehinti.piece.Piece;
 import static com.github.fehinti.board.BoardUtilities.*;
-import static com.github.fehinti.board.PieceType.BLACK_PAWN;
-import static com.github.fehinti.board.PieceType.WHITE_PAWN;
+import static com.github.fehinti.piece.Piece.BLACK_PAWN;
+import static com.github.fehinti.piece.Piece.WHITE_PAWN;
 
 public class Pawn {
 
@@ -28,8 +28,8 @@ public class Pawn {
     // castling ??
 
     // direct testing
-    private static List<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
-        return PieceMove.generatePseudoLegal(board, sideToPlay, floor, ceiling, piece);
+    private static List<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, Piece piece) {
+        return PieceMove.generatePseudoLegal(board);
     }
 
 }

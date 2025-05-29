@@ -1,11 +1,14 @@
 package com.github.fehinti.board;
 
+import com.github.fehinti.piece.Piece;
+
 import java.util.Arrays;
 
 import static com.github.fehinti.board.BoardUtilities.*;
-import static com.github.fehinti.board.PieceType.EMPTY;
+import static com.github.fehinti.piece.Piece.EMPTY;
 
 public class FENParser {
+    
     private static final String START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     /**
@@ -25,7 +28,7 @@ public class FENParser {
     public static String getFENotation(Board board) {
         StringBuilder notation;
         int emptyCount = 0; // counts empty cells
-        PieceType piece;
+        Piece piece;
         notation = new StringBuilder();
         // start from black side
         for (int i = RANK_8; i > EMPT_SQ; i--) {
@@ -107,12 +110,12 @@ public class FENParser {
      */
     public static Board parseFENotation(String fenotation) {
         if (fenotation == null) throw new IllegalArgumentException("Null string in FEN" + fenotation);
-        PieceType[] pieces;
+        Piece[] pieces;
         int halfMoveClock, fullMoveCounter;
         byte enPassant, castlingRights;
         boolean side; // side to move
         // fill pieces with empty pieces
-        pieces = new PieceType[64];
+        pieces = new Piece[64];
         Arrays.fill(pieces, EMPTY);
         String[] tokens = fenotation.split("/");
         // all 8 ranks of the board must be present
@@ -140,8 +143,8 @@ public class FENParser {
     }
 
     // parse string tokens of each rank
-    private static void parseRankandFile(String rankAndFile, PieceType[] pieceTypes, int index) {
-        if (rankAndFile == null || pieceTypes == null)
+    private static void parseRankandFile(String rankAndFile, Piece[] Pieces, int index) {
+        if (rankAndFile == null || Pieces == null)
             throw new IllegalArgumentException("Null rank and file notation");
         if (index < EMPT_SQ || index >= RANK_8) throw new IllegalArgumentException("Invalid rank: " + index);
         int file = 0;
@@ -149,8 +152,8 @@ public class FENParser {
             if (Character.isDigit(ch)) {
                 file += ch - '0'; // advance to next file, square already filled with EMPTY
             } else {
-                PieceType piece = PieceType.getPieceType(ch);
-                pieceTypes[index * FILE_H + file] = piece;
+                Piece piece = Piece.getPiece(ch);
+                Pieces[index * FILE_H + file] = piece;
                 file++;
             }
         }

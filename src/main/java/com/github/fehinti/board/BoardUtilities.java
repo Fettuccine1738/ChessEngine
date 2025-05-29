@@ -1,6 +1,7 @@
 package com.github.fehinti.board;
 
 import java.util.function.Predicate;
+import com.github.fehinti.piece.Piece;
 
 public class BoardUtilities {
 
@@ -51,7 +52,7 @@ public class BoardUtilities {
     public final static byte BLACK_KINGSIDE     = 4; // 0100
     public final static byte BLACK_QUEENSIDE    = 8; // 1000
 
-    // max possible amount of PieceType (No of possible type from the null
+    // max possible amount of Piece (No of possible type from the null
     // starting position + ( 4 - 8 ) possible pawn promotions for all non-pawn Piece
     public final static byte MAX_KING   = 1; // 0 - 1
     public final static byte MAX_QUEEN  = 11; // 1 - 9
@@ -61,8 +62,11 @@ public class BoardUtilities {
     public final static byte MAX_PAWN   = 48;
     public final static byte MAX_MAX    = 49;
 
+    // 16 length vector
+    public final static byte MAX_LEN_16 = 16;
+
     // this 
-    public static int getPieceListCeiling(PieceType piece) {
+    public static int getPieceListCeiling(Piece piece) {
         switch (piece) {
             case BLACK_ROOK, WHITE_ROOK -> { return MAX_ROOKS; }
             case BLACK_PAWN, WHITE_PAWN -> { return MAX_MAX; }
@@ -74,7 +78,7 @@ public class BoardUtilities {
         }
     }
 
-    public static int getPieceListFloor(PieceType piece) {
+    public static int getPieceListFloor(Piece piece) {
         switch (piece) {
             case BLACK_KING, WHITE_KING -> { return 0; }
             case BLACK_QUEEN, WHITE_QUEEN -> { return MAX_KING; }

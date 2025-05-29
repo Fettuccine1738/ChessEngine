@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.github.fehinti.board.Board;
 import com.github.fehinti.board.FENParser;
-import com.github.fehinti.board.PieceType;
+import com.github.fehinti.piece.Piece;
 
 import static com.github.fehinti.board.Board.getMailbox120Number;
 import static com.github.fehinti.board.Board.getMailbox64Number;
@@ -225,8 +225,8 @@ public class AttackMap {
         for (int s : square) {
             int cap = getMailbox120Number(getMailbox64Number(attackedIndex) + s);
             if (cap != OFF_BOARD) {
-                PieceType xpawn = board.getPieceOnBoard(cap);
-                if (xpawn == PieceType.EMPTY || Math.abs(xpawn.getValue()) != 1) continue;
+                Piece xpawn = board.getPieceOnBoard(cap);
+                if (xpawn == Piece.EMPTY || Math.abs(xpawn.getValue()) != 1) continue;
                 if (xpawn.isWhite() != side) return true;
             }
         }
@@ -242,8 +242,8 @@ public class AttackMap {
      * @return      true / false if piece on attacking can reach attacked index.
      */
     public static boolean traceRayToSquare(Board board, int attacked,  int attacking, boolean side, int piece) {
-        PieceType attackingPc = board.getPieceOnBoard(attacking);
-        if (attackingPc == PieceType.EMPTY || attackingPc.isWhite() == side) return false;
+        Piece attackingPc = board.getPieceOnBoard(attacking);
+        if (attackingPc == Piece.EMPTY || attackingPc.isWhite() == side) return false;
         int index = Math.abs(attackingPc.getValue()) - 1;
         int ray = calculateRay(getMailbox64Number(attacking), getMailbox64Number(attacked),
                 PieceMove.OFFSET_VECTOR_COORDINATES[index]);
@@ -256,8 +256,8 @@ public class AttackMap {
                 square = getMailbox120Number(getMailbox64Number(square) + ray);
                 if (square == OFF_BOARD) return false;
                 if (square == attacked) return true;
-                PieceType currentPiece = board.getPieceOnBoard(square);
-                if (currentPiece == PieceType.EMPTY) {
+                Piece currentPiece = board.getPieceOnBoard(square);
+                if (currentPiece == Piece.EMPTY) {
                     if (!slides) break;
                 }
                 else return false; // there is a piece blocking us
@@ -267,7 +267,7 @@ public class AttackMap {
     }
 
     // allow queen to travers rook rays and bishop rays (maybe vice versa)???
-    private static boolean canTraverseRay(int searcher, PieceType p) {
+    private static boolean canTraverseRay(int searcher, Piece p) {
         // create pairs for bishop queen and rookqueen and maybe kingqueen
         int value = Math.abs(p.getValue());
         if (searcher == BISHOP && (value-1 == QUEEN || value-1 == BISHOP)) return true;

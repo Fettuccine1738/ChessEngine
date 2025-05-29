@@ -2,6 +2,9 @@ package com.github.fehinti.board;
 
 import java.util.Arrays;
 import static com.github.fehinti.board.BoardUtilities.*;
+import static  com.github.fehinti.piece.Piece.*;
+
+import  com.github.fehinti.piece.Piece;
 
 public class Bitboard {
 
@@ -18,7 +21,7 @@ public class Bitboard {
 
     private static final long SHIFT_BY = 1L;
 
-    private long mapPieceToBitBoard(PieceType piece) {
+    private long mapPieceToBitBoard(Piece piece) {
         switch (piece) {
             case WHITE_KING-> { return WK;}
             case WHITE_QUEEN-> { return WQ;}
@@ -47,8 +50,8 @@ public class Bitboard {
             for (int j = FILE_A; j < FILE_H; j++) {
                 sq120 = Board.mapIndex64To120(i, j);
                 sq64 = Board.getMailbox120Number(sq120);
-                PieceType p = board.getPieceOnBoard(sq64);
-                if (p == PieceType.EMPTY) {continue; }
+                Piece p = board.getPieceOnBoard(sq64);
+                if (p == Piece.EMPTY) {continue; }
                 switch (p) {
                     case WHITE_KING -> WK |= (SHIFT_BY << sq64);
                     case WHITE_QUEEN -> WQ |= (SHIFT_BY << sq64);
@@ -86,7 +89,7 @@ public class Bitboard {
     }
 
     public void printBitboards() {
-        Arrays.stream(PieceType.values())
+        Arrays.stream(Piece.values())
                 .filter(p -> p.getValue() != 0) // ignore empty for now
                 .forEach(this::printBitboards);
     }
@@ -112,7 +115,7 @@ public class Bitboard {
         System.out.println("\n\n");
     }
 
-    private void printBitboards(PieceType piece) {
+    private void printBitboards(Piece piece) {
         long toPrint = mapPieceToBitBoard(piece);
         int start = RANK_8 - 1;
         System.out.println(piece.getName());
@@ -137,7 +140,8 @@ public class Bitboard {
 
     public static void main(String[] args) {
         Bitboard b = new Bitboard();
-        Board board = FENParser.parseFENotation(Board.FEN_ONE_PIN);
+        // Board board = FENParser.parseFENotation(Board.FEN_ONE_PIN);
+        Board board = FENParser.startPos();
         System.out.println(board + "\n");
 
         b.initBitBoards(board);

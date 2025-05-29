@@ -1,5 +1,7 @@
 package com.github.fehinti.board;
 
+import com.github.fehinti.piece.Piece;
+
 import java.util.Random;
 /*
 * Zobrist hashing starts by randomly generating bitstrings for each possible
@@ -43,8 +45,8 @@ public class ZobristHash {
     public static long hash(Board board) {
         long h = (board.getSideToMove()) ? 0L : BLACK_BIT_STRING;
         for (int i = 0; i < 64; i++) {
-            PieceType p = board.getPieceOnBoard(i);
-            if (p != PieceType.EMPTY) {
+            Piece p = board.getPieceOnBoard(i);
+            if (p != Piece.EMPTY) {
                 int v = p.getValue();
                 int index = (v > 0) ? v - 1 : mapBlackToPositiveInt(v);
                 h ^= table[i][index];
@@ -53,7 +55,7 @@ public class ZobristHash {
         return h;
     }
 
-    public static long zobrist(int square, int pieceVal) {
+    public static long zobristKey(int square, int pieceVal) {
         if (pieceVal == 0) throw new IllegalArgumentException();
         return table[square][(pieceVal > 0) ? pieceVal - 1 : mapBlackToPositiveInt(pieceVal)];
     }

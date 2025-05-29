@@ -2,10 +2,10 @@ package com.github.fehinti.piece;
 
 import com.github.fehinti.board.Board;
 import static com.github.fehinti.board.BoardUtilities.*;
-import static com.github.fehinti.board.PieceType.BLACK_KNIGHT;
-import static com.github.fehinti.board.PieceType.WHITE_KNIGHT;
+import static com.github.fehinti.piece.Piece.BLACK_KNIGHT;
+import static com.github.fehinti.piece.Piece.WHITE_KNIGHT;
 
-import com.github.fehinti.board.PieceType;
+import com.github.fehinti.piece.Piece;
 
 import java.util.Collection;
 
@@ -34,8 +34,8 @@ public class Knight  {
     }
 
     // direct testing
-    private static Collection<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, PieceType piece) {
-        return PieceMove.generatePseudoLegal(board, sideToPlay, floor, ceiling, piece);
+    private static Collection<Integer> generatePseudoLegal(Board board, boolean sideToPlay, int floor, int ceiling, Piece piece) {
+        return PieceMove.generatePseudoLegal(board);
     }
 
 }
