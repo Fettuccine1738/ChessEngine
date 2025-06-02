@@ -87,32 +87,13 @@ public class Perft {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
            board.make(move);
-           //int captures = Move.getCapturedPiece(move);
-           //if (captures != 0) {
-               //if (currentDepth == 1) COUNT++;
-           //}
-           //int flag = Move.getFlag(move);
-           //if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
-           //else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
-           //if (AttackMap.isSquareAttacked(board,
-                   //(board.getSideToMove()) ? board.getWhiteKingSq() : board.getBlackKingSq(),
-                   //AttackMap.BEFORE) && currentDepth == 1) CHECKS++;
-           //nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
-           //nodes += nodeCount;
-           //board.unmake(move);
-           //if (currentDepth == originalDepth) {
-               //System.out.println(Move.printMove(move) + " :\t" + nodeCount);
-           //}
-
            if (!AttackMap.isKingInCheck(board)) {
                // writeFENToFile(FENParser.getFENotation(board));
                int captures = Move.getCapturedPiece(move);
                if (captures != 0) {
                    if (currentDepth == 1) {
                        COUNT++;
-                       writeFENToFile(FENParser.getFENotation(board));
                    }
-                  // if (currentDepth == 2) writeFENToFile(FENParser.getFENotation(board));
                }
                int flag = Move.getFlag(move);
                if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
@@ -127,7 +108,7 @@ public class Perft {
            board.unmake(move);
            if (currentDepth == originalDepth) {
                System.out.println(Move.printMove(move) + " :\t" + nodeCount);
-               writeFENToFile(Move.printMove(move) + " :\t" + nodeCount);
+               //writeFENToFile(Move.printMove(move) + " :\t" + nodeCount);
            }
        }
        return nodes;

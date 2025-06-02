@@ -129,8 +129,8 @@ public class FENParser {
             parseRankandFile(tokens[index], pieces, i);
         }
         // parse last token of FEN string
-        String[] lastToken = tokens[RANK_8 - 1].split(" ");
-        if (lastToken.length != 6) throw new IllegalArgumentException("Last row invalid in FEN" + lastToken.length);
+        String[] lastToken = tokens[RANK_8 - 1].split("\\s+");
+        if (lastToken.length != 6) throw new IllegalArgumentException( fenotation + "\tLast row invalid in FEN " + lastToken.length);
         // parse first rank of the board
         parseRankandFile(lastToken[0], pieces, EMPT_SQ);
         // side to move not required

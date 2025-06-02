@@ -18,21 +18,10 @@ import static com.github.fehinti.board.BoardUtilities.OFF_BOARD;
  *
  *
  *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
  ***********************************************************************************/
 
+// TODO: profiler shows cpu time is spent tracing attack ray for every piece type to king
+// * optimize
 public class AttackMap {
 
     public static final int ATTACK_NONE = 0; // no piece can attack the square

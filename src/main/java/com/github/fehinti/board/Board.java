@@ -12,6 +12,10 @@
  */
 package com.github.fehinti.board;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,9 +28,10 @@ import static com.github.fehinti.board.ZobristHash.*;
 import static com.github.fehinti.piece.PieceMove.generatePseudoLegal;
 
 
+import com.github.fehinti.piece.AttackMap;
 import com.github.fehinti.piece.Piece;
 import com.github.fehinti.piece.PieceMove;
-import edu.princeton.cs.algs4.Stack;
+import java.util.Stack;
 
 
 public class Board  implements Cloneable{
@@ -825,18 +830,21 @@ public class Board  implements Cloneable{
     }
 
     public static void main(String[] args) {
-        int count = 0;
-        String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
-        String blackAtckd = "rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1";
-        //Scanner sc = new Scanner(System.in);
-        //System.out.println("DEPTH? ");
-        //int depth = sc.nextInt();
-        //dbg_perft(depth, depth, b, sc);
-        Board b = FENParser.parseFENotation("8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1");
+        //int count = 0;
+        //String falseCap = "rnbqkbnr/1ppppppp/p7/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 3 2";
+        //String blackAtckd = "rnbqkbnr/ppp1pppp/3p4/8/Q7/2P5/PP1PPPPP/RNB1KBNR b KQkq - 1 1";
+        ////Scanner sc = new Scanner(System.in);
+        ////System.out.println("DEPTH? ");
+        ////int depth = sc.nextInt();
+        ////dbg_perft(depth, depth, b, sc);
+        String bp = "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1";
+        String wp = "r3k2r/8/5Q2/8/8/3q4/8/R3K2R w KQkq - 0 1";
+        String third ="8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1";
+        Board b = FENParser.parseFENotation(wp);
         System.out.println(b.print());
         System.out.println(b.getBoardData());
         List<Integer> list = generatePseudoLegal(b);
-        int ocunt =0;
+        int count =0;
 
         for (int i : list) {
             System.out.println(++count);
@@ -844,11 +852,26 @@ public class Board  implements Cloneable{
             printMove(i);
             // if (getCapturedPiece(i) == 0 && getPromotionPiece(i) == 0) continue;
             b.make(i);
+            if (AttackMap.isKingInCheck(b)) {
+                count--; // count only valid moves
+                System.out.println("illegal move ");
+            }
             System.out.println(b.print());
             System.out.println(b.getBoardData() + "\n");
             b.unmake(i);
             System.out.println(b.print());
             System.out.println(b.getBoardData() + "\n");
         }
+        System.out.println("Legal count " + count);
+
+        // try (BufferedReader br = Files.newBufferedReader(Paths.get("C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\java\\com\\github\\fehinti\\piece\\fenway.txt"))) {
+            // br.lines().forEach(e -> {
+                // Board b = FENParser.parseFENotation(e);
+                // List<Integer> moves = generatePseudoLegal(b);
+                // System.out.println(e + "\t" + moves.size());
+            // });
+        // } catch (IOException e) {
+            // System.out.println(e.getMessage());
+        // }
     }
 }
