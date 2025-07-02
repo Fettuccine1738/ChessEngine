@@ -168,6 +168,7 @@ class PieceMoveTest {
                    MoveList m = new MoveList(line, cleanup(list.get()));
                    lines.add(m);
 
+                   writer.write("quit"); // end the process
                    int exitCode = process.waitFor();
                    assertEquals(0, exitCode);
 
@@ -178,14 +179,14 @@ class PieceMoveTest {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-        // * first four lines of stockfish's output are process id, and n
-        // * info string Available processors: 0-3
-        // * info string Using 1 thread
-        // * info string NNUE evaluation using nn-1111cefa1111.nnue (133MiB, (22528, 3072, 15, 32, 1))
-        // * info string NNUE evaluation using nn-37f18f62d772.nnue (6MiB, (22528, 128, 15, 32, 1))
         return lines.stream();
     }
 
+    // * first four lines of stockfish's output are process id, and n
+    // * info string Available processors: 0-3
+    // * info string Using 1 thread
+    // * info string NNUE evaluation using nn-1111cefa1111.nnue (133MiB, (22528, 3072, 15, 32, 1))
+    // * info string NNUE evaluation using nn-37f18f62d772.nnue (6MiB, (22528, 128, 15, 32, 1))
     private static List<String> cleanup(List<String> lines) {
         return lines.stream().skip(4)
                 .map(e -> {

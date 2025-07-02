@@ -19,10 +19,9 @@ public class ZobristHash {
     private static final Random random = new Random();
 
     private static final long[][] table = new long[64][12];
-    private static final long BLACK_BIT_STRING;
+    private static final long BLACK_BIT_STRING = random.nextLong();
 
     static {
-        BLACK_BIT_STRING = random.nextLong();
         for (int i = 0; i < 64; i++) {
             for (int j = 0; j < 12; j++) {
                 table[i][j] = random.nextLong();
@@ -32,32 +31,36 @@ public class ZobristHash {
 
     private static int mapBlackToPositiveInt(int blackValue) {
         return switch(blackValue) { // blackPiece.getValue() - 1 to adjust to zero and non -ve index
-            case -1 ->  6;
-            case -2 ->  7;
-            case -3 ->  8;
-            case -4 ->  9;
-            case -5 ->  10;
-            case -6 ->  11;
+            case -1, -127 ->  6;
+            case -2, -126 ->  7;
+            case -3, -125 ->  8;
+            case -4, -124 ->  9;
+            case -5, -123 ->  10;
+            case -6, -122 ->  11;
             default -> throw new IllegalArgumentException("Invalid black value: " + blackValue);
         };
     }
 
-    public static long hash(Board board) {
-        long h = (board.getSideToMove()) ? 0L : BLACK_BIT_STRING;
+    public static long hash(Board120 board) {
+        long result = (board.getSideToMove()) ? 0L : BLACK_BIT_STRING;
         for (int i = 0; i < 64; i++) {
-            Piece p = board.getPieceOnBoard(i);
-            if (p != Piece.EMPTY) {
-                int v = p.getValue();
-                int index = (v > 0) ? v - 1 : mapBlackToPositiveInt(v);
-                h ^= table[i][index];
+            int index120 = Board120.getMailbox64Number(i);
+            int piece = board.getPieceOnSquare(index120);
+            if (piece != 0) {
+                int index = (piece > 0) ? piece - 1 : mapBlackToPositiveInt(piece);
+                result ^= table[i][index];
             }
         }
-        return h;
+        return result;
     }
 
     public static long zobristKey(int square, int pieceVal) {
         if (pieceVal == 0) throw new IllegalArgumentException();
         return table[square][(pieceVal > 0) ? pieceVal - 1 : mapBlackToPositiveInt(pieceVal)];
+    }
+
+    public static long zobristKey(int square, byte pieceVal) {
+        return zobristKey(square, pieceVal);
     }
 
 }

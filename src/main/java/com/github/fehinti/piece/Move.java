@@ -1,6 +1,12 @@
-package com.github.fehinti.board;
+package com.github.fehinti.piece;
+
+import com.github.fehinti.board.Board120;
+
 
 public class Move {
+    // .Move.encodeMove(from, to, newSquare, 0, com.github.fehinti.board.Move.FLAG_CAPTURE, index);
+    // from = bits 0 - 7, to 8 - 15, 15 - 23, promotion (3),flag (3), index (4  bits)
+    // origin, dest,
 
     // tactical move flags
     public static final int FLAG_QUIET = 0;
@@ -9,54 +15,42 @@ public class Move {
     public static final int FLAG_DOUBLE_PAWN_PUSH = 3;
     public static final int FLAG_CAPTURE = 4;
     public static final int FLAG_PROMOTION = 5;
+    public static final int FLAG_PROMOTION_CAPTURE = 6;
 
     // ? last flag bytes only needs 3 bytes to so bit 23 to 31 is still avilable
     // ? may need switch to 64 bytes encoding in the future
-    // TODO: use 5 bits to store indexes and maintain move generation ordering
+    // bits
     /**
-     * @param from
-     * @param to
-     * @param captured
-     * @param promoted
-     * @param flag
-     * @param index  0..15 index in the piece list to preserve move generation ordering.
+     * @param from 0..6
+     * @param to   7..12
+     * @param promoted 13..14 {knight = 00, bishop = 01, rook = 10, queen = 11}
+     * @param flag 15..17
+     * @param index 18..21 index in the piece list to preserve move generation ordering.
      * @return
      */
-    public static int encodeMove(int from, int to, int captured, int promoted, int flag, int index) {
-        int cap = captured;
-        int pro = promoted;
-        if (captured < 0) { // adjust black piece value to an unsigned int
-            cap = mapBlackToUnsignedInt(captured);
-        }
-        if (promoted < 0) pro = mapBlackToUnsignedInt(promoted);
-        return (from) | (to << 6) | (cap << 12) | (pro << 16) | (flag << 20) | (index << 23);
+    public static int encodeMove(int from, int to, int promoted, int flag, int index) {
+        // if promotion flag is not set, ignore anything encoded in promoted
+        return (from) | (to << 7) | (promoted << 13) | (flag << 15) | (index << 18);
     }
 
     public static int getIndex(int move) {
-        return  (move >> 23) & 0xf; // extract bits 23 - 26
+        return  (move >> 18) & 0xf; // 0x7 would be fine here, just 3 bits needed
     }
 
     public static int getFromSquare(int move) {
-        return  move & 0x3f; // extract bits 0 - 5
+        return  move & 0x7f;
     }
 
     public static int getTargetSquare(int move) {
-        return (move >> 6) & 0x3f; // extract bits 6 - 11
+        return (move >> 7) & 0x7f;
     }
 
-    public static int getCapturedPiece(int move) {
-        int piece =  (move >> 12) & 0xf;
-        if (piece > 8) return mapCapturedPieceToBlack(piece);
-        else return piece;
-    }
-
-    public static int getPromotionPiece(int move) {
-        int piece = (move >> 16) & 0xf;
-        return (piece > 8)  ? mapCapturedPieceToBlack(piece) : piece; // bits 12 - 15
+    public static int getPromotion(int move) {
+        return (move >> 13) & 0x3;
     }
 
     public static int getFlag(int move) {
-        return (move >> 20) & 0x7;
+        return (move >> 15) & 0x7;
     }
 
     public static int mapBlackToUnsignedInt(int piece) {
@@ -85,8 +79,8 @@ public class Move {
 
     public static String printMove(int move) {
         StringBuilder sb = new StringBuilder();
-        int from = getFromSquare(move);
-        int to = getTargetSquare(move);
+        int from = Board120.getMailbox120Number(getFromSquare(move));
+        int to = Board120.getMailbox120Number(getTargetSquare(move));
         int fromRank = (from / 8) + 1; // adjust for zero based index
         int fromFile = from % 8;
         int toRank = 1 + (to / 8);
@@ -98,14 +92,20 @@ public class Move {
         return sb.toString();
     }
 
-    static int convertsFileRankToIndex(String fileRank) {
-        int file = fileRank.charAt(0) - 'a';
-        int rank = Integer.parseInt(fileRank.charAt(1) + "") - 1;
-        return rank * BoardUtilities.RANK_8 + file;
+    private static String printFlag(int flag) {
+        switch (flag) {
+            case FLAG_QUIET : return "Quiet";
+            case FLAG_EN_PASSANT:  return "Ep";
+            case FLAG_CASTLE: return "Castle";
+            case FLAG_CAPTURE: return "Capture";
+            case FLAG_PROMOTION_CAPTURE: return "Promo";
+            case FLAG_DOUBLE_PAWN_PUSH: return "DoublePawnPush";
+            default: throw new IllegalStateException("Unexpected value: " + flag);
+        }
     }
 
-    public static void main(String[] args) {
-
+    public static String dbgMove(int move) {
+        return printMove(move) + "\t" + printFlag(getFlag(move));
     }
 
 }

@@ -5,13 +5,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
-import com.github.fehinti.board.Board;
-import com.github.fehinti.board.Move;
+import com.github.fehinti.board.Board120;
+import com.github.fehinti.piece.Move;
 import com.github.fehinti.board.FENParser;
-import com.github.fehinti.piece.PieceMove;
-import com.github.fehinti.piece.AttackMap;
+import com.github.fehinti.piece.MoveGenerator;
+import com.github.fehinti.piece.VectorAttack120;
 
 /***********************************************************************************
  * Perft, (performance test, move path enumeration)
@@ -27,22 +29,22 @@ import com.github.fehinti.piece.AttackMap;
  * there are variations to perft.
  **********************************************************************************/
 public class Perft {
-   static long startTime;
-   static long endTime;
-   static Board board;
+   static Board120 board;
   // static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\perft_init.txt";
    static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\dummy.txt";
    static File file;
    static BufferedWriter bufferedWriter; //  = new BufferedWriter(new FileWriter(file));
    static int COUNT = 0;
-   static int CHECKS = 0;
-   static int EnP = 0;
-   static int castles = 0;
+   static long CHECKS = 0;
+   static long EnP = 0;
+   static long castles = 0;
+   static long CAPTURE = 0;
 
    static {
-       //board = FENParser.parseFENotation("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1" ); // comment out when debugging with perftree
-       board = FENParser.startPos();
-       System.out.println(board.print());
+       // comment out when debugging with perftree
+       // board = FENParser.parseFENotation120("rnbqkbnr/ppppp1pp/8/8/4p3/8/PPPPKPPP/RNBQ1BNR w kq - 0 3" );
+       board = FENParser.startPos120();
+       System.out.println(board.print8x8());
        System.out.println(board.getBoardData());
        file = new File(FILEPATH);
 
@@ -78,8 +80,8 @@ public class Perft {
            return 1;
        }
        long nodes = 0L;
-       List<Integer> moveList = PieceMove.generatePseudoLegal(board);
-      // List<Integer> moveList = PieceMove.generateLegalMoves(board, list);
+       List<Integer> moveList = MoveGenerator.generatePseudoLegal(board);
+
        int N = moveList.size();
        int move, i;
 
@@ -87,21 +89,24 @@ public class Perft {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
            board.make(move);
-           if (!AttackMap.isKingInCheck(board)) {
-               // writeFENToFile(FENParser.getFENotation(board));
-               int captures = Move.getCapturedPiece(move);
-               if (captures != 0) {
-                   if (currentDepth == 1) {
-                       COUNT++;
-                   }
-               }
+           // System.out.println(board.print8x8() + "\n" + board.getBoardData());
+           // writeFENToFile(FENParser.getFENotation(board) + "\t" + (board.lastEntry & 0xff) + "\t"
+             // + (board.lastEntry >> 8 & 0xff));
+           if (!VectorAttack120.isKingInCheck(board)) {
                int flag = Move.getFlag(move);
+               if (currentDepth == 1 && (flag == Move.FLAG_PROMOTION_CAPTURE || flag == Move.FLAG_CAPTURE)) {
+                   CAPTURE++;
+               }
                if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
                else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
-               if (AttackMap.isSquareAttacked(board,
-                       (board.getSideToMove()) ? board.getWhiteKingSq() : board.getBlackKingSq(),
-                        AttackMap.BEFORE) && currentDepth == 1) CHECKS++;
-
+               // checks to see if move leaves us in check
+               boolean side = board.getSideToMove();
+               // checks if last move played is a checking move
+               if (VectorAttack120.isSquareChecked(board,
+                       side,
+                       (side) ? board.getWhiteKingSq() : board.getBlackKingSq())
+                       && currentDepth == 1) CHECKS++;
+               // writeFENToFile(Move.printMove(move) + " :\t" + FENParser.getFENotation(board));
                nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
                nodes += nodeCount;
            }
@@ -127,22 +132,27 @@ public class Perft {
 
 
     public static void main(String[] args) {
-       startTime = System.currentTimeMillis();
        if (args.length != 1) { // adjust length to 2 when debugging with perftree
            System.out.println("Provide a depth please");
        }
-       // board = FENParser.parseFENotation(args[1]); // instatiate board with 2 when debugging with perftree
+
+       // board = FENParser.sparseFENotation(args[1]); // instatiate board with 2 when debugging with perftree
        int depth = Integer.parseInt(args[0]);
        System.out.println("go perft " + depth);
+
+       Instant st = Instant.now();
        long total = divide(depth, depth);
-       endTime = System.currentTimeMillis();
-        System.out.println("EndTime " + endTime +
-                "\n" + total + " nodes in " + (endTime - startTime) + "ms");
-        System.out.println("captures " + COUNT);
+       System.out.println("TOtal " + total);
+       Instant end = Instant.now();
+       Duration duration = Duration.between(st, end);
+
+        System.out.println("Duration : " + duration.getSeconds() + " seconds");
+        System.out.println( duration.getSeconds() / total  + " seconds");
+        System.out.println("captures " + (CAPTURE + EnP));
         System.out.println("Checks: " + CHECKS);
         System.out.println("Enpassant " + EnP);
         System.out.println("Castles: " + castles);
-       closeWriter();
    //     long total = pseudoPerformanceTest(depth);
+        closeWriter();
     }
 }

@@ -4,8 +4,8 @@ import com.github.fehinti.piece.Piece;
 
 import java.util.Arrays;
 
-import static com.github.fehinti.board.BoardUtilities.*;
-import static com.github.fehinti.piece.Piece.EMPTY;
+import static com.github.fehinti.board.Board120Utils.*;
+import static com.github.fehinti.piece.Piece.*;
 
 public class FENParser {
     
@@ -15,30 +15,20 @@ public class FENParser {
      * @return the starting position on a board, white to play,
      *  both side have long and short castles and no enpassant on the board
      */
-    public static Board startPos() {
-        Board initpos =  parseFENotation(START_POS);
-        ZobristHash.hash(initpos);
-        return initpos;
+    public static Board120 startPos120() {
+        return parseFENotation120(START_POS);
     }
 
-    /**
-     * @param board board to scan for piece and corresponding position
-     * @return a string that is the Forsyth Edward Notation of the board
-     */
-    public static String getFENotation(Board board) {
-        StringBuilder notation;
-        int emptyCount = 0; // counts empty cells
-        Piece piece;
-        notation = new StringBuilder();
-        // start from black side
-        for (int i = RANK_8; i > EMPT_SQ; i--) {
-            emptyCount = 0;
+    public static String getFENotation(Board120 board) {
+        StringBuilder notation = new StringBuilder();
+        for (int i = RANK_8; i > 0; i--) {
+            int emptyCount = 0;
             for (int j = 0; j < FILE_H; j++) {
-                piece = board.getPieceOnBoard((i -  1) * FILE_H + j);
-                if (piece == EMPTY) emptyCount++;
+                byte piece = board.getPieceOnSquare(Board120.getMailbox64Number((i - 1) * FILE_H + j));
+                if (piece == 0) emptyCount++;
                 else {
                     if (emptyCount > 0) notation.append(emptyCount);
-                    notation.append(piece.getName());
+                    notation.append(Board120.mapByteToChar(piece));
                     emptyCount = 0;
                 }
             }
@@ -46,7 +36,7 @@ public class FENParser {
             if (i > 1) notation.append('/');
         }
         notation.append(' ');
-        notation.append(getSideToMove(board)).append(' ');
+        notation.append((board.getSideToMove() ? 'w' : 'b')).append(' ');
         // castling ability
         notation.append(getCastlingRightsFENotation(board));
         notation.append(' ');
@@ -56,26 +46,27 @@ public class FENParser {
         return notation.toString();
     }
 
-
-    protected static String getCastlingRightsFENotation(Board board) {
+    /**
+     * @param board board to scan for piece and corresponding position
+     * @return a string that is the Forsyth Edward Notation of the board
+     */
+    protected static String getCastlingRightsFENotation(Board120 board) {
         if (board == null) throw new IllegalArgumentException("Enpassant invoked with null board");
         StringBuilder notation = new StringBuilder();
-
         boolean castlingRigts = false;
-        byte  castle = board.getCastlingRights();
-        if (board.canWhiteCastleKingside(castle)) {
+        if (board.canWhiteCastleKingside()) {
             notation.append('K');
             castlingRigts = true;
         }
-        if (board.canWhiteCastleQueenside(castle)) {
+        if (board.canWhiteCastleQueenside()) {
             notation.append('Q');
             castlingRigts = true;
         }
-        if (board.canBlackCastleKingside(castle)) {
+        if (board.canBlackCastleKingside()) {
             notation.append('k');
             castlingRigts = true;
         }
-        if (board.canBlackCastleQueenside(castle)) {
+        if (board.canBlackCastleQueenside()) {
             notation.append('q');
             castlingRigts = true;
         }
@@ -84,10 +75,11 @@ public class FENParser {
     }
 
 
-    private static String getEnPassantFENotation(Board board) {
+    private static String getEnPassantFENotation(Board120 board) {
         if (board == null) throw new IllegalArgumentException("Enpassant invoked with null board");
         StringBuilder notation = new StringBuilder();
-        byte enPassant = board.getEnPassant();
+        int enPassant = (board.getEnPassant() == OFF_BOARD) ? OFF_BOARD :
+                Board120.getMailbox120Number(board.getEnPassant());
         if (enPassant == OFF_BOARD) return "-";
         int rank = enPassant >> 3; // divide by 8
         int file = enPassant  & 7; // modulo 8
@@ -96,50 +88,65 @@ public class FENParser {
         return notation.toString();
     }
 
-
-    private static char getSideToMove(Board board) {
-        if (board == null) throw new IllegalArgumentException("Side to move invoked with null board");
-        boolean fullCounts = board.getSideToMove();
-        if (fullCounts) return 'w';
-        else return 'b';
-    }
-
     /**
-     * @param fenotation FEN Notation of a chess position
-     * @return Board instance of exact position from a FEN string
+     * @param notation FEN Notation of a chess position
+     * @return Board120 instance of exact position from a FEN string
      */
-    public static Board parseFENotation(String fenotation) {
-        if (fenotation == null) throw new IllegalArgumentException("Null string in FEN" + fenotation);
-        Piece[] pieces;
+    public static Board120 parseFENotation120(String notation) {
+        if (notation == null || notation.isEmpty()) throw new IllegalArgumentException("Null string in FEN" + notation);
+        byte[] array = new byte[BOARD_SIZE_120];
         int halfMoveClock, fullMoveCounter;
         byte enPassant, castlingRights;
-        boolean side; // side to move
-        // fill pieces with empty pieces
-        pieces = new Piece[64];
-        Arrays.fill(pieces, EMPTY);
-        String[] tokens = fenotation.split("/");
-        // all 8 ranks of the board must be present
-        if (tokens.length != RANK_8) throw new IllegalArgumentException();
+        boolean side;
+        Arrays.fill(array, (byte) 0);
+        String[] tokens = notation.split("/");
+        if (tokens.length != FILE_H) throw new IllegalArgumentException( notation + "\tLast row invalid in FEN");
         char ch;
         int index = 0;
         int N = RANK_8 - 1;
-        // loop through first 7 ranks / string representation starting from top
         for (int i = N; i > 0; i--) {
             index = N - i;
-            parseRankandFile(tokens[index], pieces, i);
+            parseRankandFile(tokens[index], array, i);
         }
-        // parse last token of FEN string
+        // last token of board apsects etc
         String[] lastToken = tokens[RANK_8 - 1].split("\\s+");
-        if (lastToken.length != 6) throw new IllegalArgumentException( fenotation + "\tLast row invalid in FEN " + lastToken.length);
-        // parse first rank of the board
-        parseRankandFile(lastToken[0], pieces, EMPT_SQ);
-        // side to move not required
-        side             = parseSideToMove(lastToken[1]);
+        if (lastToken.length != 6) {
+            throw new IllegalArgumentException(notation + "Last row invalid in FEN " + lastToken.length);
+        }
+        parseRankandFile(lastToken[0], array, 0);
+        fillOffBoard(array);
+        side = parseSideToMove(lastToken[1]);
         castlingRights   = parseCastlingRights(lastToken[2]);
-        enPassant        = parseEnPassant(lastToken[3]);
+        byte result = parseEnPassant(lastToken[3]);
+        enPassant        =   (result == OFF_BOARD) ? OFF_BOARD : (byte) Board120.getMailbox64Number(result);
         halfMoveClock    = parseHalfMoveClock(lastToken[4]);
         fullMoveCounter  = parseFullMoveCounter(lastToken[5]);
-        return new Board(pieces, side, fullMoveCounter, halfMoveClock, castlingRights, enPassant);
+        return new Board120(array, side, fullMoveCounter, halfMoveClock, castlingRights, enPassant);
+    }
+
+    private static void fillOffBoard(byte[] array) {
+        for (int i = 0; i < 12; i++) {
+            for (int j = 0; j < 10; j++) {
+                if (Board120.getMailbox120Number(i * 10 + j) == OFF_BOARD) array[i * 10 + j] = (byte) OFF_BOARD;
+            }
+        }
+    }
+
+    private static void parseRankandFile(String fenotation, byte[] array, int index) {
+        if (fenotation == null || array == null)
+            throw new IllegalArgumentException("Null rank and file notation");
+        if (index < EMPT_SQ || index >= RANK_8) throw new IllegalArgumentException("Invalid rank: " + index);
+        int file = 0;
+        for (char ch : fenotation.toCharArray()) {
+            if (Character.isDigit(ch)) {
+                file += ch - '0'; // advance to next file, square already filled with EMPTY
+            }
+            else {
+                byte piece = Board120.mapCharToByte(ch);
+                array[Board120.getMailbox64Number(index * FILE_H + file)] = piece;
+                file++;
+            }
+        }
     }
 
     // parse string tokens of each rank
@@ -199,5 +206,4 @@ public class FENParser {
         if (fullMove == null) throw new IllegalArgumentException("halfMoveClock is null");
         return Integer.parseInt(fullMove);
     }
-
 }

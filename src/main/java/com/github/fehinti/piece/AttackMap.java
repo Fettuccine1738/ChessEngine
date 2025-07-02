@@ -4,21 +4,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.github.fehinti.board.Board;
+import com.github.fehinti.board.Board120;
+import com.github.fehinti.board.Board120;
 import com.github.fehinti.board.FENParser;
-import com.github.fehinti.piece.Piece;
 
-import static com.github.fehinti.board.Board.getMailbox120Number;
-import static com.github.fehinti.board.Board.getMailbox64Number;
-import static com.github.fehinti.board.BoardUtilities.BOARD_SIZE;
-import static com.github.fehinti.board.BoardUtilities.OFF_BOARD;
-
-/************************************************************************************
- * <a href="https://mediocrechess.blogspot.com/2006/12/guide-attacked-squares.html">...</a>
- *
- *
- *
- ***********************************************************************************/
+import static com.github.fehinti.board.Board120.getMailbox120Number;
+import static com.github.fehinti.board.Board120.getMailbox64Number;
+import static com.github.fehinti.board.Board120Utils.BOARD_SIZE_120;
+import static com.github.fehinti.board.Board120Utils.BOARD_SIZE;
+import static com.github.fehinti.board.Board120Utils.OFF_BOARD;
 
 // TODO: profiler shows cpu time is spent tracing attack ray for every piece type to king
 // * optimize
@@ -43,12 +37,14 @@ public class AttackMap {
     // number of pawn directions
     private static final int PAWN_DIR = 2;
 
-    private static final int[][] BISHOP_ATT_MAP = new int[BOARD_SIZE][];
-    private static final int[][] ROOK_ATT_MAP = new int[BOARD_SIZE][];
+    public static final int[][] BISHOP_ATT_MAP = new int[BOARD_SIZE][];
+    public static final int[][] ROOK_ATT_MAP = new int[BOARD_SIZE][];
     // queen map not needed
-    private static final int[][] QUEEN_ATT_MAP = new int[BOARD_SIZE][];
-    private static final int[][] KNIGHT_ATT_MAP = new int[BOARD_SIZE][];
-    private static final int[][] KING_ATT_MAP = new int[BOARD_SIZE][];
+    public static final int[][] QUEEN_ATT_MAP = new int[BOARD_SIZE][];
+    public static final int[][] KNIGHT_ATT_MAP = new int[BOARD_SIZE][];
+    public static final int[][] KING_ATT_MAP = new int[BOARD_SIZE][];
+
+    final static ArrayList<Integer>[][] BLOCKERS = new ArrayList[64][64];
 
     static {
         for (int sq = 0; sq < BOARD_SIZE; sq++) {
@@ -61,8 +57,6 @@ public class AttackMap {
     }
 
     private static int[] computePieceMap(int sq, int piece) {
-        int rank = sq / BOARD_SIZE;
-        int file = sq % BOARD_SIZE;
 
         List<Integer> attacks = new ArrayList<>();
         int[] delta = (piece <= KING) ? PieceMove.VECTOR_COORDINATES[piece] :
@@ -93,46 +87,68 @@ public class AttackMap {
 
     // New attack array for a 10x12 board
     public static final int[] ATTACK_ARRAY = new int[240];
-
     static {
         for (int diff = -119; diff <= 119; diff++) {
-            int normalizedIndex = diff + 120;
+            int normalized = diff + 120;
+            ATTACK_ARRAY[normalized] = (diff == 0) ? ATTACK_NONE : matchDiff(diff);
+        }
 
-            // Determine what pieces can attack based on the difference
-            if (diff == 0) {
-                ATTACK_ARRAY[normalizedIndex] = ATTACK_NONE; // Same square
-            } else if (isKnightMove(diff)) {
-                ATTACK_ARRAY[normalizedIndex] = ATTACK_N; // Knight move
-            } else if (isDiagonal(diff)) {
-                ATTACK_ARRAY[normalizedIndex] = ATTACK_QB; // Bishop or Queen
-            } else if (isStraight(diff)) {
-                ATTACK_ARRAY[normalizedIndex] = ATTACK_QR; // Rook or Queen
-            } else {
-                ATTACK_ARRAY[normalizedIndex] = ATTACK_NONE; // No valid attack
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 24; j++) {
+                System.out.print(ATTACK_ARRAY[24 * i + j] + " ");
             }
+            System.out.println();
         }
     }
 
-    private static boolean isKnightMove(int diff) {
-        return diff == -21 || diff == -19 || diff == -12 || diff == -8 ||
-                diff == 8 || diff == 12 || diff == 19 || diff == 21;
+    static int matchDiff(int vector) {
+        if (isKnightMove(vector))            return ATTACK_N;
+        else if (isPawnMove(vector, WT))     return ATTACK_KQBwP;
+        else if (isPawnMove(vector, BK))     return ATTACK_KQBbP;
+        else if (isKingMove(vector) && isRookMove(vector)) return ATTACK_KQR;
+        else if (isQueenMove(vector) && isRookMove(vector))  return ATTACK_QR;
+        else if (isQueenMove(vector) && isBishopMove(vector))  return ATTACK_QB;
+        return ATTACK_NONE;
     }
 
-    private static boolean isDiagonal(int diff) {
+    static boolean WT = true; // white
+    static boolean BK = false; // black
+
+    static boolean isQueenMove(int diff) {
+        return isRookMove(diff) || isBishopMove(diff);
+    }
+
+    static boolean isPawnMove(int diff, boolean color) {
+        if (color) return diff == 9 || diff == 11;
+        else return diff == -9 || diff == -11;
+    }
+
+    static boolean isKingMove(int diff) {
+        int r = Math.abs(diff);
+        return  r ==  1 || r == 9 || r ==  10 || r == 11;
+    }
+
+    private static boolean isKnightMove(int diff) {
+        int r = Math.abs(diff);
+        return r == 8 || r == 12 || r == 19 || r == 21;
+    }
+
+    private static boolean isBishopMove(int diff) {
         return Math.abs(diff) % 9 == 0 || Math.abs(diff) % 11 == 0;
     }
 
-    private static boolean isStraight(int diff) {
+    private static boolean isRookMove(int diff) {
         return diff % 10 == 0 || (diff >= -8 && diff <= 8);
     }
 
     public static boolean isSquareAttacked(int attackedIndex, int attackingIndex) {
-        int normalizedIndex = attackedIndex - attackingIndex + 120;
-        System.out.println(ATTACK_ARRAY[normalizedIndex]);
-        return ATTACK_ARRAY[normalizedIndex] != ATTACK_NONE;
+        int normalized = attackedIndex - attackingIndex + 120;
+        System.out.println(ATTACK_ARRAY[normalized]);
+        return ATTACK_ARRAY[normalized] != ATTACK_NONE;
     }
 
-    private static int[][] computedAttackMaps(int piece) {
+    public static int[][] computedAttackMaps(int piece) {
+        System.out.println(piece);
         switch (piece) {
             case KNIGHT -> { return KNIGHT_ATT_MAP; }
             case BISHOP -> { return BISHOP_ATT_MAP; }
@@ -180,12 +196,12 @@ public class AttackMap {
         // for each piece attack map , check if we can reach the king square
         for (int pc = KNIGHT; pc <= PAWN; pc++) {
             if (isInComputedAttackMap(board, attackedIndex, pc, after)) {
+
                 return true;
             }
         }
         return false;
     }
-
 
     private static boolean isInComputedAttackMap(Board board, int attackedIndex, int piece, boolean after) {
         boolean checkSide = after != board.getSideToMove();
@@ -290,13 +306,6 @@ public class AttackMap {
 
     public static void pprint() {
         int count = 0;
-        for (int i = 0; i < 24; i++) {
-            for (int j = 0; j < 10; j++) {
-                System.out.printf("%d\t", ATTACK_ARRAY[10 * j + i]);
-            }
-            System.out.println();
-        }
-
         System.out.println("\nKNIGHT\n");
         for (int[] arr : KNIGHT_ATT_MAP) {
             System.out.println(Arrays.toString(arr));
@@ -326,6 +335,16 @@ public class AttackMap {
         System.out.println(b.print());
         long now = System.currentTimeMillis();
         boolean reachable = isKingInCheck(b);
+        boolean a = isSquareAttacked(getMailbox64Number(1), getMailbox64Number(9));
+        System.out.println("a  " + a);
+        boolean ba = isSquareAttacked(getMailbox64Number(2), getMailbox64Number(18));
+        System.out.println(ba);
+        boolean c = isSquareAttacked(2, 10);
+        System.out.println(c);
+        System.out.println();
         System.out.println(reachable + "\t " + (System.currentTimeMillis() - now));
+        for (int[] arr : KNIGHT_ATT_MAP) {
+            System.out.println(Arrays.toString(arr));
+        }
     }
 }
