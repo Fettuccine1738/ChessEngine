@@ -1,11 +1,8 @@
 package com.github.fehinti.board;
 
-import com.github.fehinti.piece.Piece;
-
 import java.util.Arrays;
 
 import static com.github.fehinti.board.Board120Utils.*;
-import static com.github.fehinti.piece.Piece.*;
 
 public class FENParser {
     
@@ -149,23 +146,6 @@ public class FENParser {
         }
     }
 
-    // parse string tokens of each rank
-    private static void parseRankandFile(String rankAndFile, Piece[] Pieces, int index) {
-        if (rankAndFile == null || Pieces == null)
-            throw new IllegalArgumentException("Null rank and file notation");
-        if (index < EMPT_SQ || index >= RANK_8) throw new IllegalArgumentException("Invalid rank: " + index);
-        int file = 0;
-        for (char ch : rankAndFile.toCharArray()) {
-            if (Character.isDigit(ch)) {
-                file += ch - '0'; // advance to next file, square already filled with EMPTY
-            } else {
-                Piece piece = Piece.getPiece(ch);
-                Pieces[index * FILE_H + file] = piece;
-                file++;
-            }
-        }
-    }
-
     private static byte parseCastlingRights(String rights) {
         if (rights == null) throw new IllegalArgumentException("Null rights");
         byte encodeRights = 0;
@@ -190,8 +170,7 @@ public class FENParser {
 
     private static byte parseEnPassant(String enPassant) {
         if (enPassant == null) throw new IllegalArgumentException("Null enPassant");
-        byte encodeEnPass = 0;
-        if (enPassant.equals("-")) return OFF_BOARD; // no enpassant available
+        if (enPassant.equals("-")) return OFF_BOARD;
         int file = enPassant.charAt(0) - 'a';
         int rank = Integer.parseInt(enPassant.charAt(1) + "");
         return ((byte) ((rank - 1) * FILE_H + file));

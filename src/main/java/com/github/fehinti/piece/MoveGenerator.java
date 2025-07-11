@@ -248,18 +248,17 @@ public class MoveGenerator {
     }
 
     private static void addPromotionMoves(List<Integer> moves, int from, int to,  int index) {
-        // 2 bits needed for promotion pieces
-        moves.add(Move.encodeMove(from, to,  KNIGHT_PROMO, Move.FLAG_PROMOTION, index));// knight
-        moves.add(Move.encodeMove(from, to,  BISHOP_PROMO, Move.FLAG_PROMOTION, index)); // bishop
-        moves.add(Move.encodeMove(from, to,  ROOK_PROMO,   Move.FLAG_PROMOTION, index)); // rook
         moves.add(Move.encodeMove(from, to,  QUEEN_PROMO,  Move.FLAG_PROMOTION, index)); // queen
+        moves.add(Move.encodeMove(from, to,  ROOK_PROMO,   Move.FLAG_PROMOTION, index)); // rook
+        moves.add(Move.encodeMove(from, to,  BISHOP_PROMO, Move.FLAG_PROMOTION, index)); // bishop
+        moves.add(Move.encodeMove(from, to,  KNIGHT_PROMO, Move.FLAG_PROMOTION, index));// knight
     }
 
     private static void addPromotionCaptureMoves(List<Integer> moves, int from, int to, int index) {
-        moves.add(Move.encodeMove(from, to,  KNIGHT_PROMO, Move.FLAG_PROMOTION_CAPTURE, index));// knight
-        moves.add(Move.encodeMove(from, to,  BISHOP_PROMO, Move.FLAG_PROMOTION_CAPTURE, index)); // bishop
-        moves.add(Move.encodeMove(from, to,  ROOK_PROMO,   Move.FLAG_PROMOTION_CAPTURE, index)); // rook
         moves.add(Move.encodeMove(from, to,  QUEEN_PROMO,  Move.FLAG_PROMOTION_CAPTURE, index)); // queen
+        moves.add(Move.encodeMove(from, to,  ROOK_PROMO,   Move.FLAG_PROMOTION_CAPTURE, index)); // rook
+        moves.add(Move.encodeMove(from, to,  BISHOP_PROMO, Move.FLAG_PROMOTION_CAPTURE, index)); // bishop
+        moves.add(Move.encodeMove(from, to,  KNIGHT_PROMO, Move.FLAG_PROMOTION_CAPTURE, index));// knight
     }
 
 

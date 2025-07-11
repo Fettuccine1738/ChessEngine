@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.github.fehinti.board.Board120;
-import com.github.fehinti.board.Board120;
 import com.github.fehinti.board.FENParser;
 
 import static com.github.fehinti.board.Board120.getMailbox120Number;
 import static com.github.fehinti.board.Board120.getMailbox64Number;
-import static com.github.fehinti.board.Board120Utils.BOARD_SIZE_120;
 import static com.github.fehinti.board.Board120Utils.BOARD_SIZE;
 import static com.github.fehinti.board.Board120Utils.OFF_BOARD;
 

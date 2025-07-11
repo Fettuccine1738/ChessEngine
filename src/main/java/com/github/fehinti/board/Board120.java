@@ -426,7 +426,7 @@ public final class Board120 {
         int flag = getFlag(move);
         int from = getFromSquare(move);
         int to   = getTargetSquare(move);
-        int promo = getPromotionPiece(move);
+        int promo = getPromotion(move);
         int index = getIndex(move);
         byte piece = board120[to]; // piece has moved to target square
         byte capturedPiece = 0;
@@ -487,8 +487,8 @@ public final class Board120 {
                 assert(board120[from] == EMPT_SQ);
                 if (sideToMove) makeMove(to, from, WPAWN);
                 else makeMove(to, from, BPAWN);
-                int enc = (sideToMove) ? WPAWN : BPAWN;
-                boolean found = incrementalUpdate(side, index, encode(enc, from), encode(promo, to));
+                int enc = (sideToMove) ? WPAWN : -BPAWN;
+                boolean found = incrementalUpdate(side, index, encode(enc, from), encode(v, to));
                 if (!found) throw new RuntimeException("Error restoring promoting pawn f=Promotion");
                 if (flag == FLAG_PROMOTION_CAPTURE) {
                     board120[to] = capturedPiece;
@@ -657,6 +657,10 @@ public final class Board120 {
         playHistory[ply] = move;
     }
 
+    public int getMoveFromHistory() {
+        return playHistory[ply];
+    }
+
     private void addIrreversibleAspect() { int ep = (enPassant & 0xff);   // Mask to 6 bits
         int cR = (castlingRights & 0xF) << 8; // Shift and mask to 4 bits
         int hM = (halfMoveClock & 0x3F) << 16; // Shift and mask to 6 bits
@@ -674,13 +678,14 @@ public final class Board120 {
         halfMoveClock = hM;
     }
 
-    private byte getPromotionPiece(int flag) {
+    public byte getPromotionPiece(int flag) {
         byte piece = 0;
         switch (flag) {
-            case 0: piece = WKNIGHT;
-            case 1: piece = WBISHOP;
-            case 2: piece = WROOK;
-            case 3: piece = WQUEEN;
+            case 0: piece = WKNIGHT; break;
+            case 1: piece = WBISHOP; break;
+            case 2: piece = WROOK; break;
+            case 3: piece = WQUEEN; break;
+            default:
         }
         return (sideToMove) ? piece : (byte) (BLACK | piece);
     }

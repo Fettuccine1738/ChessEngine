@@ -1,6 +1,5 @@
 package com.github.fehinti.board;
 
-import com.github.fehinti.piece.Piece;
 
 import java.util.Random;
 /*

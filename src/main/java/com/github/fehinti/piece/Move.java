@@ -30,11 +30,11 @@ public class Move {
      */
     public static int encodeMove(int from, int to, int promoted, int flag, int index) {
         // if promotion flag is not set, ignore anything encoded in promoted
-        return (from) | (to << 7) | (promoted << 13) | (flag << 15) | (index << 18);
+        return (from) | (to << 7) | (promoted << 14) | (flag << 16) | (index << 19);
     }
 
     public static int getIndex(int move) {
-        return  (move >> 18) & 0xf; // 0x7 would be fine here, just 3 bits needed
+        return  (move >> 19) & 0xf; // 0x7 would be fine here, just 3 bits needed
     }
 
     public static int getFromSquare(int move) {
@@ -46,11 +46,11 @@ public class Move {
     }
 
     public static int getPromotion(int move) {
-        return (move >> 13) & 0x3;
+        return (move >> 14) & 0x3;
     }
 
     public static int getFlag(int move) {
-        return (move >> 15) & 0x7;
+        return (move >> 16) & 0x7;
     }
 
     public static int mapBlackToUnsignedInt(int piece) {

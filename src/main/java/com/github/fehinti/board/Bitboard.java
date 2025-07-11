@@ -3,9 +3,6 @@ package com.github.fehinti.board;
 import java.util.Arrays;
 
 import static com.github.fehinti.board.Board120Utils.*;
-import static com.github.fehinti.board.BoardUtilities.*;
-
-import  com.github.fehinti.piece.Piece;
 
 public class Bitboard {
 
@@ -50,7 +47,7 @@ public class Bitboard {
         for (int i = RANK_8 - 1; i >= 0; i--) {
             for (int j = FILE_A; j < FILE_H; j++) {
                 sq120 = Board120Utils.mapIndex64To120(i, j);
-                sq64 = Board.getMailbox120Number(sq120);
+                sq64 = Board120.getMailbox120Number(sq120);
                 byte p = board.getPieceOnSquare((byte) sq120);
                 if (p ==EMPT_SQ) { continue; }
                 switch (p) {
@@ -80,8 +77,8 @@ public class Bitboard {
         int sq120, sq64;
         for (int i = start; i >= 0; i--) {
             for (int j = FILE_A; j < FILE_H ; j++) {
-                sq120 = Board.mapIndex64To120(i, j);
-                sq64 = Board.getMailbox120Number(sq120);
+                sq120 = Board120Utils.mapIndex64To120(i, j);
+                sq64 = Board120.getMailbox120Number(sq120);
                 if (((SHIFT_BY << sq64) & NOT_EMPTY) == 0) {
                     System.out.print("_");
                 }
@@ -100,8 +97,8 @@ public class Bitboard {
         int sq120, sq64;
         for (int i = start; i >= 0; i--) {
             for (int j = FILE_A; j < FILE_H ; j++) {
-                sq120 = Board.mapIndex64To120(i, j);
-                sq64 = Board.getMailbox120Number(sq120);
+                sq120 = Board120Utils.mapIndex64To120(i, j);
+                sq64 = Board120.getMailbox120Number(sq120);
                 if (((SHIFT_BY << sq64) & toPrint) == 0) {
                     System.out.print("_");
                 }

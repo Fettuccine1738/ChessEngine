@@ -41,8 +41,7 @@ public class Perft {
    static long CAPTURE = 0;
 
    static {
-       // comment out when debugging with perftree
-       // board = FENParser.parseFENotation120("rnbqkbnr/ppppp1pp/8/8/4p3/8/PPPPKPPP/RNBQ1BNR w kq - 0 3" );
+       // board = FENParser.parseFENotation120("8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1" );
        board = FENParser.startPos120();
        System.out.println(board.print8x8());
        System.out.println(board.getBoardData());
@@ -88,10 +87,14 @@ public class Perft {
        for(i = 0; i < N; i++) {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
+           //System.out.println("-------------------------------------------\n\t" + Move.printMove(move));
            board.make(move);
-           // System.out.println(board.print8x8() + "\n" + board.getBoardData());
-           // writeFENToFile(FENParser.getFENotation(board) + "\t" + (board.lastEntry & 0xff) + "\t"
-             // + (board.lastEntry >> 8 & 0xff));
+          //System.out.println(board.print8x8() + "\n" + board.getBoardData());
+          //writeFENToFile(FENParser.getFENotation(board) + "\t" + (board.lastEntry & 0xff) + "\t"
+          //+ (board.lastEntry >> 8 & 0xff));
+          // System.out.println(Arrays.toString((board.getSideToMove()) ? board.getBlackPieceList() : board.getWhitePieceList()));
+
+           // Is the move legal ? (does not leave own king in check)
            if (!VectorAttack120.isKingInCheck(board)) {
                int flag = Move.getFlag(move);
                if (currentDepth == 1 && (flag == Move.FLAG_PROMOTION_CAPTURE || flag == Move.FLAG_CAPTURE)) {
@@ -112,7 +115,13 @@ public class Perft {
            }
            board.unmake(move);
            if (currentDepth == originalDepth) {
-               System.out.println(Move.printMove(move) + " :\t" + nodeCount);
+               System.out.print(Move.printMove(move) + " :\t" + nodeCount);
+               int mv = board.getMoveFromHistory();
+               int pp = board.getPromotionPiece(Move.getPromotion(mv));
+               if (Move.getFlag(mv) == Move.FLAG_PROMOTION_CAPTURE || Move.getFlag(mv) == Move.FLAG_PROMOTION) {
+                   System.out.println("\t" + Board120.mapByteToChar((byte) pp));
+               }
+               else System.out.println();
                //writeFENToFile(Move.printMove(move) + " :\t" + nodeCount);
            }
        }
