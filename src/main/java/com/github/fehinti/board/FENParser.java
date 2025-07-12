@@ -107,7 +107,7 @@ public class FENParser {
         }
         // last token of board apsects etc
         String[] lastToken = tokens[RANK_8 - 1].split("\\s+");
-        if (lastToken.length != 6) {
+        if (lastToken.length != 6) {// valid fen = first row,side, castling, enPassant, fullcount, halfmove
             throw new IllegalArgumentException(notation + "Last row invalid in FEN " + lastToken.length);
         }
         parseRankandFile(lastToken[0], array, 0);

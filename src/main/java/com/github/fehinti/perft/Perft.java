@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.github.fehinti.board.Board120;
@@ -70,8 +72,15 @@ public class Perft {
        }
    }
 
+   static TestPerftAgainstStockfish.StockFishResult getPerftResult(String fen) {
+       board = FENParser.parseFENotation120(fen);
+       List<String> strList = new ArrayList<>();
+       long dres = divide(TestPerftAgainstStockfish.DEPTH, TestPerftAgainstStockfish.DEPTH, strList);
+       Collections.sort(strList);
+       return new TestPerftAgainstStockfish.StockFishResult(strList, (int) dres);
+   }
 
-   static long divide(int currentDepth, int originalDepth) {
+   static long divide(int currentDepth, int originalDepth, List<String> strList) {
        if (originalDepth > 8) {
            throw new IllegalArgumentException("depth must be between 1 and 8");
        }
@@ -96,33 +105,34 @@ public class Perft {
 
            // Is the move legal ? (does not leave own king in check)
            if (!VectorAttack120.isKingInCheck(board)) {
-               int flag = Move.getFlag(move);
-               if (currentDepth == 1 && (flag == Move.FLAG_PROMOTION_CAPTURE || flag == Move.FLAG_CAPTURE)) {
-                   CAPTURE++;
-               }
-               if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
-               else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
-               // checks to see if move leaves us in check
-               boolean side = board.getSideToMove();
-               // checks if last move played is a checking move
-               if (VectorAttack120.isSquareChecked(board,
-                       side,
-                       (side) ? board.getWhiteKingSq() : board.getBlackKingSq())
-                       && currentDepth == 1) CHECKS++;
+              // int flag = Move.getFlag(move);
+              // if (currentDepth == 1 && (flag == Move.FLAG_PROMOTION_CAPTURE || flag == Move.FLAG_CAPTURE)) {
+              //     CAPTURE++;
+              // }
+              // if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
+              // else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
+              // // checks to see if move leaves us in check
+              // boolean side = board.getSideToMove();
+              // // checks if last move played is a checking move
+              // if (VectorAttack120.isSquareChecked(board,
+              //         side,
+              //         (side) ? board.getWhiteKingSq() : board.getBlackKingSq())
+              //         && currentDepth == 1) CHECKS++;
                // writeFENToFile(Move.printMove(move) + " :\t" + FENParser.getFENotation(board));
-               nodeCount += divide(currentDepth - 1, originalDepth); // advance to child node
+               nodeCount += divide(currentDepth - 1, originalDepth, strList); // advance to child node
                nodes += nodeCount;
            }
            board.unmake(move);
            if (currentDepth == originalDepth) {
-               System.out.print(Move.printMove(move) + " :\t" + nodeCount);
-               int mv = board.getMoveFromHistory();
-               int pp = board.getPromotionPiece(Move.getPromotion(mv));
-               if (Move.getFlag(mv) == Move.FLAG_PROMOTION_CAPTURE || Move.getFlag(mv) == Move.FLAG_PROMOTION) {
-                   System.out.println("\t" + Board120.mapByteToChar((byte) pp));
-               }
-               else System.out.println();
+              // System.out.print(Move.printMove(move) + " :\t" + nodeCount);
+              // int mv = board.getMoveFromHistory();
+              // int pp = board.getPromotionPiece(Move.getPromotion(mv));
+              // if (Move.getFlag(mv) == Move.FLAG_PROMOTION_CAPTURE || Move.getFlag(mv) == Move.FLAG_PROMOTION) {
+              //     System.out.println("\t" + Board120.mapByteToChar((byte) pp));
+              // }
+              // else System.out.println();
                //writeFENToFile(Move.printMove(move) + " :\t" + nodeCount);
+               strList.add(Move.printMove(move) + ": " + nodeCount);
            }
        }
        return nodes;
@@ -150,7 +160,8 @@ public class Perft {
        System.out.println("go perft " + depth);
 
        Instant st = Instant.now();
-       long total = divide(depth, depth);
+       List<String> list = new ArrayList<>();
+       long total = divide(depth, depth, list);
        System.out.println("TOtal " + total);
        Instant end = Instant.now();
        Duration duration = Duration.between(st, end);
