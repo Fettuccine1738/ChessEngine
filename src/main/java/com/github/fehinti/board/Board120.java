@@ -402,7 +402,11 @@ public final class Board120 {
                 if (flag == FLAG_PROMOTION_CAPTURE) {
                     if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                             print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
-                            + "\n" + Move.dbgMove(move));
+                            + "\n" + Move.dbgMove(move)
+                            + "\n" + from
+                            + "\n" + to
+                            + "\n" + piece
+                           );
                     if (captured == WROOK || captured == Math.abs(BROOK)) onCaptureRook(to);
                     boolean found3 = incrementalUpdate(xside, xindex, OFF_BOARD, (captured << RANK_8 | to)); // remove piece
                     if (!found3) throw new RuntimeException("Error f=cap&Promo, xside");
@@ -615,11 +619,12 @@ public final class Board120 {
 
     // remove castling rights when rooks move;
     private void onRookMove(int from, byte piece, int flag) {
-        if (!canSideCastle(sideToMove) || flag == FLAG_CASTLE) return; // there are no castling rights to update
-        assert(piece == WROOK || piece == WKING ||piece == BKING ||piece == BROOK);
         boolean side = canSideCastle(sideToMove);
-        if (sideToMove) {
-            if (piece == WKING && side) {
+        // there are no castling rights to update, castles updated separately
+        if (!side || flag == FLAG_CASTLE) return;
+        assert(piece == WROOK || piece == WKING ||piece == BKING ||piece == BROOK);
+        if (sideToMove) { // white
+            if (piece == WKING) {
                 castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
                 // whitePieceList[15] &= ~(MOVED_FLAG << 16); // remove moved bit,
             }
@@ -629,7 +634,7 @@ public final class Board120 {
             }
         }
         else {
-            if (piece == BKING && side) { // remove long and short castles if king moves
+            if (piece == BKING) {
                 castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
                 // blackPieceList[15] &= ~(MOVED_FLAG << 16);
             }
@@ -811,16 +816,14 @@ public final class Board120 {
 
   // has piece
   public static void main(String[] args) {
-      Board120  board = FENParser.parseFENotation120("rnbqkbnr/ppppp1pp/8/8/4p3/8/PPPPKPPP/RNBQ1BNR w kq - 0 3");
+      Board120  board = FENParser.parseFENotation120("R3k2r/1b4bq/8/8/8/8/7B/4K2R b Kk - 0 1");
       board.print();
       System.out.printf(board.getBoardData());
       System.out.println(board.print8x8());
 
-      long start = System.currentTimeMillis();
       List<Integer> list = MoveGenerator.generatePseudoLegal(board);
-      System.out.println("end" + "\t" + (System.currentTimeMillis() - start));
       int count = 0;
-      System.out.println();
+      System.out.println("Leafs : " + list.size());
 
       for (int m: list) {
           System.out.println();

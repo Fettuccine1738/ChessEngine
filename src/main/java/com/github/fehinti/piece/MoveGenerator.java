@@ -110,7 +110,7 @@ public class MoveGenerator {
 
         // do not castle if being attacked,
         if (VectorAttack120.isSquareChecked(board, side, (side) ? E1 : E8)
-                && Math.abs(board.getPieceOnSquare((side) ? E1 : E8)) == ((side) ? WKING : BKING)) {
+                && board.getPieceOnSquare((side) ? E1 : E8) == ((side) ? WKING : BKING)) {
             return;
         }
 
@@ -237,8 +237,8 @@ public class MoveGenerator {
 
         for (int offset : (side) ? WHITE_CAPTURES : BLACK_CAPTURES) {
             int cap = from + offset;
-            if (cap != OFF_BOARD) {
-                byte piece = board.getPieceOnSquare(cap);
+            byte piece = board.getPieceOnSquare(cap);
+            if (piece != OFF_BOARD) {
                 if (isOpponentPiece(piece, side) && piece != ((side) ? BKING : WKING)) {
                     addPromotionCaptureMoves(moves, from, cap, index);
                 }

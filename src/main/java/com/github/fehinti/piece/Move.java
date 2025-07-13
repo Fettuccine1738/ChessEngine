@@ -89,19 +89,26 @@ public class Move {
                 .append(fromRank)
                 .append((char) ('a' + toFile))
                 .append(toRank);
+        if (getFlag(move) == FLAG_PROMOTION ||  getFlag(move) == FLAG_PROMOTION_CAPTURE) {
+            int pr = getPromotion(move);
+            if (pr == 0) sb.append('n');
+            if (pr == 1) sb.append('b');
+            if (pr == 2) sb.append('r');
+            if (pr == 3) sb.append('q');
+        }
         return sb.toString();
     }
 
     private static String printFlag(int flag) {
-        switch (flag) {
-            case FLAG_QUIET : return "Quiet";
-            case FLAG_EN_PASSANT:  return "Ep";
-            case FLAG_CASTLE: return "Castle";
-            case FLAG_CAPTURE: return "Capture";
-            case FLAG_PROMOTION_CAPTURE: return "Promo";
-            case FLAG_DOUBLE_PAWN_PUSH: return "DoublePawnPush";
-            default: throw new IllegalStateException("Unexpected value: " + flag);
-        }
+        return switch (flag) {
+            case FLAG_QUIET -> "Quiet";
+            case FLAG_EN_PASSANT -> "Ep";
+            case FLAG_CASTLE -> "Castle";
+            case FLAG_CAPTURE -> "Capture";
+            case FLAG_PROMOTION_CAPTURE -> "Promotion";
+            case FLAG_DOUBLE_PAWN_PUSH -> "DoublePawnPush";
+            default -> throw new IllegalStateException("Unexpected value: " + flag);
+        };
     }
 
     public static String dbgMove(int move) {

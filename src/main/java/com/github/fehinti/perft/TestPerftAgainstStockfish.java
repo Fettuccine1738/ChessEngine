@@ -3,7 +3,6 @@ package com.github.fehinti.perft;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -11,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 public class TestPerftAgainstStockfish {
@@ -21,7 +19,7 @@ public class TestPerftAgainstStockfish {
   static final String TEST ="src/main/java/com/github/fehinti/perft/fenway.txt";
   static final String STOCKFISH = "Stockfish";
   static final int DEPTH = 6;
-  static final String S_DEPTH = "go perft " + DEPTH; // generate moves up to depth 6
+  static final String S_DEPTH = "go perft " + DEPTH; // generate moves up to depth
 
   static final ProcessBuilder processBuilder = new ProcessBuilder(STOCKFISH)
           .directory(new File(System.getProperty("user.dir"))); // pwd
@@ -38,13 +36,13 @@ public class TestPerftAgainstStockfish {
             bw = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
             stockfishReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             br = Files.newBufferedReader(Paths.get(TEST));
-            nmatch = new BufferedWriter(new FileWriter(NON_MATCHES, true));
+            nmatch = Files.newBufferedWriter(Paths.get(NON_MATCHES));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
    }
 
-   record StockFishResult(List<String> result, int nodes) {
+   record StockFishResult(List<String> result, long nodes) {
    }
 
    // readfrom file, run stockfish and compare against us
@@ -70,11 +68,9 @@ public class TestPerftAgainstStockfish {
 
                     // compare results and write erros to file
                     boolean isLineCorrect = compareLines(sfish, engine);
-                    if (!isLineCorrect) {
-                        nmatch.write(line);
-                        nmatch.newLine();
-                        nmatch.flush();
-                    }
+                    nmatch.write(line + ((isLineCorrect) ? "\tGG" : "\tXX"));
+                    nmatch.newLine();
+                    nmatch.flush();
                 } catch (IOException e) {
                     System.out.println(e.getMessage());
                 }
@@ -89,14 +85,14 @@ public class TestPerftAgainstStockfish {
        // read from input
        List<String> result = new ArrayList<>();
        String line;
-       int num = 0;
+       long num = 0;
        // discard stockfish process info
        for (int m = 0; m < 5; m++) stockfishReader.readLine(); // first 5 lines not needed
 
       while((line = stockfishReader.readLine()) != null) {
           if (line.startsWith("Nodes")) {
               String[] split = line.trim().split("\\s+");
-              num = Integer.parseInt(split[split.length - 1]);
+              num = Long.parseLong(split[split.length - 1]);
               break;
           }
           result.add(line);
@@ -121,6 +117,8 @@ public class TestPerftAgainstStockfish {
    static void cleanUpResources() {
        try {
            bw.write("quit");
+           bw.newLine();
+           bw.flush();
            br.close();
            bw.close();
            stockfishReader.close();

@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Arrays;
+
 
 import com.github.fehinti.board.Board120;
 import com.github.fehinti.piece.Move;
@@ -32,10 +34,9 @@ import com.github.fehinti.piece.VectorAttack120;
  **********************************************************************************/
 public class Perft {
    static Board120 board;
-  // static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\test\\perft_init.txt";
-   static String FILEPATH = "C:\\Users\\favya\\IdeaProjects\\ChessEngine\\src\\main\\java\\com\\github\\fehinti\\perft\\dummy.txt";
+   static String FILEPATH = "src\\main\\java\\com\\github\\fehinti\\perft\\dummy1.txt";
    static File file;
-   static BufferedWriter bufferedWriter; //  = new BufferedWriter(new FileWriter(file));
+   static BufferedWriter bufferedWriter;
    static int COUNT = 0;
    static long CHECKS = 0;
    static long EnP = 0;
@@ -43,8 +44,8 @@ public class Perft {
    static long CAPTURE = 0;
 
    static {
-       // board = FENParser.parseFENotation120("8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1" );
-       board = FENParser.startPos120();
+       board = FENParser.parseFENotation120("r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0 1");
+       // board = FENParser.startPos120();
        System.out.println(board.print8x8());
        System.out.println(board.getBoardData());
        file = new File(FILEPATH);
@@ -61,7 +62,6 @@ public class Perft {
            throw new NullPointerException("bufferedWriter is null");
        }
        if (fen == null) throw new IllegalArgumentException("fen is null");
-       // bufferedWriter = new BufferedWriter(new OutputStreamWriter(System.out));
        try {
            bufferedWriter.write(fen);
            bufferedWriter.newLine();
@@ -72,12 +72,17 @@ public class Perft {
        }
    }
 
+   static boolean matchILLegalMoves(String str) {
+       return str.matches("(\\w\\d){2}: 0");
+   }
+
    static TestPerftAgainstStockfish.StockFishResult getPerftResult(String fen) {
        board = FENParser.parseFENotation120(fen);
        List<String> strList = new ArrayList<>();
        long dres = divide(TestPerftAgainstStockfish.DEPTH, TestPerftAgainstStockfish.DEPTH, strList);
+       strList.removeIf(Perft::matchILLegalMoves); // ignore illegal moves leaf node count (always 0)
        Collections.sort(strList);
-       return new TestPerftAgainstStockfish.StockFishResult(strList, (int) dres);
+       return new TestPerftAgainstStockfish.StockFishResult(strList, dres);
    }
 
    static long divide(int currentDepth, int originalDepth, List<String> strList) {
@@ -96,15 +101,16 @@ public class Perft {
        for(i = 0; i < N; i++) {
            long nodeCount = 0L; // leaf node counts
            move = moveList.get(i);
-           //System.out.println("-------------------------------------------\n\t" + Move.printMove(move));
+           // System.out.println("-------------------------------------------\n\t" + Move.printMove(move));
            board.make(move);
           //System.out.println(board.print8x8() + "\n" + board.getBoardData());
           //writeFENToFile(FENParser.getFENotation(board) + "\t" + (board.lastEntry & 0xff) + "\t"
           //+ (board.lastEntry >> 8 & 0xff));
-          // System.out.println(Arrays.toString((board.getSideToMove()) ? board.getBlackPieceList() : board.getWhitePieceList()));
+          //System.out.println(Arrays.toString((board.getSideToMove()) ? board.getBlackPieceList() : board.getWhitePieceList()));
 
            // Is the move legal ? (does not leave own king in check)
            if (!VectorAttack120.isKingInCheck(board)) {
+               // writeFENToFile(FENParser.getFENotation(board));
               // int flag = Move.getFlag(move);
               // if (currentDepth == 1 && (flag == Move.FLAG_PROMOTION_CAPTURE || flag == Move.FLAG_CAPTURE)) {
               //     CAPTURE++;
@@ -124,14 +130,6 @@ public class Perft {
            }
            board.unmake(move);
            if (currentDepth == originalDepth) {
-              // System.out.print(Move.printMove(move) + " :\t" + nodeCount);
-              // int mv = board.getMoveFromHistory();
-              // int pp = board.getPromotionPiece(Move.getPromotion(mv));
-              // if (Move.getFlag(mv) == Move.FLAG_PROMOTION_CAPTURE || Move.getFlag(mv) == Move.FLAG_PROMOTION) {
-              //     System.out.println("\t" + Board120.mapByteToChar((byte) pp));
-              // }
-              // else System.out.println();
-               //writeFENToFile(Move.printMove(move) + " :\t" + nodeCount);
                strList.add(Move.printMove(move) + ": " + nodeCount);
            }
        }
@@ -154,15 +152,16 @@ public class Perft {
        if (args.length != 1) { // adjust length to 2 when debugging with perftree
            System.out.println("Provide a depth please");
        }
-
-       // board = FENParser.sparseFENotation(args[1]); // instatiate board with 2 when debugging with perftree
        int depth = Integer.parseInt(args[0]);
        System.out.println("go perft " + depth);
 
        Instant st = Instant.now();
        List<String> list = new ArrayList<>();
        long total = divide(depth, depth, list);
+       list.removeIf(Perft::matchILLegalMoves);
        System.out.println("TOtal " + total);
+       for (String str : list) System.out.println(str);
+
        Instant end = Instant.now();
        Duration duration = Duration.between(st, end);
 
