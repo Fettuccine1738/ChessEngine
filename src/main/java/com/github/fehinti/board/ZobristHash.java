@@ -2,6 +2,9 @@ package com.github.fehinti.board;
 
 
 import java.util.Random;
+
+import static com.github.fehinti.board.Board120Utils.*;
+
 /*
 * Zobrist hashing starts by randomly generating bitstrings for each possible
 *  element of a board game,
@@ -15,51 +18,49 @@ import java.util.Random;
  */
 public class ZobristHash {
 
+    // black piece value on board is in range -127 (bpawn) to -122(bking)
+    // 133 maps this index to 6 (bpawn) to 11(bking) to index the zobrist table
+    static final int ADJUST_BLACK_INDEX = 133;
     private static final Random random = new Random();
 
-    private static final long[][] table = new long[64][12];
-    private static final long BLACK_BIT_STRING = random.nextLong();
+    // each square (0..63) and piece combination (K,Q,R,B,N,P,k,q,r,b,n,p)
+    private static final long[][] table = new long[BOARD_SIZE][PIECE_TYPE_COUNT];
+    private static final long BLACK_TO_MOVE = Math.abs(random.nextLong());
+    // * For future use
+    private static final long BLACK_KING_SIDE_CASTLE =  random.nextLong();
+    private static final long BLACK_QUEEN_SIDE_CASTLE =  random.nextLong();
+    private static final long WHITE_KING_SIDE_CASTLE =  random.nextLong();
+    private static final long WHITE_QUEEN_SIDE_CASTLE =  random.nextLong();
 
     static {
-        for (int i = 0; i < 64; i++) {
-            for (int j = 0; j < 12; j++) {
-                table[i][j] = random.nextLong();
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < PIECE_TYPE_COUNT; j++) {
+                table[i][j] = Math.abs(random.nextLong());
             }
         }
     }
 
-    private static int mapBlackToPositiveInt(int blackValue) {
-        return switch(blackValue) { // blackPiece.getValue() - 1 to adjust to zero and non -ve index
-            case -1, -127 ->  6;
-            case -2, -126 ->  7;
-            case -3, -125 ->  8;
-            case -4, -124 ->  9;
-            case -5, -123 ->  10;
-            case -6, -122 ->  11;
-            default -> throw new IllegalArgumentException("Invalid black value: " + blackValue);
-        };
-    }
-
-    public static long hash(Board120 board) {
-        long result = (board.getSideToMove()) ? 0L : BLACK_BIT_STRING;
+    // * this is only used at initialization
+    public static long hashAtInit(Board120 board) {
+        long result = (board.getSideToMove()) ? 0L : BLACK_TO_MOVE;
         for (int i = 0; i < 64; i++) {
             int index120 = Board120.getMailbox64Number(i);
             int piece = board.getPieceOnSquare(index120);
             if (piece != 0) {
-                int index = (piece > 0) ? piece - 1 : mapBlackToPositiveInt(piece);
+                int index = (piece > 0) ? piece - 1 : (ADJUST_BLACK_INDEX + piece);
                 result ^= table[i][index];
             }
         }
         return result;
     }
 
-    public static long zobristKey(int square, int pieceVal) {
-        if (pieceVal == 0) throw new IllegalArgumentException();
-        return table[square][(pieceVal > 0) ? pieceVal - 1 : mapBlackToPositiveInt(pieceVal)];
-    }
-
+    // * this is used to incrementally update the hashvalue of the board
+    // * we take advantage of the fact that the changes on a board are only local
+    // * e.g a white pawn push from a2 to a4 requires XOR out the current hash with
+    // * [a2 = 31][0 (wp(1) - 1], then XOR in the new hash value with
+    // * [a4 = 51][0]
     public static long zobristKey(int square, byte pieceVal) {
-        return zobristKey(square, pieceVal);
+        if (pieceVal == 0) throw new IllegalArgumentException();
+        return table[square][(pieceVal > 0) ? pieceVal - 1 : ADJUST_BLACK_INDEX + pieceVal];
     }
-
 }

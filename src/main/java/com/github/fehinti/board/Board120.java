@@ -1,5 +1,8 @@
 package com.github.fehinti.board;
 
+import com.github.fehinti.engine.Evaluator;
+import com.github.fehinti.engine.PESTO;
+import com.github.fehinti.engine.SimpleEvaluator;
 import com.github.fehinti.piece.Move;
 import com.github.fehinti.piece.MoveGenerator;
 
@@ -52,11 +55,14 @@ public final class Board120 {
     91, 92, 93, 94, 95, 96, 97, 98
     };
 
+
     private final static byte BLACK = (byte) 0b10000000;
     private final static byte WHITE = (byte) 0b00000000;
     public final static byte  MOVED_FLAG = (byte) 0b1;
+    public static final int KING_SQ = 15;
+    static final int INIT_BUFFER = 512;
 
-    public int lastEntry = 0;
+    // ! public int lastEntry = 0;
 
     private final byte[] board120; // 8x8
     private boolean sideToMove; // white or black's turn
@@ -100,9 +106,28 @@ public final class Board120 {
         blackPieceList = new int[MAX_LEN_16];
         fillLists();
         captureEntry = new Stack<>();
-        playHistory    = new int[512];
-        irreversibleAspect    = new int[512];
+        playHistory    = new int[INIT_BUFFER];
+        irreversibleAspect    = new int[INIT_BUFFER];
         ply = 0;
+        zobristKey = ZobristHash.hashAtInit(this);
+    }
+
+    public Board120(Board120 copy) {
+        this.board120 = new byte[copy.board120.length];
+        this.whitePieceList = new int[copy.whitePieceList.length];
+        this.blackPieceList = new int[copy.blackPieceList.length];
+        System.arraycopy(copy.board120, 0, this.board120, 0, this.board120.length);
+        this.sideToMove = copy.getSideToMove();
+        this.fullMoveCounter = copy.getFullMoveCounter();
+        this.halfMoveClock = copy.getHalfMoveClock();
+        this.enPassant = (byte) copy.getEnPassant();
+        this.setCastlingRights(copy.getCastlingRights());
+        fillLists();
+        captureEntry = new Stack<>();
+        playHistory    = new int[INIT_BUFFER];
+        irreversibleAspect    = new int[INIT_BUFFER];
+        ply = 0;
+        this.zobristKey = copy.zobristKey;
     }
 
     public static int getMailbox64Number(int index) {
@@ -137,19 +162,19 @@ public final class Board120 {
         }
         // sort list will be valuable when looking for smallest attackers
         // pieces are sorted with minor pieces first (ordering: P, N, B, R, Q , K)
-        Arrays.sort(whitePieceList, 0, 15);
+        Arrays.sort(whitePieceList, 0, KING_SQ);
         // sort descending, encoding of pawns > major pieces , this keeps pawns before other pieces
         // allowing us to get smallest attacker for black easily
         sortDescending(blackPieceList);
     }
 
     private void sortDescending(int[] arr) {
-        Integer[] copy = new Integer[15];
-        for (int i = 0; i < 15; i++) {
+        Integer[] copy = new Integer[KING_SQ];
+        for (int i = 0; i < KING_SQ; i++) {
             copy[i] = arr[i];
         }
         Arrays.sort(copy, Collections.reverseOrder());
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < KING_SQ; i++) {
            arr[i] = copy[i];
         }
     }
@@ -261,11 +286,11 @@ public final class Board120 {
     }
 
     public int getBlackKingSq() {
-        return blackPieceList[15] & 0xff;
+        return blackPieceList[KING_SQ] & 0xff;
     }
 
     public int getWhiteKingSq() {
-        return whitePieceList[15] & 0xff;
+        return whitePieceList[KING_SQ] & 0xff;
     }
 
     public int getEnPassant() {
@@ -286,10 +311,6 @@ public final class Board120 {
      */
     public int getFullMoveCounter() {
         return fullMoveCounter;
-    }
-
-    public void setZobrist(long key) {
-        zobristKey = key;
     }
 
     private int getPieceListIndex(int piece, int square, boolean captured) {
@@ -363,11 +384,13 @@ public final class Board120 {
                 makeMove(from, to, piece);
                 int xpos = OFF_BOARD;
                 if (sideToMove) {
-                    xpos = to - 10;
+                    xpos = to - 10; // black piece to capture is a square below enpassnt
+                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to - 10), BPAWN);
                     assert(board120[xpos] == BPAWN);
                 }
                 else {
-                    xpos = to + 10;
+                    xpos = to + 10; // white piece to capture is a square above enpassant
+                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to + 10), WPAWN);
                     assert(board120[xpos] == WPAWN);
                 }
                 board120[xpos] = EMPT_SQ;
@@ -379,11 +402,13 @@ public final class Board120 {
             }
             case FLAG_CAPTURE -> {
                 assert(board120[to] != EMPT_SQ);
-                // captured piece is again opponent
                 if (captured == WROOK || captured == Math.abs(BROOK)) onCaptureRook(to);
                 if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                         print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
                         + "\n" + Move.dbgMove(move));
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece); // XOR out capturER
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to),   board120[to]); // XOR out captured
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to),   piece); // XOR in
                 board120[from] = EMPT_SQ;
                 board120[to]   = piece;
                 halfMoveClock = EMPT_SQ;
@@ -394,6 +419,9 @@ public final class Board120 {
             }
             case FLAG_PROMOTION, FLAG_PROMOTION_CAPTURE -> {
                 byte pp = getPromotionPiece(promotion);
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece);
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), board120[to]);
+                if (flag == FLAG_PROMOTION_CAPTURE) zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
                 board120[from] = EMPT_SQ;
                 board120[to] = pp;
                 boolean found2 = incrementalUpdate(side, index,
@@ -419,6 +447,17 @@ public final class Board120 {
         if (flag != FLAG_DOUBLE_PAWN_PUSH) enPassant =  OFF_BOARD;
         if (!isPieceWhite(piece)) fullMoveCounter++;
         sideToMove = !sideToMove;
+    }
+
+    private void updateHashOnCaptures(int from, int to, byte fPiece, byte tPiece) {
+        zobristKey ^= ZobristHash.zobristKey(from, fPiece); // XOR out
+        zobristKey ^= ZobristHash.zobristKey(to, tPiece); // XOR out captured
+    }
+
+    private void updateHashOnPromotin(int fm, int to, byte pp) {
+        zobristKey ^= ZobristHash.zobristKey(fm, board120[fm]); // XOR out
+        zobristKey ^= ZobristHash.zobristKey(to, board120[to]); // XOR out captured
+        zobristKey ^= ZobristHash.zobristKey(to, pp); // XOR out captured
     }
 
     /**
@@ -469,8 +508,14 @@ public final class Board120 {
             case FLAG_EN_PASSANT -> {
                 makeMove(to, from, piece); //reverse capturing pawn to its previous square
                 assert(capturedPiece == WPAWN || capturedPiece == BPAWN);// captured piece is a square above enpassant
-                if (isPieceWhite(capturedPiece)) board120[enPassant + 10] = capturedPiece;
-                else board120[enPassant - 10] = capturedPiece;
+                if (isPieceWhite(capturedPiece))  {
+                    board120[enPassant + 10] = capturedPiece;
+                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(enPassant + 10), capturedPiece);
+                }
+                else {
+                    board120[enPassant - 10] = capturedPiece;
+                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(enPassant - 10), capturedPiece);
+                }
                 boolean f1 = incrementalUpdate(side, index, encode(v, from), encode(v, to));
                 boolean f2 = incrementalUpdate(xside, xindex,
                         encode(Math.abs(capturedPiece), (sideToMove) ? enPassant - 10 : enPassant + 10), OFF_BOARD);
@@ -482,6 +527,7 @@ public final class Board120 {
                 makeMove(to, from, piece); // return capturing piece
                 assert(capturedPiece != EMPT_SQ);
                 board120[to] = capturedPiece; // returned captured piece
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
                 boolean f1 = incrementalUpdate(side, index, encode(v, from), encode(v, to));
                 boolean f2 = incrementalUpdate(xside, xindex,  encode(Math.abs(capturedPiece), to), OFF_BOARD);
                 if (!f1) throw new RuntimeException("Error updating capturing pc");
@@ -496,6 +542,7 @@ public final class Board120 {
                 if (!found) throw new RuntimeException("Error restoring promoting pawn f=Promotion");
                 if (flag == FLAG_PROMOTION_CAPTURE) {
                     board120[to] = capturedPiece;
+                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
                     // this has encoding would have been set to -1 in the make's incremental update
                     boolean fd = incrementalUpdate(xside, xindex, (Math.abs(capturedPiece) << RANK_8 | to ), OFF_BOARD);
                     if (!fd) throw new RuntimeException("Error rest;oring prev captured f=Promotion");
@@ -514,6 +561,7 @@ public final class Board120 {
         if (sideToMove) {
             board120[E1] = WKING;
             if (to == G1) { // short castles
+                // 4 zobrist updates
                 board120[G1] = EMPT_SQ;
                 board120[F1] = EMPT_SQ; // undo rook's move
                 board120[H1] = WROOK;
@@ -523,6 +571,10 @@ public final class Board120 {
                 board120[D1] = EMPT_SQ; // undo rooks's move
                 board120[A1] = WROOK;
             }
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), WKING);
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), WKING);
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C1 ? D1 : F1), WROOK);
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C1 ? A1 : H1), WROOK);
             ri = getPieceListIndex(rv, (to == C1) ? D1 : F1, false);
             fRook = incrementalUpdate(side, ri, encode(rv, (to == C1) ? A1 : H1),
                     encode(rv, (to == C1) ? D1 : F1));
@@ -542,6 +594,11 @@ public final class Board120 {
             ri = getPieceListIndex(rv, (to == C8) ? D8 : F8, false);
             fRook = incrementalUpdate(side, ri, encode(rv, (to == C8) ? A8 : H8),
                     encode(rv, (to == C8) ? D8 : F8));
+
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), BKING);
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), BKING);
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C8 ? D8 : F8), BROOK);
+            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C8 ? A8 : H8), BROOK);
         }
         if (!fRook) throw new RuntimeException("Error updating Rook f=castle");
         int enc = (sideToMove) ? WKING : -BKING;
@@ -603,6 +660,8 @@ public final class Board120 {
     private void makeMove(int from, int to, byte p) {
         board120[from] = EMPT_SQ;
         board120[to] = p;
+        zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), p);
+        zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), p);
     }
 
     private boolean incrementalUpdate(int[] side, int index, int encode, int validate) {
@@ -611,7 +670,7 @@ public final class Board120 {
         // compares piece and square encoding match our validate encoding before overwriting
         if ((side[index] & 0xff) == (validate & 0xff) && (side[index] >> RANK_8) == validate >> RANK_8) {
             found = true;
-            lastEntry = encode;
+            //! lastEntry = encode;
         }
         side[index] = encode;
         return  found;
@@ -773,6 +832,7 @@ public final class Board120 {
         info.append("\n").append("fullCount = ").append(fullMoveCounter);
         info.append("\n").append("halfMove = ").append(halfMoveClock);
         info.append("\nSide:\t").append((sideToMove) ? "white" : "black").append("\n");
+        info.append("Zobristhash: ").append(zobristKey).append("\n");
         return info.toString();
     }
 
@@ -814,10 +874,41 @@ public final class Board120 {
         return board.toString();
     }
 
+    // use this to determine if we are in the endgame, middlegame, start
+    public int getTotalPcCount() {
+        int count = 0;
+        for (int i = 0; i < 16; i++) {
+            if (blackPieceList[i] != OFF_BOARD) count++;
+            if (whitePieceList[i] != OFF_BOARD) count++;
+        }
+        return count;
+    }
+
+    public int getBlackPcCount() {
+        int count = 0;
+        for (int i = 0; i < 16; i++) {
+           if (blackPieceList[i] != OFF_BOARD) count++;
+        }
+        return count;
+    }
+
+    public int getWhitePcCount() {
+        int count = 0;
+        for (int i = 0; i < 16; i++) {
+            if (whitePieceList[i] != OFF_BOARD) count++;
+        }
+        return count;
+    }
+
+
   // has piece
   public static void main(String[] args) {
-      Board120  board = FENParser.parseFENotation120("R3k2r/1b4bq/8/8/8/8/7B/4K2R b Kk - 0 1");
+      Board120  board = FENParser.parseFENotation120("5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1");
+      Evaluator evaluator = PESTO.getInstance();
+
       board.print();
+      double eval1 = evaluator.evaluate(board);
+      System.out.println("Eval " + eval1);
       System.out.printf(board.getBoardData());
       System.out.println(board.print8x8());
 
@@ -829,6 +920,8 @@ public final class Board120 {
           System.out.println();
           System.out.println((++count) + "\t" + Move.printMove(m));
           board.make(m);
+          double eval = evaluator.evaluate(board);
+          System.out.println("Eval " + eval);
           System.out.println(board.print8x8());
           System.out.printf(board.getBoardData());
           board.unmake(m);

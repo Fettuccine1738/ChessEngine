@@ -4,6 +4,26 @@ import java.util.function.Predicate;
 
 public class Board120Utils {
 
+    public static final boolean  CWHITE = true;
+    public static final boolean  CBLACK = false;
+
+    // color coding of the board
+    public static final boolean[] COLOR = {
+            CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK,
+            CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE,
+            CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE,
+            CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK,
+            CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE,
+            CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK,
+            CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE,
+            CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK,
+            CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE,
+            CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK,
+            CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK,
+            CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, CBLACK, CWHITE, };
+
+
+    public static final byte PIECE_TYPE_COUNT = 12;
     public static final byte A1= 21;
     public static final byte B1= 22;
     public static final byte C1= 23;

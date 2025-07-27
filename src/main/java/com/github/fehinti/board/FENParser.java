@@ -96,7 +96,7 @@ public class FENParser {
         byte enPassant, castlingRights;
         boolean side;
         Arrays.fill(array, (byte) 0);
-        String[] tokens = notation.split("/");
+        String[] tokens = notation.trim().split("/");
         if (tokens.length != FILE_H) throw new IllegalArgumentException( notation + "\tLast row invalid in FEN");
         char ch;
         int index = 0;
