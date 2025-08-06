@@ -134,20 +134,29 @@ public class Engine {
         int[] wList = board.getWhitePieceList();
         int[] bList = board.getBlackPieceList();
 
-        // [N, B, PRQ]
+        // [N, B, PRQ] count the number of knights, bishop and other pieces on the board
+        // estimates draws based on piece  combinations;
         int[] wPc = new int[3];
         int[] bPc = new int[3];
+        int bSquare = 0;
+        int wSquare = 0;
 
        for (int i = 0; i < 16; i++) {
-            // return early, checkmate is still possible with pieces remaining
+            // return early, checkmate possible with (pawn, rook and queen) remaining
             if (wPc[2] > 2 || bPc[2] > 2) return false;
             int wp = (wList[i] >> 8) & 0xff;
             int bp = (bList[i] >> 8) & 0xff;
             if (wp == WKNIGHT) wPc[0]++;
-            else if (wp == WBISHOP) wPc[1]++;
+            else if (wp == WBISHOP) {
+                wPc[1]++;
+                wSquare = wList[i] & 0xff;
+            }
             else wPc[2]++;
             if (bp == -BKNIGHT) bPc[0]++;
-            else if (bp == -BBISHOP) bPc[1]++;
+            else if (bp == -BBISHOP) {
+                bPc[1]++;
+                bSquare = bList[i] & 0xff;
+            }
             else bPc[2]++;
         }
         // King vs. king
@@ -165,8 +174,6 @@ public class Engine {
         else if ( blackKingBishop &&  onlyWhiteKing)  return true;
         else if ( whiteKingBishop && blackKingBishop) {
             // check if the bishops are of the same color => stalemate
-            int bSquare = 0;
-            int wSquare = 0;
             for (int j = 0; j < KING_SQ; j++) {
                 if (((bList[j] >> 8) & 0xff) == -BBISHOP) bSquare  = bList[j] & 0xff;
                 if (((wList[j] >> 8) & 0xff) == WBISHOP)  wSquare  = wList[j] & 0xff;
@@ -175,5 +182,4 @@ public class Engine {
         }
         return false;
     }
-
 }

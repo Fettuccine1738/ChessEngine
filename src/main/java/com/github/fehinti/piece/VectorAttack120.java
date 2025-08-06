@@ -130,6 +130,7 @@ public class VectorAttack120 {
             int from = i & 0xff;
             int pie = (i >> 8) & 0xff;
             if (pie == WPAWN || pie == WKNIGHT || pie == -BPAWN || pie == -BKNIGHT) {
+                // no possible blockers when attacked by a pawn or knight
                 if (isSquareReachableByPiece(from, sq, pie)) return true;
             }
             else if (isSquareReachableByPiece(from, sq, pie)) {

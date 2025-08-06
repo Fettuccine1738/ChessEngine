@@ -104,11 +104,11 @@ public class SimpleEvaluator implements  Evaluator {
        int xScore = 0;
 
        boolean b = board120.getSideToMove();
-       int[] sSide = (b ? board120.getWhitePieceList() :  board120.getBlackPieceList());
-       int count = (b) ? board120.getWhitePcCount() : board120.getBlackPcCount();
+       int[] sSide = board120.getWhitePieceList(); // (b ? board120.getWhitePieceList() :  board120.getBlackPieceList());
+       int count = board120.getWhitePcCount(); // (b) ? board120.getWhitePcCount() : board120.getBlackPcCount();
 
-       int[] xSide = (b ? board120.getBlackPieceList() :  board120.getWhitePieceList());
-       int xcount = (b) ? board120.getBlackPcCount() : board120.getWhitePcCount();
+       int[] xSide = board120.getBlackPieceList(); // (b ? board120.getBlackPieceList() : board120.getWhitePieceList());
+       int xcount = board120.getBlackPcCount(); // (b) ? board120.getBlackPcCount() : board120.getWhitePcCount();
 
        for (int i = 0; i < MAX_LEN_16; i++) {
            if (sSide[i] != OFF_BOARD) {
@@ -117,10 +117,10 @@ public class SimpleEvaluator implements  Evaluator {
            }
            if (xSide[i] != OFF_BOARD) {
                int bp = (xSide[i] >> RANK_8) & 0xff;
-               sScore += getPieceValue(bp) + getPieceTableEntry(xcount, bp, !b, xSide[i] & 0xff);
+               xScore += getPieceValue(bp) + getPieceTableEntry(xcount, bp, !b, xSide[i] & 0xff);
            }
        }
-       return (sScore - xScore) / 10000.;
+       return (sScore - xScore) / 100. ;
     }
 
     public static int getPieceTableEntry(int pCount, int piece, boolean side, int square) {

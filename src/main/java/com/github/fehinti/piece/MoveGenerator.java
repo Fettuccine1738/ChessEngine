@@ -108,7 +108,7 @@ public class MoveGenerator {
         boolean longCastle = (side) ? board.canWhiteCastleQueenside() : board.canBlackCastleQueenside();
         boolean shortCastle = (side) ? board.canWhiteCastleKingside() : board.canBlackCastleKingside();
 
-        // do not castle if being attacked,
+        // do not castle if king is under check
         if (VectorAttack120.isSquareChecked(board, side, (side) ? E1 : E8)
                 && board.getPieceOnSquare((side) ? E1 : E8) == ((side) ? WKING : BKING)) {
             return;

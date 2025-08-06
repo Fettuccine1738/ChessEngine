@@ -160,7 +160,7 @@ public class PESTO implements Evaluator {
             BISHOP_MID_GAME, ROOK_MID_GAME,
             QUEEN_MID_GAME, KING_MID_GAME, };
 
-    // determines how much each piece type contributes to calculating the
+    // determines how much each piece type contributes to calculating the game phase
     final static int[] GAME_PHASE = { 0, 1, 1, 2, 4, 0, 0, 1, 1, 2, 4, 0};
     final static int[][] MID_PHASE_TABLE = new int[PIECE_TYPE_COUNT][BOARD_SIZE];
     final static int[][] END_PHASE_TABLE = new int[PIECE_TYPE_COUNT][BOARD_SIZE];
@@ -169,9 +169,10 @@ public class PESTO implements Evaluator {
         for (int i = WPAWN; i <= WKING; i++) {
             for (int sq = 0; sq < BOARD_SIZE; sq++) {
                 MID_PHASE_TABLE[i][sq] = MID_GAME_VAL[i - 1] + MID_GAME_PESTO[i - 1][sq];
-                END_PHASE_TABLE[i][sq] = MID_GAME_VAL[i - 1] + MID_GAME_PESTO[i - 1][sq];
+                END_PHASE_TABLE[i][sq] = END_GAME_VAL[i - 1] + END_GAME_PESTO[i - 1][sq];
+                // xor with 56 to mirror the position
                 MID_PHASE_TABLE[i + 5][sq] = MID_GAME_VAL[i - 1] + MID_GAME_PESTO[i - 1][sq ^ 56];
-                END_PHASE_TABLE[i + 5][sq] = MID_GAME_VAL[i - 1] + MID_GAME_PESTO[i - 1][sq ^ 56];
+                END_PHASE_TABLE[i + 5][sq] = END_GAME_VAL[i - 1] + END_GAME_PESTO[i - 1][sq ^ 56];
             }
         }
     }
@@ -200,9 +201,9 @@ public class PESTO implements Evaluator {
             }
         }
 
-        int side = board.getSideToMove() ? 0 : 1; // BUGBUG TODO: likely cause of PESTO always being -ve
-        int midgame = mg[side] - mg[side ^ 1];
-        int endgame = eg[side] - eg[side ^ 1];
+        //int side = board.getSideToMove() ? 0 : 1; // BUGBUG TODO: likely cause of PESTO always being -ve
+        int midgame = mg[0] - mg[1];
+        int endgame = eg[0] - eg[1];
         int mgPhase = phase;
         mgPhase = Math.min(mgPhase, 24);
         int egPhase = 24 - mgPhase;

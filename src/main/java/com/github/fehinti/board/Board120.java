@@ -154,7 +154,7 @@ public final class Board120 {
                 else whitePieceList[wp++] = ((value << RANK_8) | square);
             }
             // * negate value used because signed bit is still maintained if actual value
-            // * -num is used, this allows us to use the unused bits
+            // * -num removes the signed bits allows us to use the unused bits
             else if (value < 0){
                 if (value == BKING) blackPieceList[wk] = ((-value << RANK_8) | square);
                 else blackPieceList[bp++] = ((-value << RANK_8) | square);
@@ -221,11 +221,9 @@ public final class Board120 {
 
     public boolean canSideCastle(boolean b) {
         byte castles = castlingRights;
-        if (b) {
-            // masks blacks bits if white to play
+        if (b) { // masks blacks bits if white to play
             castles &= ~(BLACK_QUEENSIDE | BLACK_KINGSIDE);
-        }
-        else            castles &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE); // vice versa
+        } else            castles &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE); // vice versa
         return castles != 0;
     }
 
@@ -904,7 +902,7 @@ public final class Board120 {
   // has piece
   public static void main(String[] args) {
       Board120  board = FENParser.parseFENotation120("5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1");
-      Evaluator evaluator = PESTO.getInstance();
+      Evaluator evaluator = SimpleEvaluator.getInstance();
 
       board.print();
       double eval1 = evaluator.evaluate(board);
