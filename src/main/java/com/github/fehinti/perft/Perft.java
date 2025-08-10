@@ -66,8 +66,7 @@ public class Perft {
            bufferedWriter.write(fen);
            bufferedWriter.newLine();
            bufferedWriter.flush();
-       }
-       catch(IOException e) {
+       } catch(IOException e) {
            System.out.println(e.getMessage());
        }
    }
@@ -140,8 +139,7 @@ public class Perft {
        if (bufferedWriter != null) {
            try {
                bufferedWriter.close();
-           }
-           catch(IOException e) {
+           } catch(IOException e) {
                System.out.println(e.getMessage());
            }
        }

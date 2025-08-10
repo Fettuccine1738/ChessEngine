@@ -209,5 +209,5 @@ public class PESTO implements Evaluator {
         int egPhase = 24 - mgPhase;
 
         return (midgame * mgPhase + endgame * egPhase) / 24.;
-    };
+    }
 }

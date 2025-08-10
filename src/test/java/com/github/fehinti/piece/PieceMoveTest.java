@@ -1,8 +1,6 @@
 package com.github.fehinti.piece;
 
-import com.github.fehinti.board.Board;
 import com.github.fehinti.board.FENParser;
-import com.github.fehinti.board.Move;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,8 +24,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static com.github.fehinti.piece.PieceMove.generateLegalMoves;
-import static com.github.fehinti.piece.PieceMove.generatePseudoLegal;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.*;
 

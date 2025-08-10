@@ -15,41 +15,89 @@ import static com.github.fehinti.board.Board120Utils.*;
 
 public class Engine {
 
-    record Move(boolean isMate,  List<Integer> Legalmoves) {
-    }
+    record Move(boolean isMate,  List<Integer> legalMoves) { }
+    record TranspositionEntry(double value, byte depthFound, byte nodeType) { }
 
     private static final double INIT_ALPHA = Double.NEGATIVE_INFINITY;
     private static final double INIT_BETA  = Double.POSITIVE_INFINITY;
+    private static final byte  NODE_TYPE_EXACT = 0;
+    private static final byte  NODE_TYPE_LOWER = 1;
+    private static final byte  NODE_TYPE_UPPER = 2;
     private static final int DRAW_BY_50 = 50;
+    private static final int COLOR_WH = 1;
     private static final boolean MAX_PLAYER = true;
     private static final boolean MIN_PLAYER = false;
     private static final byte SIMPLE = 1;
     private static final byte ADV = 0;
 
     private final Board120 board;
-    private HashMap<Long, Integer> previousEval;
+    private final Board120 gameBoard;
+    private final HashMap<Long, TranspositionEntry> transpositionTable;
     private final Evaluator evaluator;
 
     public Engine(String fen, int eval) {
         this.board = FENParser.parseFENotation120(fen);
-        previousEval = new HashMap<>();
+        transpositionTable = new HashMap<>();
         evaluator = (eval == 0) ? PESTO.getInstance() : SimpleEvaluator.getInstance();
+        gameBoard = new Board120(board);
     }
 
     public int search() {
+        boolean side = gameBoard.getSideToMove();
+        negamax(8, INIT_ALPHA, INIT_BETA, 1);
         return 0;
     }
 
-    // negamax form of alphabeta, were both sides are maximizing their scores
-    private double alphaBeta(int depth, double alpha, double beta) {
-        if (depth == 0) return  evaluator.evaluate(board);
+    private double negamax(int depth, double alpha, double beta, int color) {
+        double alphaOrig = alpha;
+
+        TranspositionEntry transpositionEntry =  transpositionTable.get(board.getZobristHash());
+        if (transpositionEntry != null && transpositionEntry.depthFound >= depth) {
+            double value = transpositionEntry.value;
+            if (transpositionEntry.nodeType == NODE_TYPE_EXACT) return  value;
+            else if (transpositionEntry.nodeType == NODE_TYPE_LOWER && value >= beta ) {
+                return value;
+            } else if (transpositionEntry.nodeType == NODE_TYPE_UPPER && value <= alpha ) {
+                return value;
+            }
+        }
+
+        if (depth == 0) return  color * evaluator.evaluate(board);
         List<Integer> child = MoveGenerator.generatePseudoLegal(board);
+        MoveGenerator.sortMoves(child);
+
         double eval = Double.NEGATIVE_INFINITY;
-        if (child.isEmpty()) return 0; // TODO : checkmate ? draw
+        if (child.isEmpty()) return 0; // TODO : checkmate ? draw/ terminal node
         for (Integer mv : child) {
             board.make(mv);
             if (!VectorAttack120.isKingInCheck(board)) {
-                eval = -alphaBeta(depth - 1, -beta, -alpha);
+                eval = -negamax(depth - 1, -beta, -alpha, -color);
+            }
+            board.unmake(mv);
+            alpha = Math.max(alpha, eval);
+            if (alpha >= beta) break;
+        }
+
+        byte nodeType;
+
+        if (eval <= alphaOrig) nodeType = NODE_TYPE_UPPER;
+        else if (eval >= beta) nodeType = NODE_TYPE_LOWER;
+        else nodeType = NODE_TYPE_EXACT;
+
+        TranspositionEntry newEntry = new TranspositionEntry(eval, (byte) depth, nodeType);
+        transpositionTable.put(board.getZobristHash(), newEntry);
+        return eval;
+    }
+
+    private double oldnegamax(int depth, double alpha, double beta, int color) {
+        if (depth == 0) return  color * evaluator.evaluate(board);
+        List<Integer> child = MoveGenerator.generatePseudoLegal(board);
+        double eval = Double.NEGATIVE_INFINITY;
+        if (child.isEmpty()) return 0; // TODO : checkmate ? draw/ terminal node
+        for (Integer mv : child) {
+            board.make(mv);
+            if (!VectorAttack120.isKingInCheck(board)) {
+                eval = -oldnegamax(depth - 1, -beta, -alpha, -color);
             }
             board.unmake(mv);
             if (eval >= beta) return beta;

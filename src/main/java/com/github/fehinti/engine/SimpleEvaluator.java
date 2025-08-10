@@ -1,8 +1,6 @@
 package com.github.fehinti.engine;
 
 import com.github.fehinti.board.Board120;
-
-
 import static com.github.fehinti.board.Board120Utils.*;
 
 /*

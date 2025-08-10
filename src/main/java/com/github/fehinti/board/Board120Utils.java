@@ -114,14 +114,15 @@ public class Board120Utils {
     public final static int BOARD_SIZE     = 64;
     public final static int BOARD_SIZE_120 = 120;
 
-    public final static int QUEEN_PROMO = 3;
-    public final static int ROOK_PROMO = 2;
-    public final static int BISHOP_PROMO = 1;
-    public final static int KNIGHT_PROMO = 0;
+    // promotions
+    public final static int Q_PROMO = 3;
+    public final static int R_PROMO = 2;
+    public final static int B_PROMO = 1;
+    public final static int KN_PROMO = 0;
 
 
-    public final static boolean BLACK         = false;
-    public final static boolean WHITE         = true;
+    public final static boolean BLACK = false;
+    public final static boolean WHITE = true;
 
     // rank
     public final static int EMPT_SQ = 0;
@@ -139,6 +140,7 @@ public class Board120Utils {
     public final static byte WHITE_QUEENSIDE    = 2; // 0010
     public final static byte BLACK_KINGSIDE     = 4; // 0100
     public final static byte BLACK_QUEENSIDE    = 8; // 1000
+
 
     public final static byte MAX_LEN_16 = 16;
 

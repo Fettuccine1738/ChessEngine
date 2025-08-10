@@ -152,10 +152,9 @@ public final class Board120 {
             if (value > 0) {
                 if (value == WKING) whitePieceList[wk] = ((value << RANK_8) | square);
                 else whitePieceList[wp++] = ((value << RANK_8) | square);
-            }
-            // * negate value used because signed bit is still maintained if actual value
-            // * -num removes the signed bits allows us to use the unused bits
-            else if (value < 0){
+            } else if (value < 0) {
+                // * negate value used because signed bit is still maintained if actual value
+                // * -num removes the signed bits allows us to use the unused bits
                 if (value == BKING) blackPieceList[wk] = ((-value << RANK_8) | square);
                 else blackPieceList[bp++] = ((-value << RANK_8) | square);
             }
@@ -338,7 +337,7 @@ public final class Board120 {
         addIrreversibleAspect();
 
         if ((piece == WKING || piece == BKING || piece == WROOK || piece == BROOK)
-                && flag != FLAG_CASTLE) onRookMove(from,  piece, flag);
+                && flag != CASTLE) onRookMove(from,  piece, flag);
 
         int[] side = (sideToMove) ? whitePieceList : blackPieceList;
         int[] xside = (sideToMove) ? blackPieceList : whitePieceList;
@@ -346,12 +345,12 @@ public final class Board120 {
         int xindex = OFF_BOARD;
         // every capture will be on the to square except enpassant where piece-to-be-captured
         // will be below enpassant (black) : above enpassant (white)
-        int captured = (flag != FLAG_EN_PASSANT) ?  Math.abs(board120[to]) :
+        int captured = (flag != EN_PASSANT) ?  Math.abs(board120[to]) :
                         (sideToMove) ? Math.abs(board120[enPassant - 10]) :
                         Math.abs(board120[enPassant + 10]);
         int val = Math.abs(piece);
         if (captured != 0) { // capture on the board
-            if (flag == FLAG_EN_PASSANT) {
+            if (flag == EN_PASSANT) {
                 assert((sideToMove) ? board120[to] == BPAWN : board120[to] == WPAWN);
                 int epSq = (sideToMove) ? enPassant - 10 : enPassant + 10;
                 xindex = getPieceListIndex( captured, epSq , true);
@@ -361,18 +360,18 @@ public final class Board120 {
         }
 
         switch (flag) {
-            case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
+            case QUIET, DOUBLE_PAWN_PUSH -> {
                 assert(board120[to] == EMPT_SQ);
                 makeMove(from, to, piece);
                 halfMoveClock++;
                 boolean found = incrementalUpdate(side, index, (val << RANK_8 | to), (val << RANK_8 | from));
                 if (!found) throw new RuntimeException("Error f=quiet&dpPush");
-                if (flag == FLAG_DOUBLE_PAWN_PUSH) {
+                if (flag == DOUBLE_PAWN_PUSH) {
                     if (sideToMove) enPassant = (byte) (to - 10);
                     else enPassant = (byte) (to + 10);
                 }
             }
-            case FLAG_EN_PASSANT -> {
+            case EN_PASSANT -> {
                 assert(board120[to] == EMPT_SQ);
                 assert(to == enPassant);
                 if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
@@ -398,7 +397,7 @@ public final class Board120 {
                 if (!found1) throw new RuntimeException("Error f=ep, side" + sideToMove);
                 if (!found2) throw new RuntimeException("Error f=ep, xside  " + sideToMove);
             }
-            case FLAG_CAPTURE -> {
+            case CAPTURE -> {
                 assert(board120[to] != EMPT_SQ);
                 if (captured == WROOK || captured == Math.abs(BROOK)) onCaptureRook(to);
                 if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
@@ -415,17 +414,17 @@ public final class Board120 {
                 if (!found1) throw new RuntimeException("Error f=cap, side");
                 if (!found2) throw new RuntimeException("Error f=cap, xside");
             }
-            case FLAG_PROMOTION, FLAG_PROMOTION_CAPTURE -> {
+            case PROMOTION, PROMOTION_CAPTURE -> {
                 byte pp = getPromotionPiece(promotion);
                 zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece);
                 zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), board120[to]);
-                if (flag == FLAG_PROMOTION_CAPTURE) zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
+                if (flag == PROMOTION_CAPTURE) zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
                 board120[from] = EMPT_SQ;
                 board120[to] = pp;
                 boolean found2 = incrementalUpdate(side, index,
                         (Math.abs(pp) << RANK_8 | to), (Math.abs(piece) << RANK_8 | from));
                 if (!found2) throw new RuntimeException("Error f=promo, freeslot");
-                if (flag == FLAG_PROMOTION_CAPTURE) {
+                if (flag == PROMOTION_CAPTURE) {
                     if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                             print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
                             + "\n" + Move.dbgMove(move)
@@ -438,24 +437,17 @@ public final class Board120 {
                     if (!found3) throw new RuntimeException("Error f=cap&Promo, xside");
                 }
             }
-            case FLAG_CASTLE ->  makeCastle(from, to, piece);
+            case CASTLE ->  makeCastle(from, to, piece);
             default -> throw new IllegalStateException("Unexpected value: " + flag);
         }
         // enPassant no longer valid after every (non-double pawn push)move
-        if (flag != FLAG_DOUBLE_PAWN_PUSH) enPassant =  OFF_BOARD;
+        if (flag != DOUBLE_PAWN_PUSH) enPassant =  OFF_BOARD;
         if (!isPieceWhite(piece)) fullMoveCounter++;
         sideToMove = !sideToMove;
     }
 
-    private void updateHashOnCaptures(int from, int to, byte fPiece, byte tPiece) {
-        zobristKey ^= ZobristHash.zobristKey(from, fPiece); // XOR out
-        zobristKey ^= ZobristHash.zobristKey(to, tPiece); // XOR out captured
-    }
-
-    private void updateHashOnPromotin(int fm, int to, byte pp) {
-        zobristKey ^= ZobristHash.zobristKey(fm, board120[fm]); // XOR out
-        zobristKey ^= ZobristHash.zobristKey(to, board120[to]); // XOR out captured
-        zobristKey ^= ZobristHash.zobristKey(to, pp); // XOR out captured
+    public long getZobristHash() {
+        return zobristKey;
     }
 
     /**
@@ -477,7 +469,7 @@ public final class Board120 {
         unaddIrreversibleAspect();
 
         int xindex = OFF_BOARD;
-        if (flag == FLAG_CAPTURE || flag == FLAG_PROMOTION_CAPTURE || flag == FLAG_EN_PASSANT) {
+        if (flag == CAPTURE || flag == PROMOTION_CAPTURE || flag == EN_PASSANT) {
             int entry = captureEntry.pop();
             capturedPiece = (byte) ((entry >> RANK_8) & 0xff);
             xindex = entry & 0xff;
@@ -489,7 +481,7 @@ public final class Board120 {
         int[] xside = (sideToMove)  ? blackPieceList : whitePieceList;
 
         switch (flag) {
-            case FLAG_QUIET, FLAG_DOUBLE_PAWN_PUSH -> {
+            case QUIET, DOUBLE_PAWN_PUSH -> {
                 assert(board120[from] == EMPT_SQ);
                 boolean f = incrementalUpdate(side, index, encode(v, from), encode(v, to));
                 if (!f) {
@@ -503,7 +495,7 @@ public final class Board120 {
                 }
                 makeMove(to, from, piece);
             }
-            case FLAG_EN_PASSANT -> {
+            case EN_PASSANT -> {
                 makeMove(to, from, piece); //reverse capturing pawn to its previous square
                 assert(capturedPiece == WPAWN || capturedPiece == BPAWN);// captured piece is a square above enpassant
                 if (isPieceWhite(capturedPiece))  {
@@ -520,7 +512,7 @@ public final class Board120 {
                 if (!f1) throw new RuntimeException("Error updating ep capturing piece");
                 if (!f2) throw new RuntimeException("Error updating eP captured piece");
             }
-            case FLAG_CAPTURE -> {
+            case CAPTURE -> {
                 assert(board120[from] == EMPT_SQ);
                 makeMove(to, from, piece); // return capturing piece
                 assert(capturedPiece != EMPT_SQ);
@@ -531,14 +523,14 @@ public final class Board120 {
                 if (!f1) throw new RuntimeException("Error updating capturing pc");
                 if (!f2) throw new RuntimeException("Error updating captured pc");
             }
-            case FLAG_PROMOTION, FLAG_PROMOTION_CAPTURE -> {
+            case PROMOTION, PROMOTION_CAPTURE -> {
                 assert(board120[from] == EMPT_SQ);
                 if (sideToMove) makeMove(to, from, WPAWN);
                 else makeMove(to, from, BPAWN);
                 int enc = (sideToMove) ? WPAWN : -BPAWN;
                 boolean found = incrementalUpdate(side, index, encode(enc, from), encode(v, to));
                 if (!found) throw new RuntimeException("Error restoring promoting pawn f=Promotion");
-                if (flag == FLAG_PROMOTION_CAPTURE) {
+                if (flag == PROMOTION_CAPTURE) {
                     board120[to] = capturedPiece;
                     zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
                     // this has encoding would have been set to -1 in the make's incremental update
@@ -546,7 +538,7 @@ public final class Board120 {
                     if (!fd) throw new RuntimeException("Error rest;oring prev captured f=Promotion");
                 }
             }
-            case FLAG_CASTLE -> unmakeCastle(from, to, side, index);
+            case CASTLE -> unmakeCastle(from, to, side, index);
             default -> throw new IllegalArgumentException();
         }
         if (!isPieceWhite(piece)) fullMoveCounter--;
@@ -563,8 +555,7 @@ public final class Board120 {
                 board120[G1] = EMPT_SQ;
                 board120[F1] = EMPT_SQ; // undo rook's move
                 board120[H1] = WROOK;
-            }
-            else if (to == C1) { // long castle
+            } else if (to == C1) { // long castle
                 board120[C1] = EMPT_SQ; // undo king's move
                 board120[D1] = EMPT_SQ; // undo rooks's move
                 board120[A1] = WROOK;
@@ -576,15 +567,13 @@ public final class Board120 {
             ri = getPieceListIndex(rv, (to == C1) ? D1 : F1, false);
             fRook = incrementalUpdate(side, ri, encode(rv, (to == C1) ? A1 : H1),
                     encode(rv, (to == C1) ? D1 : F1));
-        }
-        else {
+        } else {
             board120[E8] = BKING;
             if (to == G8) { // short castles
                 board120[G8] = EMPT_SQ; // undo king's move
                 board120[F8] = EMPT_SQ; // undo rook's move
                 board120[H8] = BROOK;
-            }
-            else if (to == C8) { // long castle
+            } else if (to == C8) { // long castle
                 board120[C8] = EMPT_SQ; // undo rook's move
                 board120[D8] = EMPT_SQ; // undo rook's move
                 board120[A8] = BROOK; // put rook back on A_8
@@ -618,25 +607,20 @@ public final class Board120 {
             if (to == C1) {
                 rookFr = A1;  // queenside castle
                 rookTo = D1;
-            }
-            else if (to == G1) {
+            } else if (to == G1) {
                 rookFr = H1; // kingside castles
                 rookTo = F1;
-            }
-            else throw new IllegalArgumentException("invalid castle");
+            } else throw new IllegalArgumentException("invalid castle");
             castlingRights &= ~(WHITE_QUEENSIDE | WHITE_KINGSIDE); // remove kside and qside castling
-        }
-        else {
+        } else {
             assert(board120[from] == BKING);
             if (to == C8)  { // queenside
                 rookFr = A8;
                 rookTo = D8;
-            }
-            else if (to == G8) { // kingside
+            } else if (to == G8) { // kingside
                 rookFr = H8;
                 rookTo = F8;
-            }
-            else throw new IllegalArgumentException("invalid castle");
+            } else throw new IllegalArgumentException("invalid castle");
             castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
         }
         // TODO mask out the moved flag
@@ -678,7 +662,7 @@ public final class Board120 {
     private void onRookMove(int from, byte piece, int flag) {
         boolean side = canSideCastle(sideToMove);
         // there are no castling rights to update, castles updated separately
-        if (!side || flag == FLAG_CASTLE) return;
+        if (!side || flag == CASTLE) return;
         assert(piece == WROOK || piece == WKING ||piece == BKING ||piece == BROOK);
         if (sideToMove) { // white
             if (piece == WKING) {
@@ -708,8 +692,7 @@ public final class Board120 {
         if (sideToMove) {
             if (square == A8) castlingRights &= ~BLACK_QUEENSIDE;
             else if (square == H8) castlingRights &= ~BLACK_KINGSIDE;
-        }
-        else {
+        } else {
             if (square == A1) castlingRights &= ~WHITE_QUEENSIDE;
             else if (square == H1) castlingRights &= ~WHITE_KINGSIDE;
         }
@@ -854,10 +837,8 @@ public final class Board120 {
                 else if (c == '.') {
                     if (getMailbox64Number(((rank - 1) * RANK_8 + file)) == enPassant) {
                         board.append(' ').append("o ").append('|');
-                    }
-                    else board.append(' ').append(' ').append(' ').append('|');
-                }
-                else board.append(' ').append(c).append(' ').append('|');
+                    } else board.append(' ').append(' ').append(' ').append('|');
+                } else board.append(' ').append(c).append(' ').append('|');
             }
             board.append("\n\t");
             for (int c = FILE_A; c < FILE_H; c++)   {
@@ -901,8 +882,8 @@ public final class Board120 {
 
   // has piece
   public static void main(String[] args) {
-      Board120  board = FENParser.parseFENotation120("5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1");
-      Evaluator evaluator = SimpleEvaluator.getInstance();
+      Board120  board = FENParser.parseFENotation120("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+      Evaluator evaluator = PESTO.getInstance();
 
       board.print();
       double eval1 = evaluator.evaluate(board);
@@ -913,10 +894,13 @@ public final class Board120 {
       List<Integer> list = MoveGenerator.generatePseudoLegal(board);
       int count = 0;
       System.out.println("Leafs : " + list.size());
+      System.out.println("Sorted");
 
+      MoveGenerator.sortMoves(list);
       for (int m: list) {
           System.out.println();
           System.out.println((++count) + "\t" + Move.printMove(m));
+          System.out.println("score" + Move.getScore(m));
           board.make(m);
           double eval = evaluator.evaluate(board);
           System.out.println("Eval " + eval);
