@@ -199,11 +199,12 @@ public class MoveGenerator {
         int pc = board.getPieceOnSquare(to);
 
         if (pc == EMPT_SQ && !isPromotingRank.test((byte) from)) {
-            moves.add(Move.encodeMove(from, to, 0, Move.QUIET, index));
+            int score = scoreQuietPawns(board, to);
+            moves.add(Move.encodeMove(from, to, 0, Move.QUIET, index, score));
             if (isOnStartingRank(from, side)) {
                 to = from + doublePush;
                 if (board.getPieceOnSquare(to) == EMPT_SQ) {
-                    moves.add(Move.encodeMove(from, to, 0, Move.DOUBLE_PAWN_PUSH, index));
+                    moves.add(Move.encodeMove(from, to, 0, Move.DOUBLE_PAWN_PUSH, index, score));
                 }
             }
         }
@@ -274,7 +275,6 @@ public class MoveGenerator {
         moves.add(Move.encodeMove(from, to, KN_PROMO, Move.PROMOTION_CAPTURE, index, score+KN_PROMO));
     }
 
-
     public static void sortMoves(List<Integer> unordered) {
         int sz = unordered.size();
         for (int i = 0; i < sz; i++) {
@@ -304,6 +304,11 @@ public class MoveGenerator {
                 unordered.set(maxIndex, temp);
             }
         }
+    }
+
+    private static int scoreQuietPawns(Board120 board, int defSq) {
+        int defenders = VectorAttack120.getDefenderCount(board, defSq);
+        return (defenders != 0) ? 8 * defenders : 5;
     }
 
     private static void sortByFlag(List<Integer> unordered) {

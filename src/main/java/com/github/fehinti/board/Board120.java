@@ -5,6 +5,7 @@ import com.github.fehinti.engine.PESTO;
 import com.github.fehinti.engine.SimpleEvaluator;
 import com.github.fehinti.piece.Move;
 import com.github.fehinti.piece.MoveGenerator;
+import com.github.fehinti.piece.VectorAttack120;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -883,29 +884,40 @@ public final class Board120 {
   // has piece
   public static void main(String[] args) {
       Board120  board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
-      Evaluator evaluator = SimpleEvaluator.getInstance();
+      Evaluator simple = SimpleEvaluator.getInstance();
+      Evaluator pesto  = PESTO.getInstance();
 
       board.print();
-      double eval1 = evaluator.evaluate(board);
-      System.out.println("Eval " + eval1);
+      double eval1 = simple.evaluate(board);
+      System.out.println("Simple eval " + eval1);
+      System.out.println("Pesto eval " + pesto.evaluate(board));
       System.out.printf(board.getBoardData());
       System.out.println(board.print8x8());
 
       List<Integer> list = MoveGenerator.generatePseudoLegal(board);
+      MoveGenerator.sortMoves(list);
       int count = 0;
       System.out.println("Leafs : " + list.size());
-      System.out.println("Sorted");
 
-      MoveGenerator.sortMoves(list);
-      for (int m: list) {
+      List<Integer> valid = list.stream().filter(
+              x -> {
+                  board.make(x);
+                  boolean checked = VectorAttack120.isKingInCheck(board);
+                  board.unmake(x);
+                  return !checked;
+              }
+      ).toList();
+
+      for (int m: valid) {
           System.out.println();
           System.out.println((++count) + "\t" + Move.printMove(m));
-          System.out.println("score" + Move.getScore(m));
+          System.out.println("score"   + Move.getScore(m));
           board.make(m);
-          double eval = evaluator.evaluate(board);
-          System.out.println("Eval " + eval);
+          System.out.println("Simple eval " + simple.evaluate(board));
+          System.out.println("Pesto eval  " + pesto.evaluate(board));
           System.out.println(board.print8x8());
           System.out.printf(board.getBoardData());
+
           board.unmake(m);
           System.out.printf(board.getBoardData());
       }

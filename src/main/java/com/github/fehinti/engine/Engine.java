@@ -44,7 +44,6 @@ public class Engine {
 
     public int search() {
         boolean side = gameBoard.getSideToMove();
-
         negamax(8, INIT_ALPHA, INIT_BETA, board.getSideToMove() ? COLOR_WH: -COLOR_WH);
         return 0;
     }
@@ -55,7 +54,7 @@ public class Engine {
         TranspositionEntry transpositionEntry =  transpositionTable.get(board.getZobristHash());
         if (transpositionEntry != null && transpositionEntry.depthFound >= depth) {
             double value = transpositionEntry.value;
-            if (transpositionEntry.nodeType == NODE_TYPE_EXACT) return  value;
+            if (transpositionEntry.nodeType == NODE_TYPE_EXACT) return value;
             else if (transpositionEntry.nodeType == NODE_TYPE_LOWER && value >= beta ) {
                 return value;
             } else if (transpositionEntry.nodeType == NODE_TYPE_UPPER && value <= alpha ) {

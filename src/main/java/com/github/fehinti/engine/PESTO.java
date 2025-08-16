@@ -195,12 +195,11 @@ public class PESTO implements Evaluator {
             if (black[i] != OFF_BOARD) {
                 int pc = (black[i] >> 8) & 0xff;
                 int sq = Board120.getMailbox120Number(black[i] & 0xff);
-                mg[1] += MID_PHASE_TABLE[128 - pc - 1][sq];
-                eg[1] += END_PHASE_TABLE[128 - pc - 1][sq];
-                phase += GAME_PHASE[128 - pc - 1];
+                mg[1] += MID_PHASE_TABLE[127 - pc][sq];
+                eg[1] += END_PHASE_TABLE[127 - pc][sq];
+                phase += GAME_PHASE[127 - pc];
             }
         }
-
         //int side = board.getSideToMove() ? 0 : 1; // BUGBUG TODO: likely cause of PESTO always being -ve
         int midgame = mg[0] - mg[1];
         int endgame = eg[0] - eg[1];

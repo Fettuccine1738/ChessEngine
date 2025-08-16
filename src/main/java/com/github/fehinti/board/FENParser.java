@@ -105,19 +105,19 @@ public class FENParser {
             index = N - i;
             parseRankandFile(tokens[index], array, i);
         }
-        // last token of board apsects etc
-        String[] lastToken = tokens[RANK_8 - 1].split("\\s+");
-        if (lastToken.length != 6) {// valid fen = first row,side, castling, enPassant, fullcount, halfmove
-            throw new IllegalArgumentException(notation + "Last row invalid in FEN " + lastToken.length);
+        // last token of board aspects etc
+        String[] aspects = tokens[RANK_8 - 1].split("\\s+");
+        if (aspects.length != 6) {// valid fen = first row,side, castling, enPassant, fullcount, halfmove
+            throw new IllegalArgumentException(notation + "Last row invalid in FEN " + aspects.length);
         }
-        parseRankandFile(lastToken[0], array, 0);
+        parseRankandFile(aspects[0], array, 0);
         fillOffBoard(array);
-        side = parseSideToMove(lastToken[1]);
-        castlingRights   = parseCastlingRights(lastToken[2]);
-        byte result = parseEnPassant(lastToken[3]);
-        enPassant        =   (result == OFF_BOARD) ? OFF_BOARD : (byte) Board120.getMailbox64Number(result);
-        halfMoveClock    = parseHalfMoveClock(lastToken[4]);
-        fullMoveCounter  = parseFullMoveCounter(lastToken[5]);
+        side = parseSideToMove(aspects[1]);
+        castlingRights   = parseCastlingRights(aspects[2]);
+        byte result      = parseEnPassant(aspects[3]);
+        enPassant        = (result == OFF_BOARD) ? OFF_BOARD : (byte) Board120.getMailbox64Number(result);
+        halfMoveClock    = parseHalfMoveClock(aspects[4]);
+        fullMoveCounter  = parseFullMoveCounter(aspects[5]);
         return new Board120(array, side, fullMoveCounter, halfMoveClock, castlingRights, enPassant);
     }
 

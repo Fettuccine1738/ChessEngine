@@ -106,9 +106,6 @@ public class VectorAttack120 {
         return ATTACK_ARRAY[normalized] != ATTACK_NONE;
     }
 
-    public static final boolean  AFTER = true; // checks if own king is attacked, does this move leave own king in check
-    public static final boolean  BEFORE = false; // also checks if own king is in check before playing
-
     /**
      * @param board current position after a move has been played, verifying move legality
      *           depending on side to move we look at the opposite side because that is the side
@@ -119,7 +116,7 @@ public class VectorAttack120 {
         int kingSquare = (board.getSideToMove()) ? board.getBlackKingSq()
                 : board.getWhiteKingSq();
         assert(kingSquare < BOARD_SIZE_120);
-        return isSquareAttacked(board, kingSquare, AFTER); // this checks  and validates the move PLAYED on the board
+        return isSquareAttacked(board, kingSquare); // this checks  and validates the move PLAYED on the board
     }
 
     public static boolean isSquareChecked(Board120 board, boolean color, int sq) {
@@ -143,10 +140,9 @@ public class VectorAttack120 {
     /**
      * @param board current position to be evaluated
      * @param attackedIndex check if this board index is attacked
-     * @param after determines checking if the side to play's or side that played square is being attacked
      * @return   true if the square can be attacked,  false if that square is not attacked
      */
-    public static boolean isSquareAttacked(Board120 board, int attackedIndex, boolean after) {
+    public static boolean isSquareAttacked(Board120 board, int attackedIndex) {
         if (attackedIndex < 0 || attackedIndex >= BOARD_SIZE_120) {
             throw new IllegalArgumentException("Invalid attacking index: " + attackedIndex);
         }
@@ -165,6 +161,27 @@ public class VectorAttack120 {
             }
         }
         return false;
+    }
+
+    // quick counts how many pieces are defending this square
+    public static int getDefenderCount(Board120 board, int attackedIndex) {
+        if (board == null) throw new NullPointerException("Null board");
+        int defenders = 0;
+        // boolean checkSide = after != board.getSideToMove();
+        int[] opps = (board.getSideToMove()) ? board.getWhitePieceList() : board.getBlackPieceList();
+        for (int encoding : opps) {
+            if (encoding == OFF_BOARD) continue; // captured piece is 'offboarded'
+            int pos = encoding & 0xff;
+            int piece = (encoding >> 8) & 0xff;
+            int p = Math.abs(piece);
+            if (p == WPAWN || p == WKNIGHT ||  p == -BPAWN || p == -BKNIGHT) {
+                if (isSquareReachableByPiece(pos, attackedIndex, piece)) defenders++;
+            } else if (isSquareReachableByPiece(pos, attackedIndex, p)) {
+                defenders++;
+                //if (findBlocker(board, pos, attackedIndex)) defenders++;
+            }
+        }
+        return defenders;
     }
 
     private static boolean isSquareReachableByPiece(int from, int to, int piece) {

@@ -118,7 +118,7 @@ public class SimpleEvaluator implements  Evaluator {
                xScore += getPieceValue(bp) + getPieceTableEntry(xcount, bp, !b, xSide[i] & 0xff);
            }
        }
-       return (sScore - xScore) / 100. ;
+       return sScore - xScore;
     }
 
     public static int getPieceTableEntry(int pCount, int piece, boolean side, int square) {
