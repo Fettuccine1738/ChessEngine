@@ -101,21 +101,20 @@ public class SimpleEvaluator implements  Evaluator {
        int sScore = 0;
        int xScore = 0;
 
-       boolean b = board120.getSideToMove();
-       int[] sSide = board120.getWhitePieceList(); // (b ? board120.getWhitePieceList() :  board120.getBlackPieceList());
-       int count = board120.getWhitePcCount(); // (b) ? board120.getWhitePcCount() : board120.getBlackPcCount();
+       // boolean b = board120.getSideToMove();
+       int[] sSide = board120.getWhitePieceList();
+       int count = board120.getWhitePcCount() + board120.getBlackPcCount();
 
-       int[] xSide = board120.getBlackPieceList(); // (b ? board120.getBlackPieceList() : board120.getWhitePieceList());
-       int xcount = board120.getBlackPcCount(); // (b) ? board120.getBlackPcCount() : board120.getWhitePcCount();
+       int[] xSide = board120.getBlackPieceList();
 
        for (int i = 0; i < MAX_LEN_16; i++) {
            if (sSide[i] != OFF_BOARD) {
                int wp = (sSide[i] >> RANK_8) & 0xff;
-               sScore += getPieceValue(wp) + getPieceTableEntry(count, wp, b, sSide[i] & 0xff);
+               sScore += getPieceValue(wp) + getPieceTableEntry(count, wp, true, sSide[i] & 0xff);
            }
            if (xSide[i] != OFF_BOARD) {
                int bp = (xSide[i] >> RANK_8) & 0xff;
-               xScore += getPieceValue(bp) + getPieceTableEntry(xcount, bp, !b, xSide[i] & 0xff);
+               xScore += getPieceValue(bp) + getPieceTableEntry(count, bp, false, xSide[i] & 0xff);
            }
        }
        return sScore - xScore;
@@ -132,7 +131,7 @@ public class SimpleEvaluator implements  Evaluator {
            case WROOK, -BROOK -> WHITE_ROOK[square];
            case WQUEEN, -BQUEEN -> WHITE_QUEEN[square];
            case WKING, -BKING -> {
-               if (pCount < 8) yield WHITE_KING_END[square];
+               if (pCount < 12) yield WHITE_KING_END[square];
                else yield WHITE_KING_MIDDLE[square];
            }
            default -> 0;
@@ -143,7 +142,7 @@ public class SimpleEvaluator implements  Evaluator {
         return switch(piece) {
             case WPAWN, -BPAWN -> PAWN_VAL;
             case WKNIGHT, -BKNIGHT -> KNIGHT_VAL;
-            case WBISHOP -BBISHOP -> BISHOP_VAL;
+            case WBISHOP, -BBISHOP -> BISHOP_VAL;
             case WROOK, -BROOK -> ROOK_VAL;
             case WQUEEN, -BQUEEN -> QUEEN_VAL;
             case WKING, -BKING -> KING_VAL;

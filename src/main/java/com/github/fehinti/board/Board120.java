@@ -3,14 +3,21 @@ package com.github.fehinti.board;
 import com.github.fehinti.engine.Evaluator;
 import com.github.fehinti.engine.PESTO;
 import com.github.fehinti.engine.SimpleEvaluator;
+import com.github.fehinti.engine.WeightedCombiEval;
 import com.github.fehinti.piece.Move;
 import com.github.fehinti.piece.MoveGenerator;
 import com.github.fehinti.piece.VectorAttack120;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LongSummaryStatistics;
 import java.util.Stack;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static com.github.fehinti.board.Board120Utils.*;
 import static com.github.fehinti.board.Board120Utils.BOARD_SIZE;
@@ -886,6 +893,8 @@ public final class Board120 {
       Board120  board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
       Evaluator simple = SimpleEvaluator.getInstance();
       Evaluator pesto  = PESTO.getInstance();
+      Evaluator weg    = WeightedCombiEval.getInstance();
+
 
       board.print();
       double eval1 = simple.evaluate(board);
@@ -895,31 +904,33 @@ public final class Board120 {
       System.out.println(board.print8x8());
 
       List<Integer> list = MoveGenerator.generatePseudoLegal(board);
-      MoveGenerator.sortMoves(list);
+      MoveGenerator.sortGen(list);
+
       int count = 0;
       System.out.println("Leafs : " + list.size());
 
-      List<Integer> valid = list.stream().filter(
-              x -> {
-                  board.make(x);
-                  boolean checked = VectorAttack120.isKingInCheck(board);
-                  board.unmake(x);
-                  return !checked;
-              }
-      ).toList();
+     // List<Integer> valid = list.stream().filter(
+     //         x -> {
+     //             board.make(x);
+     //             boolean checked = VectorAttack120.isKingInCheck(board);
+     //             board.unmake(x);
+     //             return !checked;
+     //         }
+     // ).toList();
 
-      for (int m: valid) {
+      for (int m: list) {
           System.out.println();
           System.out.println((++count) + "\t" + Move.printMove(m));
           System.out.println("score"   + Move.getScore(m));
           board.make(m);
           System.out.println("Simple eval " + simple.evaluate(board));
           System.out.println("Pesto eval  " + pesto.evaluate(board));
-          System.out.println(board.print8x8());
-          System.out.printf(board.getBoardData());
+          System.out.println("Weg eval  " + weg.evaluate(board));
+         // System.out.println(board.print8x8());
+         // System.out.printf(board.getBoardData());
 
           board.unmake(m);
-          System.out.printf(board.getBoardData());
+          //System.out.printf(board.getBoardData());
       }
   }
 }

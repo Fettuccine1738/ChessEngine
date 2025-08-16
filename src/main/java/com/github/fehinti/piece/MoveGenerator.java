@@ -275,6 +275,7 @@ public class MoveGenerator {
         moves.add(Move.encodeMove(from, to, KN_PROMO, Move.PROMOTION_CAPTURE, index, score+KN_PROMO));
     }
 
+    // orders by flag then score
     public static void sortMoves(List<Integer> unordered) {
         int sz = unordered.size();
         for (int i = 0; i < sz; i++) {
@@ -304,6 +305,18 @@ public class MoveGenerator {
                 unordered.set(maxIndex, temp);
             }
         }
+    }
+
+    public static void sortGen(List<Integer> unordered) {
+        unordered.sort((lhs, rhs) -> {
+            int f1 = Move.getFlag(lhs);
+            int f2 = Move.getFlag(rhs);
+            if (f1 != f2) return -Integer.compare(f1, f2);
+
+            int s1 = Move.getScore(lhs);
+            int s2 = Move.getScore(rhs);
+            return -Integer.compare(s1, s2);
+        });
     }
 
     private static int scoreQuietPawns(Board120 board, int defSq) {

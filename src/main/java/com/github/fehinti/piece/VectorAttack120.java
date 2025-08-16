@@ -164,7 +164,7 @@ public class VectorAttack120 {
     }
 
     // quick counts how many pieces are defending this square
-    public static int getDefenderCount(Board120 board, int attackedIndex) {
+    public static int getDefenderCount(Board120 board, int defendSq) {
         if (board == null) throw new NullPointerException("Null board");
         int defenders = 0;
         // boolean checkSide = after != board.getSideToMove();
@@ -173,10 +173,11 @@ public class VectorAttack120 {
             if (encoding == OFF_BOARD) continue; // captured piece is 'offboarded'
             int pos = encoding & 0xff;
             int piece = (encoding >> 8) & 0xff;
+            if (pos == defendSq) continue;
             int p = Math.abs(piece);
             if (p == WPAWN || p == WKNIGHT ||  p == -BPAWN || p == -BKNIGHT) {
-                if (isSquareReachableByPiece(pos, attackedIndex, piece)) defenders++;
-            } else if (isSquareReachableByPiece(pos, attackedIndex, p)) {
+                if (isSquareReachableByPiece(pos, defendSq, piece)) defenders++;
+            } else if (isSquareReachableByPiece(pos, defendSq, p)) {
                 defenders++;
                 //if (findBlocker(board, pos, attackedIndex)) defenders++;
             }
