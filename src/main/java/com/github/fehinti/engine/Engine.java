@@ -16,7 +16,7 @@ import static com.github.fehinti.board.Board120Utils.*;
 public class Engine {
 
     record Move(boolean isMate,  List<Integer> legalMoves) { }
-    record TranspositionEntry(double value, byte depthFound, byte nodeType) { }
+    record TranspositionEntry(double value, byte depthFound, byte nodeType) {}
 
     private static final double INIT_ALPHA = Double.NEGATIVE_INFINITY;
     private static final double INIT_BETA  = Double.POSITIVE_INFINITY;
@@ -44,7 +44,8 @@ public class Engine {
 
     public int search() {
         boolean side = gameBoard.getSideToMove();
-        negamax(8, INIT_ALPHA, INIT_BETA, 1);
+
+        negamax(8, INIT_ALPHA, INIT_BETA, board.getSideToMove() ? COLOR_WH: -COLOR_WH);
         return 0;
     }
 

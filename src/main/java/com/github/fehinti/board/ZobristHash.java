@@ -60,7 +60,7 @@ public class ZobristHash {
     // * [a2 = 31][0 (wp(1) - 1], then XOR in the new hash value with
     // * [a4 = 51][0]
     public static long zobristKey(int square, byte pieceVal) {
-        if (pieceVal == 0) throw new IllegalArgumentException();
+        if (pieceVal == 0) throw new IllegalArgumentException("square " + square + " piece val " + pieceVal);
         return table[square][(pieceVal > 0) ? pieceVal - 1 : ADJUST_BLACK_INDEX + pieceVal];
     }
 }

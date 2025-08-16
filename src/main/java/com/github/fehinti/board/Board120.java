@@ -416,15 +416,15 @@ public final class Board120 {
             }
             case PROMOTION, PROMOTION_CAPTURE -> {
                 byte pp = getPromotionPiece(promotion);
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece);
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), board120[to]);
-                if (flag == PROMOTION_CAPTURE) zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece); // xor out pawn
+                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
                 board120[from] = EMPT_SQ;
                 board120[to] = pp;
                 boolean found2 = incrementalUpdate(side, index,
                         (Math.abs(pp) << RANK_8 | to), (Math.abs(piece) << RANK_8 | from));
                 if (!found2) throw new RuntimeException("Error f=promo, freeslot");
                 if (flag == PROMOTION_CAPTURE) {
+                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), board120[to]);
                     if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                             print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
                             + "\n" + Move.dbgMove(move)
@@ -882,8 +882,8 @@ public final class Board120 {
 
   // has piece
   public static void main(String[] args) {
-      Board120  board = FENParser.parseFENotation120("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
-      Evaluator evaluator = PESTO.getInstance();
+      Board120  board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
+      Evaluator evaluator = SimpleEvaluator.getInstance();
 
       board.print();
       double eval1 = evaluator.evaluate(board);

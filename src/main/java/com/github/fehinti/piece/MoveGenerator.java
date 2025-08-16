@@ -32,15 +32,15 @@ public class MoveGenerator {
 
     private static final int[] MVA_LVA = { 1, 3, 3, 5, 9, 20};
     // MVA_LVA_SCORE[victim][attacker]
-    private static final int[][] MVA_LVA_SCORE = new int[6][6];
+    private static final int[][] MVA_LVA_SCORE =  {
+            {  100, 110, 110, 130, 140, 150 }, /* PAWN */
+            {  70, 100, 100, 120, 140, 150 }, /* KNIGHT */
+            {  70, 100, 100, 120, 140, 150 }, /* BISHOP */
+            {  60, 65,  65, 100,  140, 150 }, /* ROOK */
+            {  20, 30,  30,  40, 100, 150 }, /* QUEEN */
+            {  10, 20, 20, 30, 140, 150 }  /* KING */
+    };
 
-    static {
-        for (int i = 0; i < 6; i++) { // i = victim
-            for (int j = 0; j < 6; j++) { // attacker
-               MVA_LVA_SCORE[i][j] = MVA_LVA[i] * 10 - MVA_LVA[j];
-            }
-        }
-    }
 
     /**
      * @param board  current position
@@ -93,8 +93,8 @@ public class MoveGenerator {
                                 boolean xside = board.isPieceWhite(newSquare);
                                 if (side != xside) {
                                     // 133 to map black pieces to 0..6 when white is capturing
-                                    int score = (side) ? MVA_LVA_SCORE[(127 + newSquare )][val] :
-                                                  MVA_LVA_SCORE[newSquare - 1][val];
+                                    int score = (side) ? MVA_LVA_SCORE[val][(127 + newSquare)] :
+                                            MVA_LVA_SCORE[val][newSquare - 1];
                                     moveList.add(Move.encodeMove(square, to, 0,
                                                  Move.CAPTURE,  index,  score));
                                     break;
@@ -221,7 +221,8 @@ public class MoveGenerator {
             if (piece != OFF_BOARD && !isPromotingRank.test((byte) from)) {
                 // do not allow capture king
                 if (isOpponentPiece(piece, side) && piece != ((side) ? BKING : WKING)) {
-                    int score = (side) ? MVA_LVA_SCORE[piece + 127][0] : MVA_LVA_SCORE[piece - 1][0];
+                    int score = (side) ? MVA_LVA_SCORE[0][piece + 127] :
+                            MVA_LVA_SCORE[0][piece - 1];
                     moves.add(Move.encodeMove(from, cap, 0, Move.CAPTURE, index, score));
                 }
 
@@ -252,24 +253,23 @@ public class MoveGenerator {
             byte piece = board.getPieceOnSquare(cap);
             if (piece != OFF_BOARD) {
                 if (isOpponentPiece(piece, side) && piece != ((side) ? BKING : WKING)) {
-                    int score = (side) ? MVA_LVA_SCORE[piece + 127][0] : MVA_LVA_SCORE[piece - 1][0];
+                    int score = (side) ? MVA_LVA_SCORE[0][piece + 127] : MVA_LVA_SCORE[0][piece - 1];
                     addPromotionCaptureMoves(moves, from, cap, index, score);
                 }
             }
         }
-
     }
 
     private static void addPromotionMoves(List<Integer> moves, int from, int to,  int index) {
-        moves.add(Move.encodeMove(from, to,  Q_PROMO,  Move.PROMOTION, index));
-        moves.add(Move.encodeMove(from, to,  R_PROMO,   Move.PROMOTION, index));
-        moves.add(Move.encodeMove(from, to,  B_PROMO, Move.PROMOTION, index));
+        moves.add(Move.encodeMove(from, to, Q_PROMO,  Move.PROMOTION, index));
+        moves.add(Move.encodeMove(from, to, R_PROMO,  Move.PROMOTION, index));
+        moves.add(Move.encodeMove(from, to, B_PROMO,  Move.PROMOTION, index));
         moves.add(Move.encodeMove(from, to, KN_PROMO, Move.PROMOTION, index));
     }
 
     private static void addPromotionCaptureMoves(List<Integer> moves, int from, int to, int index, int score) {
-        moves.add(Move.encodeMove(from, to,  Q_PROMO,  Move.PROMOTION_CAPTURE, index, score+Q_PROMO));
-        moves.add(Move.encodeMove(from, to,  R_PROMO,   Move.PROMOTION_CAPTURE, index, score+R_PROMO));
+        moves.add(Move.encodeMove(from, to,  Q_PROMO, Move.PROMOTION_CAPTURE, index, score+Q_PROMO));
+        moves.add(Move.encodeMove(from, to,  R_PROMO, Move.PROMOTION_CAPTURE, index, score+R_PROMO));
         moves.add(Move.encodeMove(from, to,  B_PROMO, Move.PROMOTION_CAPTURE, index, score+B_PROMO));
         moves.add(Move.encodeMove(from, to, KN_PROMO, Move.PROMOTION_CAPTURE, index, score+KN_PROMO));
     }

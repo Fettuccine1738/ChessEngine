@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Arrays;
 
 
 import com.github.fehinti.board.Board120;
@@ -44,7 +43,7 @@ public class Perft {
    static long CAPTURE = 0;
 
    static {
-       board = FENParser.parseFENotation120("r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0 1");
+       board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
        // board = FENParser.startPos120();
        System.out.println(board.print8x8());
        System.out.println(board.getBoardData());
@@ -71,7 +70,7 @@ public class Perft {
        }
    }
 
-   static boolean matchILLegalMoves(String str) {
+   static boolean matchIllegalMoves(String str) {
        return str.matches("(\\w\\d){2}: 0");
    }
 
@@ -79,7 +78,7 @@ public class Perft {
        board = FENParser.parseFENotation120(fen);
        List<String> strList = new ArrayList<>();
        long dres = divide(TestPerftAgainstStockfish.DEPTH, TestPerftAgainstStockfish.DEPTH, strList);
-       strList.removeIf(Perft::matchILLegalMoves); // ignore illegal moves leaf node count (always 0)
+       strList.removeIf(Perft::matchIllegalMoves); // ignore illegal moves leaf node count (always 0)
        Collections.sort(strList);
        return new TestPerftAgainstStockfish.StockFishResult(strList, dres);
    }
@@ -109,23 +108,23 @@ public class Perft {
 
            // Is the move legal ? (does not leave own king in check)
            if (!VectorAttack120.isKingInCheck(board)) {
-               // writeFENToFile(FENParser.getFENotation(board));
-              // int flag = Move.getFlag(move);
-              // if (currentDepth == 1 && (flag == Move.FLAG_PROMOTION_CAPTURE || flag == Move.FLAG_CAPTURE)) {
-              //     CAPTURE++;
-              // }
-              // if (currentDepth == 1 && flag == Move.FLAG_EN_PASSANT) EnP++;
-              // else if (currentDepth == 1 && flag == Move.FLAG_CASTLE) castles++;
-              // // checks to see if move leaves us in check
-              // boolean side = board.getSideToMove();
-              // // checks if last move played is a checking move
-              // if (VectorAttack120.isSquareChecked(board,
-              //         side,
-              //         (side) ? board.getWhiteKingSq() : board.getBlackKingSq())
-              //         && currentDepth == 1) CHECKS++;
-               // writeFENToFile(Move.printMove(move) + " :\t" + FENParser.getFENotation(board));
-               nodeCount += divide(currentDepth - 1, originalDepth, strList); // advance to child node
-               nodes += nodeCount;
+             // // writeFENToFile(FENParser.getFENotation(board));
+             // int flag = Move.getFlag(move);
+             // if (currentDepth == 1 && (flag == Move.PROMOTION_CAPTURE || flag == Move.CAPTURE)) {
+             //     CAPTURE++;
+             // }
+             // if (currentDepth == 1 && flag == Move.EN_PASSANT) EnP++;
+             // else if (currentDepth == 1 && flag == Move.CASTLE) castles++;
+             // // checks to see if move leaves us in check
+             // boolean side = board.getSideToMove();
+             // // checks if last move played is a checking move
+             // if (VectorAttack120.isSquareChecked(board,
+             //         side,
+             //         (side) ? board.getWhiteKingSq() : board.getBlackKingSq())
+             //         && currentDepth == 1) CHECKS++;
+             // //  writeFENToFile(Move.printMove(move) + " :\t" + FENParser.getFENotation(board));
+              nodeCount += divide(currentDepth - 1, originalDepth, strList); // advance to child node
+              nodes += nodeCount;
            }
            board.unmake(move);
            if (currentDepth == originalDepth) {
@@ -156,7 +155,7 @@ public class Perft {
        Instant st = Instant.now();
        List<String> list = new ArrayList<>();
        long total = divide(depth, depth, list);
-       list.removeIf(Perft::matchILLegalMoves);
+       list.removeIf(Perft::matchIllegalMoves);
        System.out.println("TOtal " + total);
        for (String str : list) System.out.println(str);
 

@@ -151,7 +151,7 @@ public class FENParser {
         byte encodeRights = 0;
         for (char ch : rights.toCharArray()) {
             switch (ch) {
-                case '-':  return 0; // no castling rights
+                case '-':  return 0;
                 case 'K':  encodeRights |= WHITE_KINGSIDE;  break;
                 case 'Q':  encodeRights |= WHITE_QUEENSIDE; break;
                 case 'k':  encodeRights |= BLACK_KINGSIDE;  break;
