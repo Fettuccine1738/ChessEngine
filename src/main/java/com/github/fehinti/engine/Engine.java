@@ -39,7 +39,6 @@ public class Engine {
     private final Board120 board;
     private final Board120 gameBoard;
     private final HashMap<Long, TranspositionEntry> transpositionTable;
-    private Stack<Long> repeater;
     private final Evaluator evaluator;
     private int bestMove;
     private final int[][] principalVariation;
@@ -53,23 +52,36 @@ public class Engine {
         gameBoard = new Board120(board);
         principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
         pvLength = new int[MAX_DEPTH];
-        repeater = new Stack<>();
+        clearPV();
     }
 
     public int think() {
-        int i = 1;
+        clearPV();
         int bestMove = 0;
-        while (i <= 8) {
-            bestMove = iterativeDeepening(i++);
-            printPVLine(i - 1);
+        for (int i = 1; i <= 8; i++){
+            bestMove = iterativeDeepening(i);
+            printPVLine(i);
         }
         return bestMove;
+    }
+
+    private void clearPV() {
+        for (int i = 0; i < MAX_DEPTH; i++) {
+            pvLength[i] = 0;
+            for (int j = 0; j < MAX_DEPTH; j++) {
+                principalVariation[i][j] = 0;
+            }
+        }
     }
 
     private int iterativeDeepening(int depth) {
         boolean side = board.getSideToMove();
         List<Integer> pseudoLegal = MoveGenerator.generatePseudoLegal(board);
         ply = 0;
+
+        for (int i = 0; i < MAX_DEPTH; i++) {
+            pvLength[i] = 0;
+        }
 
         if (depth == 1) {
             pseudoLegal = pseudoLegal.stream().filter(mv -> {
@@ -82,49 +94,50 @@ public class Engine {
         } else {
             // sort using best move from previous iter then flag(desc) then score,
             MoveGenerator.sortGen(pseudoLegal);
-            final int pvMv = (depth >= 2 && pvLength[0] > 0) ? principalVariation[0][0] : -1;
+            final int pvMv = (pvLength[0] > 0) ? principalVariation[0][0] : -1;
             pseudoLegal.sort((lhs, rhs) -> { // retrieve best move from previous iteration
                 if (Objects.equals(lhs, pvMv)) return -1;
                 if (Objects.equals(rhs, pvMv)) return 1;
                 else {
                    int lFlag = Move.getFlag(lhs);
                    int rFlag = Move.getFlag(rhs);
-                   if (lFlag != rFlag) return -Integer.compare(lFlag, rFlag);
+                   if (lFlag != rFlag) return Integer.compare(rFlag, lFlag);
                    else {
                        int lScore = Move.getScore(lhs);
                        int rScore = Move.getScore(rhs);
-                       return -Integer.compare(lScore, rScore);
+                       return -Integer.compare(rScore, lScore);
                    }
                 }
             });
         }
 
-        int bestMove = pseudoLegal.getFirst();
+        int bestMove = pseudoLegal.isEmpty() ? 0: pseudoLegal.get(0);
         double bestEval = Double.NEGATIVE_INFINITY;
 
         for (int move: pseudoLegal) {
             board.make(move);
             double eval = Double.NEGATIVE_INFINITY;
             if (!VectorAttack120.isKingInCheck(board)) {
-               eval = -negamax(depth - 1, INIT_ALPHA, INIT_BETA, side ? COLOR_WH: -COLOR_WH);
+               ply = 1;
+               eval = -negamax(depth - 1, -INIT_BETA, -INIT_ALPHA, side ? -COLOR_WH: COLOR_WH);
+                if (eval > bestEval) {
+                    bestMove = move;
+                    bestEval = eval;
+                    principalVariation[0][0] = move;
+                    for (int i = 0; i < pvLength[1]; i++) {
+                        principalVariation[0][i + 1] = principalVariation[1][i];
+                    }
+                    pvLength[0] = pvLength[1] + 1;
+                }
             }
             board.unmake(move);
-            if (eval > bestEval) {
-                bestMove = move;
-                bestEval = eval;
-                principalVariation[0][0] = move;
-                for (int i = 0; i < pvLength[1]; i++) {
-                    principalVariation[0][i + 1] = principalVariation[1][i];
-                }
-                pvLength[0] = pvLength[1] + 1;
-            }
         }
         return bestMove;
     }
 
     private double negamax(int depth, double alpha, double beta, int color) {
         double alphaOrig = alpha;
-        pvLength[ply] = ply;
+        pvLength[ply] = 0;
 
         TranspositionEntry tEntry = transpositionTable.get(board.getZobristHash());
         if (tEntry != null && tEntry.depthFound >= depth) {
@@ -139,43 +152,52 @@ public class Engine {
 
         if (depth == 0) return  color * evaluator.evaluate(board);
         List<Integer> child = MoveGenerator.generatePseudoLegal(board);
+        // check for check / stalemate
+        boolean legal = false;
+        for (int m : child) {
+            board.make(m);
+            if (!VectorAttack120.isKingInCheck(board)) {
+                legal = true;
+                board.unmake(m);
+                break;
+            }
+            board.unmake(m);
+        }
+
+        if (!legal) {
+            if (VectorAttack120.isKingInCheck(board)) {
+                return -(100_000 - depth);
+            } else {
+                return 0;
+            }
+        }
+
         // MoveGenerator.sortMoves(child);
-        final int pvMove = (ply < MAX_DEPTH - 1 && pvLength[0] > ply) ? principalVariation[0][ply] : -1;
+        final int pvMove = (ply < MAX_DEPTH - 1 && pvLength[0] > ply) ? principalVariation[ply][0] : -1;
 
-        child.sort((lhs, rhs) -> {
-            if (lhs == pvMove) return -1;
-            if (rhs == pvMove) return 1;
-
-            int f1 = Move.getFlag(lhs);
-            int f2 = Move.getFlag(rhs);
-            if (f1 != f2) return -Integer.compare(f1, f2);
-
-            int s1 = Move.getScore(lhs);
-            int s2 = Move.getScore(rhs);
-            return -Integer.compare(s1, s2);
-        });
+        orderMoves(child, pvMove);
 
         double bestEval = Double.NEGATIVE_INFINITY;
-        if (child.isEmpty()) return 0; // TODO : checkmate ? draw/ terminal node
+        int bestMove = 0;
 
         for (Integer mv : child) {
             board.make(mv);
-            ply++;
             double eval = Double.NEGATIVE_INFINITY;
             if (!VectorAttack120.isKingInCheck(board)) {
+                ply++;
                 eval = -negamax(depth - 1, -beta, -alpha, -color);
+                ply--;
                 if (eval > bestEval) {
                     bestEval = eval;
                     bestMove = mv;
 
-                    principalVariation[ply - 1][ply - 1] = mv;
-                    for (int i = 0; i < pvLength[ply]; i++) {
-                        principalVariation[ply - 1][i + 1] = principalVariation[ply][i];
+                    principalVariation[ply][0] = mv;
+                    for (int i = 0; i < pvLength[ply + 1]; i++) {
+                        principalVariation[ply][i + 1] = principalVariation[ply + 1][i];
                     }
-                    pvLength[ply - 1] = pvLength[ply];
+                    pvLength[ply] = pvLength[ply + 1] + 1;
                 }
             }
-            ply--;
             board.unmake(mv);
             alpha = Math.max(alpha, eval);
             if (alpha >= beta) break; // beta cutoff
@@ -254,8 +276,9 @@ public class Engine {
 
     private void printPVLine(int depth) {
         System.out.print("PV (dpeth " + depth + "): ");
-        for (int i = 0; i < pvLength[0]; i++) {
-            System.out.print(Move.printMove(principalVariation[0][i]) + " ");
+        for (int i = 0; i < pvLength[0] && i < depth; i++) {
+            int m = principalVariation[0][i];
+            if (m != 0)  System.out.print(Move.printMove(m) + " ");
         }
         System.out.println();
     }
