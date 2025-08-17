@@ -298,7 +298,6 @@ public class MoveGenerator {
                     maxScore = nextScore;
                 }
             }
-
             if (i != maxIndex) {
                 int temp = unordered.get(i);
                 unordered.set(i, unordered.get(maxIndex));

@@ -5,17 +5,21 @@ import com.github.fehinti.board.Board120Utils;
 import com.github.fehinti.board.FENParser;
 import com.github.fehinti.piece.MoveGenerator;
 import com.github.fehinti.piece.VectorAttack120;
+import com.github.fehinti.piece.Move;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.github.fehinti.board.Board120.KING_SQ;
 import static com.github.fehinti.board.Board120Utils.*;
 
 public class Engine {
 
-    record Move(boolean isMate,  List<Integer> legalMoves) { }
+    record LMove(boolean isMate,  List<Integer> legalMoves) { }
     record TranspositionEntry(double value, byte depthFound, byte nodeType) {}
 
     private static final double INIT_ALPHA = Double.NEGATIVE_INFINITY;
@@ -25,6 +29,7 @@ public class Engine {
     private static final byte  NODE_TYPE_UPPER = 2;
     private static final int DRAW_BY_50 = 50;
     private static final int COLOR_WH = 1;
+    private static final int MAX_DEPTH = 16;
     private static final boolean MAX_PLAYER = true;
     private static final boolean MIN_PLAYER = false;
     private static final byte SIMPLE = 1;
@@ -34,122 +39,157 @@ public class Engine {
     private final Board120 gameBoard;
     private final HashMap<Long, TranspositionEntry> transpositionTable;
     private final Evaluator evaluator;
+    private int bestMove;
+    private final int[][] principalVariation;
+    private final int[] pvLength;
+    private int ply;
 
     public Engine(String fen, int eval) {
         this.board = FENParser.parseFENotation120(fen);
         transpositionTable = new HashMap<>();
-        evaluator = (eval == 0) ? PESTO.getInstance() : SimpleEvaluator.getInstance();
+        evaluator = (eval == 0) ? WeightedCombiEval.getInstance()
+                : (eval == 1) ? PESTO.getInstance() : SimpleEvaluator.getInstance();
         gameBoard = new Board120(board);
+        principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
+        pvLength = new int[MAX_DEPTH];
     }
 
-    public int search() {
+    public int think() {
+        int i = 1;
+        int bestMove = 0;
+        while (i <= 8) {
+            bestMove = iterativeDeepening(i++);
+            printPVLine(i - 1);
+        }
+        return bestMove;
+    }
+
+    private int iterativeDeepening(int depth) {
         boolean side = gameBoard.getSideToMove();
-        negamax(8, INIT_ALPHA, INIT_BETA, board.getSideToMove() ? COLOR_WH: -COLOR_WH);
-        return 0;
+        List<Integer> pseudoLegal = MoveGenerator.generatePseudoLegal(board);
+        ply = 0;
+
+        if (depth == 1) {
+            pseudoLegal = pseudoLegal.stream().filter(mv -> {
+                board.make(mv);
+                boolean legal = !VectorAttack120.isKingInCheck(board);
+                board.unmake(mv);
+                return legal;
+            }).collect(Collectors.toList());
+            MoveGenerator.sortGen(pseudoLegal);
+        } else {
+            // sort using best move from previous iter then flag(desc) then score,
+            MoveGenerator.sortGen(pseudoLegal);
+            pseudoLegal.sort((lhs, rhs) -> { // retrieve best move from previous iteration
+                if (Objects.equals(lhs, principalVariation[depth - 2][depth - 1])) return -1;
+                if (Objects.equals(rhs, principalVariation[depth - 2][depth - 1])) return 1;
+                else {
+                   int lFlag = Move.getFlag(lhs);
+                   int rFlag = Move.getFlag(rhs);
+                   if (lFlag != rFlag) return -Integer.compare(lFlag, rFlag);
+                   else {
+                       int lScore = Move.getScore(lhs);
+                       int rScore = Move.getScore(rhs);
+                       return -Integer.compare(lScore, rScore);
+                   }
+                }
+            });
+        }
+
+        int bestMove = pseudoLegal.getFirst();
+        double bestEval = Double.NEGATIVE_INFINITY;
+
+        for (int move: pseudoLegal) {
+            board.make(move);
+            double eval = Double.NEGATIVE_INFINITY;
+            if (!VectorAttack120.isKingInCheck(board)) {
+               eval = -negamax(depth - 1, INIT_ALPHA, INIT_BETA, side ? COLOR_WH: -COLOR_WH);
+            }
+            board.unmake(move);
+            if (eval > bestEval) {
+                bestMove = move;
+                bestEval = eval;
+                principalVariation[0][0] = move;
+                for (int i = 0; i < pvLength[1]; i++) {
+                    principalVariation[0][i + 1] = principalVariation[1][i];
+                }
+                pvLength[0] = pvLength[1] + 1;
+            }
+        }
+        return bestMove;
     }
 
     private double negamax(int depth, double alpha, double beta, int color) {
         double alphaOrig = alpha;
+        pvLength[ply] = ply;
 
-        TranspositionEntry transpositionEntry =  transpositionTable.get(board.getZobristHash());
-        if (transpositionEntry != null && transpositionEntry.depthFound >= depth) {
-            double value = transpositionEntry.value;
-            if (transpositionEntry.nodeType == NODE_TYPE_EXACT) return value;
-            else if (transpositionEntry.nodeType == NODE_TYPE_LOWER && value >= beta ) {
+        TranspositionEntry tEntry = transpositionTable.get(board.getZobristHash());
+        if (tEntry != null && tEntry.depthFound >= depth) {
+            double value = tEntry.value;
+            if (tEntry.nodeType == NODE_TYPE_EXACT) return value;
+            else if (tEntry.nodeType == NODE_TYPE_LOWER && value >= beta ) {
                 return value;
-            } else if (transpositionEntry.nodeType == NODE_TYPE_UPPER && value <= alpha ) {
+            } else if (tEntry.nodeType == NODE_TYPE_UPPER && value <= alpha ) {
                 return value;
             }
         }
 
         if (depth == 0) return  color * evaluator.evaluate(board);
         List<Integer> child = MoveGenerator.generatePseudoLegal(board);
-        MoveGenerator.sortMoves(child);
+        // MoveGenerator.sortMoves(child);
+        final int pvMove = (ply < MAX_DEPTH - 1 && pvLength[0] > ply) ? principalVariation[0][ply] : -1;
 
-        double eval = Double.NEGATIVE_INFINITY;
+        child.sort((lhs, rhs) -> {
+            if (lhs == principalVariation[0][ply]) return -1;
+            if (rhs == principalVariation[0][ply]) return 1;
+
+            int f1 = Move.getFlag(lhs);
+            int f2 = Move.getFlag(rhs);
+            if (f1 != f2) return -Integer.compare(f1, f2);
+
+            int s1 = Move.getScore(lhs);
+            int s2 = Move.getScore(rhs);
+            return -Integer.compare(s1, s2);
+        });
+
+        double bestEval = Double.NEGATIVE_INFINITY;
         if (child.isEmpty()) return 0; // TODO : checkmate ? draw/ terminal node
+
         for (Integer mv : child) {
             board.make(mv);
+            ply++;
+            double eval = Double.NEGATIVE_INFINITY;
             if (!VectorAttack120.isKingInCheck(board)) {
                 eval = -negamax(depth - 1, -beta, -alpha, -color);
+                if (eval > bestEval) {
+                    bestEval = eval;
+                    bestMove = mv;
+
+                    principalVariation[ply - 1][ply - 1] = mv;
+                    for (int i = 0; i < pvLength[ply]; i++) {
+                        principalVariation[ply - 1][0] = principalVariation[ply][i];
+                    }
+                    pvLength[ply - 1] = pvLength[ply];
+                }
             }
+            ply--;
             board.unmake(mv);
             alpha = Math.max(alpha, eval);
-            if (alpha >= beta) break;
+            if (alpha >= beta) break; // beta cutoff
         }
 
         byte nodeType;
 
-        if (eval <= alphaOrig) nodeType = NODE_TYPE_UPPER;
-        else if (eval >= beta) nodeType = NODE_TYPE_LOWER;
+        if (bestEval <= alphaOrig) nodeType = NODE_TYPE_UPPER;
+        else if (bestEval >= beta) nodeType = NODE_TYPE_LOWER;
         else nodeType = NODE_TYPE_EXACT;
 
-        TranspositionEntry newEntry = new TranspositionEntry(eval, (byte) depth, nodeType);
+        TranspositionEntry newEntry = new TranspositionEntry(bestEval, (byte) depth, nodeType);
         transpositionTable.put(board.getZobristHash(), newEntry);
-        return eval;
+        return bestEval;
     }
 
-    private double oldnegamax(int depth, double alpha, double beta, int color) {
-        if (depth == 0) return  color * evaluator.evaluate(board);
-        List<Integer> child = MoveGenerator.generatePseudoLegal(board);
-        double eval = Double.NEGATIVE_INFINITY;
-        if (child.isEmpty()) return 0; // TODO : checkmate ? draw/ terminal node
-        for (Integer mv : child) {
-            board.make(mv);
-            if (!VectorAttack120.isKingInCheck(board)) {
-                eval = -oldnegamax(depth - 1, -beta, -alpha, -color);
-            }
-            board.unmake(mv);
-            if (eval >= beta) return beta;
-            alpha = Math.max(alpha, eval);
-        }
-        return alpha;
-    }
-
-    // code implementation from
-    // https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning
-    private double alphaBeta(int depth, double alpha, double beta, boolean maximizingplayer) {
-        List<Integer> child = MoveGenerator.generatePseudoLegal(board);
-        if (depth == 0) return evaluator.evaluate(board);
-        // checkmate or stalemate // return worst possible scores
-        if (child.isEmpty()) return (maximizingplayer ? INIT_ALPHA : INIT_BETA); // todo
-        double eval;
-        if (maximizingplayer) {
-            eval = Double.NEGATIVE_INFINITY; // worst possible score for max player
-            for (Integer move : child) {
-                board.make(move);
-                if (!VectorAttack120.isKingInCheck(board)) {
-                    eval = Math.max(eval, alphaBeta(depth - 1, alpha, beta, false));
-                    if (eval >= beta) {
-                        // value we can get by going down this path is larger than what we already found
-                        // the minimzer will never go down this route (beta - cutoff)
-                        board.unmake(move);
-                        break; // cutoff
-                    }
-                    alpha = Math.max(alpha, eval);
-                }
-                board.unmake(move);
-            }
-        } else {
-            eval = Double.POSITIVE_INFINITY; // worst possible score for minimizer
-            for (Integer move : child) {
-                board.make(move);
-                if (!VectorAttack120.isKingInCheck(board)) {
-                    eval = Math.min(eval, alphaBeta(depth - 1, alpha, beta, true));
-                    if (eval <= alpha) {
-                        board.unmake(move);
-                        break;
-                    }
-                    beta = Math.min(beta, eval);
-                }
-                board.unmake(move);
-            }
-        }
-        return eval;
-    }
-
-
-    public boolean isGameDrawn() {
+   public boolean isGameDrawn() {
         return isDrawBy50MoveRule() || isDrawByThreefold() || drawByInsufficientMaterial();
     }
 
@@ -167,6 +207,22 @@ public class Engine {
         }
         // no valid moves left
         return moves.isEmpty();
+    }
+
+    private void printPVLine(int depth) {
+        System.out.print("PV (dpeth " + depth + "): ");
+        for (int i = 0; i < pvLength[0]; i++) {
+            System.out.print(Move.printMove(principalVariation[0][i]) + " ");
+        }
+        System.out.println();
+    }
+
+    private List<Integer> getPV() {
+        List<Integer> pv = new ArrayList<Integer>();
+        for (int i = 0; i < pvLength[0]; i++) {
+            pv.add(principalVariation[0][i]);
+        }
+        return pv;
     }
 
     private boolean isDrawBy50MoveRule() {
