@@ -64,6 +64,13 @@ public class Move {
         return (move >>> 24) & 0xff;
     }
 
+    public static boolean compareMoves(int lhs, int rhs) {
+       return getFlag(lhs) == getFlag(rhs)
+                && getFromSquare(lhs) == getFromSquare(rhs)
+                && getPromotion(lhs) == getPromotion(rhs)
+                &&  getTargetSquare(lhs) == getTargetSquare(rhs);
+    }
+
     public static String printMove(int move) {
         StringBuilder sb = new StringBuilder();
         int from = Board120.getMailbox120Number(getFromSquare(move));

@@ -6,18 +6,11 @@ import com.github.fehinti.engine.SimpleEvaluator;
 import com.github.fehinti.engine.WeightedCombiEval;
 import com.github.fehinti.piece.Move;
 import com.github.fehinti.piece.MoveGenerator;
-import com.github.fehinti.piece.VectorAttack120;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.LongSummaryStatistics;
 import java.util.Stack;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
 import static com.github.fehinti.board.Board120Utils.*;
 import static com.github.fehinti.board.Board120Utils.BOARD_SIZE;
@@ -85,6 +78,7 @@ public final class Board120 {
     private final int[] whitePieceList;
     private final int[] blackPieceList;
     private final int[] playHistory;
+    private final long[] hashHistory;
     private final int[] irreversibleAspect;
     private int ply;
     Stack<Integer> captureEntry;
@@ -115,6 +109,7 @@ public final class Board120 {
         fillLists();
         captureEntry = new Stack<>();
         playHistory    = new int[INIT_BUFFER];
+        hashHistory    = new long[INIT_BUFFER];
         irreversibleAspect    = new int[INIT_BUFFER];
         ply = 0;
         zobristKey = ZobristHash.hashAtInit(this);
@@ -124,7 +119,9 @@ public final class Board120 {
         this.board120 = new byte[copy.board120.length];
         this.whitePieceList = new int[copy.whitePieceList.length];
         this.blackPieceList = new int[copy.blackPieceList.length];
+        this.hashHistory = new long[copy.hashHistory.length];
         System.arraycopy(copy.board120, 0, this.board120, 0, this.board120.length);
+        System.arraycopy(copy.hashHistory, 0, this.hashHistory, 0, this.hashHistory.length);
         this.sideToMove = copy.getSideToMove();
         this.fullMoveCounter = copy.getFullMoveCounter();
         this.halfMoveClock = copy.getHalfMoveClock();
@@ -654,6 +651,8 @@ public final class Board120 {
         zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), p);
     }
 
+    public int getPly() {return ply;}
+
     private boolean incrementalUpdate(int[] side, int index, int encode, int validate) {
         // if entry is 'off boarded' (captured) do not bother to check if encoding matches previous state
         boolean found = validate == OFF_BOARD && side[index] == OFF_BOARD;
@@ -714,9 +713,27 @@ public final class Board120 {
         return playHistory[ply];
     }
 
+    public int[] getPlayHistory() {
+        int[] copy = new int[playHistory.length];
+        for (int i : playHistory) {
+            copy[i] = playHistory[i];
+        }
+        return copy;
+    }
+
+    public long[] getHashHistory() {
+       // int[] copy = new int[playHistory.length];
+       // for (int i : playHistory) {
+       //     copy[i] = playHistory[i];
+       // }
+       // return copy;
+        return hashHistory;
+    }
+
     private void addIrreversibleAspect() { int ep = (enPassant & 0xff);   // Mask to 6 bits
         int cR = (castlingRights & 0xF) << 8; // Shift and mask to 4 bits
         int hM = (halfMoveClock & 0x3F) << 16; // Shift and mask to 6 bits
+        hashHistory[ply] = this.zobristKey;
         irreversibleAspect[ply++] = (ep | cR | hM);
     }
 

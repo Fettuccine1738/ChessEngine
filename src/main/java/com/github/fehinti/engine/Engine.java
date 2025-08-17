@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 import static com.github.fehinti.board.Board120.KING_SQ;
@@ -38,20 +39,21 @@ public class Engine {
     private final Board120 board;
     private final Board120 gameBoard;
     private final HashMap<Long, TranspositionEntry> transpositionTable;
+    private Stack<Long> repeater;
     private final Evaluator evaluator;
     private int bestMove;
     private final int[][] principalVariation;
     private final int[] pvLength;
     private int ply;
 
-    public Engine(String fen, int eval) {
+    public Engine(String fen, Evaluator ev) {
         this.board = FENParser.parseFENotation120(fen);
         transpositionTable = new HashMap<>();
-        evaluator = (eval == 0) ? WeightedCombiEval.getInstance()
-                : (eval == 1) ? PESTO.getInstance() : SimpleEvaluator.getInstance();
+        this.evaluator = ev;
         gameBoard = new Board120(board);
         principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
         pvLength = new int[MAX_DEPTH];
+        repeater = new Stack<>();
     }
 
     public int think() {
@@ -65,7 +67,7 @@ public class Engine {
     }
 
     private int iterativeDeepening(int depth) {
-        boolean side = gameBoard.getSideToMove();
+        boolean side = board.getSideToMove();
         List<Integer> pseudoLegal = MoveGenerator.generatePseudoLegal(board);
         ply = 0;
 
@@ -80,9 +82,10 @@ public class Engine {
         } else {
             // sort using best move from previous iter then flag(desc) then score,
             MoveGenerator.sortGen(pseudoLegal);
+            final int pvMv = (depth >= 2 && pvLength[0] > 0) ? principalVariation[0][0] : -1;
             pseudoLegal.sort((lhs, rhs) -> { // retrieve best move from previous iteration
-                if (Objects.equals(lhs, principalVariation[depth - 2][depth - 1])) return -1;
-                if (Objects.equals(rhs, principalVariation[depth - 2][depth - 1])) return 1;
+                if (Objects.equals(lhs, pvMv)) return -1;
+                if (Objects.equals(rhs, pvMv)) return 1;
                 else {
                    int lFlag = Move.getFlag(lhs);
                    int rFlag = Move.getFlag(rhs);
@@ -140,8 +143,8 @@ public class Engine {
         final int pvMove = (ply < MAX_DEPTH - 1 && pvLength[0] > ply) ? principalVariation[0][ply] : -1;
 
         child.sort((lhs, rhs) -> {
-            if (lhs == principalVariation[0][ply]) return -1;
-            if (rhs == principalVariation[0][ply]) return 1;
+            if (lhs == pvMove) return -1;
+            if (rhs == pvMove) return 1;
 
             int f1 = Move.getFlag(lhs);
             int f2 = Move.getFlag(rhs);
@@ -167,7 +170,7 @@ public class Engine {
 
                     principalVariation[ply - 1][ply - 1] = mv;
                     for (int i = 0; i < pvLength[ply]; i++) {
-                        principalVariation[ply - 1][0] = principalVariation[ply][i];
+                        principalVariation[ply - 1][i + 1] = principalVariation[ply][i];
                     }
                     pvLength[ply - 1] = pvLength[ply];
                 }
@@ -189,6 +192,20 @@ public class Engine {
         return bestEval;
     }
 
+    private void orderMoves(List<Integer> unsorted, int pv) {
+        unsorted.sort((lhs, rhs) -> {
+            if (lhs == pv) return -1;
+            if (rhs == pv) return 1;
+
+            int f1 = Move.getFlag(lhs);
+            int f2 = Move.getFlag(lhs);
+            if (f1 != f2) return Integer.compare(f2, f1);
+
+            int s1 = Move.getScore(lhs);
+            int s2 = Move.getScore(lhs);
+            return Integer.compare(s2, s1);
+        });
+    }
    public boolean isGameDrawn() {
         return isDrawBy50MoveRule() || isDrawByThreefold() || drawByInsufficientMaterial();
     }
@@ -207,6 +224,32 @@ public class Engine {
         }
         // no valid moves left
         return moves.isEmpty();
+    }
+
+    private double evalTerminalNode(int depth, int color) {
+        List<Integer> moves = MoveGenerator.generatePseudoLegal(board);
+        boolean foundLegal = false;
+        Iterator<Integer> iterator = moves.iterator();
+        while (iterator.hasNext()) {
+            int mv =  iterator.next();
+            if (!VectorAttack120.isKingInCheck(board)) {
+                foundLegal = true;
+                board.unmake(mv);
+                break;
+            } else {
+                iterator.remove();
+            }
+            board.unmake(mv);
+        }
+        if (!foundLegal) {
+            if (VectorAttack120.isKingInCheck(board)) {
+                return -(100_000 - depth);
+            } else return 0;
+        }
+
+        if (isGameDrawn()) return 0;
+
+        return Double.NaN;
     }
 
     private void printPVLine(int depth) {
@@ -230,7 +273,18 @@ public class Engine {
     }
 
     private boolean isDrawByThreefold() {
-        // todo
+        long currentHash = board.getZobristHash();
+        int rep = 0;
+        long[] hashes = board.getHashHistory();
+
+        int halfMoves = board.getHalfMoveClock();
+        int st = board.getPly() - 2; // skip current
+        for (int i = st; i >= st - halfMoves && i >= 0; i -= 2) {
+            if (hashes[i] == currentHash) {
+                rep++;
+                if (rep >= 2) return true; // current + 2 previous = threefold
+            }
+        }
         return false;
     }
 
@@ -248,6 +302,7 @@ public class Engine {
        for (int i = 0; i < 16; i++) {
             // return early, checkmate possible with (pawn, rook and queen) remaining
             if (wPc[2] > 2 || bPc[2] > 2) return false;
+
             int wp = (wList[i] >> 8) & 0xff;
             int bp = (bList[i] >> 8) & 0xff;
             if (wp == WKNIGHT) wPc[0]++;
@@ -255,13 +310,14 @@ public class Engine {
                 wPc[1]++;
                 wSquare = wList[i] & 0xff;
             }
-            else wPc[2]++;
+            else if (wList[i] != OFF_BOARD) wPc[2]++;
+
             if (bp == -BKNIGHT) bPc[0]++;
             else if (bp == -BBISHOP) {
                 bPc[1]++;
                 bSquare = bList[i] & 0xff;
             }
-            else bPc[2]++;
+            else if (bList[i] != OFF_BOARD) bPc[2]++;
         }
         // King vs. king
         boolean  onlyBlackKing = bPc[0] == 0 && bPc[1] == 0 && bPc[2] == 1;
@@ -285,5 +341,13 @@ public class Engine {
             return Board120Utils.COLOR[bSquare] == Board120Utils.COLOR[wSquare]; // same color = draw
         }
         return false;
+    }
+
+
+    public static void main(String[] args) {
+        String fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
+        Engine engine = new Engine(fen, WeightedCombiEval.getInstance());
+        int best = engine.think();
+
     }
 }
