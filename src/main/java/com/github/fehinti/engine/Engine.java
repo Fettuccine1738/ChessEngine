@@ -44,6 +44,7 @@ public class Engine {
     private final int[][] principalVariation;
     private final int[] pvLength;
     private int ply;
+    private int nodecount;
 
     public Engine(String fen, Evaluator ev) {
         this.board = FENParser.parseFENotation120(fen);
@@ -53,12 +54,13 @@ public class Engine {
         principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
         pvLength = new int[MAX_DEPTH];
         clearPV();
+        nodecount = 0;
     }
 
     public int think() {
         clearPV();
         int bestMove = 0;
-        for (int i = 1; i <= 8; i++){
+        for (int i = 1; i <= 7; i++){
             bestMove = iterativeDeepening(i);
             printPVLine(i);
         }
@@ -117,6 +119,7 @@ public class Engine {
         for (int move: pseudoLegal) {
             board.make(move);
             double eval = Double.NEGATIVE_INFINITY;
+            nodecount++;
             if (!VectorAttack120.isKingInCheck(board)) {
                ply = 1;
                eval = -negamax(depth - 1, -INIT_BETA, -INIT_ALPHA, side ? -COLOR_WH: COLOR_WH);
@@ -156,6 +159,7 @@ public class Engine {
         boolean legal = false;
         for (int m : child) {
             board.make(m);
+            nodecount++;
             if (!VectorAttack120.isKingInCheck(board)) {
                 legal = true;
                 board.unmake(m);
@@ -275,7 +279,7 @@ public class Engine {
     }
 
     private void printPVLine(int depth) {
-        System.out.print("PV (dpeth " + depth + "): ");
+        System.out.print("PV (depth " + depth + "): ");
         for (int i = 0; i < pvLength[0] && i < depth; i++) {
             int m = principalVariation[0][i];
             if (m != 0)  System.out.print(Move.printMove(m) + " ");
@@ -371,6 +375,8 @@ public class Engine {
         String fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
         Engine engine = new Engine(fen, WeightedCombiEval.getInstance());
         int best = engine.think();
+        System.out.println("Best Move " + Move.printMove(best));
+        System.out.println(engine.nodecount);
 
     }
 }
