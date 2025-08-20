@@ -95,22 +95,23 @@ public class Engine {
             MoveGenerator.sortGen(pseudoLegal);
         } else {
             // sort using best move from previous iter then flag(desc) then score,
-            MoveGenerator.sortGen(pseudoLegal);
+            // MoveGenerator.sortGen(pseudoLegal);
             final int pvMv = (pvLength[0] > 0) ? principalVariation[0][0] : -1;
-            pseudoLegal.sort((lhs, rhs) -> { // retrieve best move from previous iteration
-                if (Objects.equals(lhs, pvMv)) return -1;
-                if (Objects.equals(rhs, pvMv)) return 1;
-                else {
-                   int lFlag = Move.getFlag(lhs);
-                   int rFlag = Move.getFlag(rhs);
-                   if (lFlag != rFlag) return Integer.compare(rFlag, lFlag);
-                   else {
-                       int lScore = Move.getScore(lhs);
-                       int rScore = Move.getScore(rhs);
-                       return -Integer.compare(rScore, lScore);
-                   }
-                }
-            });
+            orderMoves(pseudoLegal, pvMv);
+           // pseudoLegal.sort((lhs, rhs) -> { // retrieve best move from previous iteration
+           //     if (Objects.equals(lhs, pvMv)) return -1;
+           //     if (Objects.equals(rhs, pvMv)) return 1;
+           //     else {
+           //        int lFlag = Move.getFlag(lhs);
+           //        int rFlag = Move.getFlag(rhs);
+           //        if (lFlag != rFlag) return Integer.compare(rFlag, lFlag);
+           //        else {
+           //            int lScore = Move.getScore(lhs);
+           //            int rScore = Move.getScore(rhs);
+           //            return -Integer.compare(rScore, lScore);
+           //        }
+           //     }
+           // });
         }
 
         int bestMove = pseudoLegal.isEmpty() ? 0: pseudoLegal.get(0);
@@ -122,7 +123,7 @@ public class Engine {
             nodecount++;
             if (!VectorAttack120.isKingInCheck(board)) {
                ply = 1;
-               eval = -negamax(depth - 1, -INIT_BETA, -INIT_ALPHA, side ? -COLOR_WH: COLOR_WH);
+               eval = -negamax(depth - 1, -INIT_BETA, -INIT_ALPHA, side ? -COLOR_WH : COLOR_WH);
                 if (eval > bestEval) {
                     bestMove = move;
                     bestEval = eval;
@@ -155,11 +156,11 @@ public class Engine {
 
         if (depth == 0) return  color * evaluator.evaluate(board);
         List<Integer> child = MoveGenerator.generatePseudoLegal(board);
+
         // check for check / stalemate
         boolean legal = false;
         for (int m : child) {
             board.make(m);
-            nodecount++;
             if (!VectorAttack120.isKingInCheck(board)) {
                 legal = true;
                 board.unmake(m);
@@ -186,6 +187,7 @@ public class Engine {
 
         for (Integer mv : child) {
             board.make(mv);
+            nodecount++;
             double eval = Double.NEGATIVE_INFINITY;
             if (!VectorAttack120.isKingInCheck(board)) {
                 ply++;
