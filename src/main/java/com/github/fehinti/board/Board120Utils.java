@@ -111,38 +111,38 @@ public class Board120Utils {
     public static final byte BQUEEN = -123;
     public static final byte BKING = -122;
 
-    public final static int BOARD_SIZE     = 64;
-    public final static int BOARD_SIZE_120 = 120;
+    public static final int BOARD_SIZE     = 64;
+    public static final int BOARD_SIZE_120 = 120;
 
     // promotions
-    public final static int Q_PROMO = 3;
-    public final static int R_PROMO = 2;
-    public final static int B_PROMO = 1;
-    public final static int KN_PROMO = 0;
+    public static final int Q_PROMO = 3;
+    public static final int R_PROMO = 2;
+    public static final int B_PROMO = 1;
+    public static final int KN_PROMO = 0;
 
 
-    public final static boolean BLACK = false;
-    public final static boolean WHITE = true;
+    public static final boolean BLACK = false;
+    public static final boolean WHITE = true;
 
     // rank
-    public final static int EMPT_SQ = 0;
-    public final static int RANK_1 = 0;
-    public final static int RANK_8 = 8;
+    public static final int EMPT_SQ = 0;
+    public static final int RANK_1 = 0;
+    public static final int RANK_8 = 8;
 
     // file
-    public final static int FILE_A = 0;
-    public final static int FILE_H = 8;
+    public static final int FILE_A = 0;
+    public static final int FILE_H = 8;
 
     // sentinel and blocking piece
-    public final static int OFF_BOARD = -1;
+    public static final int OFF_BOARD = -1;
     // castling rights
-    public final static byte WHITE_KINGSIDE     = 1; // 0001
-    public final static byte WHITE_QUEENSIDE    = 2; // 0010
-    public final static byte BLACK_KINGSIDE     = 4; // 0100
-    public final static byte BLACK_QUEENSIDE    = 8; // 1000
+    public static final byte WHITE_KINGSIDE     = 1; // 0001
+    public static final byte WHITE_QUEENSIDE    = 2; // 0010
+    public static final byte BLACK_KINGSIDE     = 4; // 0100
+    public static final byte BLACK_QUEENSIDE    = 8; // 1000
 
 
-    public final static byte MAX_LEN_16 = 16;
+    public static final byte MAX_LEN_16 = 16;
 
     static Predicate<Byte> secondRank = i -> (i >= A2  && i <= H2);
     static Predicate<Byte> seventhRank = i -> (i >= A7 && i <= H7);

@@ -4,7 +4,6 @@ import com.github.fehinti.board.Board120;
 import com.github.fehinti.board.Board120Utils;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -13,11 +12,11 @@ import static com.github.fehinti.piece.Move.CASTLE;
 
 public class MoveGenerator {
     //    index like so --------->      { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING_;
-    final static boolean[] IS_SLIDING = { false, false, true, true, true, false};
-    final static int[]   DIRECTIONS   = { 0,     8,      4,     4,    8,   8 };
+    static final boolean[] IS_SLIDING = { false, false, true, true, true, false};
+    static final int[]   DIRECTIONS   = { 0,     8,      4,     4,    8,   8 };
 
     // board coordinates for board 120
-    final static int[][] VECTOR_COORDINATES = {
+    static final int[][] VECTOR_COORDINATES = {
             {   0,   0,  0,  0, 0,  0,  0,  0 },
             { -21, -19,-12, -8, 8, 12, 19, 21 }, /* KNIGHT */
             { -11,  -9,  9, 11, 0,  0,  0,  0 }, /* BISHOP */
@@ -25,14 +24,13 @@ public class MoveGenerator {
             { -11, -10, -9, -1, 1,  9, 10, 11 }, /* QUEEN */
             { -11, -10, -9, -1, 1,  9, 10, 11 }  /* KING */  };
 
-    final static int SINGLE_PUSH = 10; // single push
-    final static int DOUBLE_PUSH = 20; // valid on the second rank only
-    final static int LEFTCAP = 9;
-    final static int RIGHTCAP = 11;
+    static final int SINGLE_PUSH = 10; // single push
+    static final int DOUBLE_PUSH = 20; // valid on the second rank only
+    static final int LEFTCAP = 9;
+    static final int RIGHTCAP = 11;
 
-    private static final int[] MVA_LVA = { 1, 3, 3, 5, 9, 20};
     // MVA_LVA_SCORE[victim][attacker]
-    private static final int[][] MVA_LVA_SCORE =  {
+    private static final int[][] MVA_LVA =  {
             {  100, 110, 110, 130, 140, 150 }, /* PAWN */
             {  70, 100, 100, 120, 140, 150 }, /* KNIGHT */
             {  70, 100, 100, 120, 140, 150 }, /* BISHOP */
@@ -53,8 +51,8 @@ public class MoveGenerator {
         List<Integer> moveList = new ArrayList<>();
 
         int[] piecelist = (side) ? board.getWhitePieceList() : board.getBlackPieceList();
-        int isEmpty = OFF_BOARD;
-        int piece, isPawn = 0;
+        int piece;
+        int isPawn = 0;
 
         for (int index = 0; index < piecelist.length; index++) {
             int encoding = piecelist[index];
@@ -93,12 +91,12 @@ public class MoveGenerator {
                                 boolean xside = board.isPieceWhite(newSquare);
                                 if (side != xside) {
                                     // 133 to map black pieces to 0..6 when white is capturing
-                                    int score = (side) ? MVA_LVA_SCORE[val][(127 + newSquare)] :
-                                            MVA_LVA_SCORE[val][newSquare - 1];
+                                    int score = (side) ? MVA_LVA[val][(127 + newSquare)] :
+                                            MVA_LVA[val][newSquare - 1];
                                     moveList.add(Move.encodeMove(square, to, 0,
                                                  Move.CAPTURE,  index,  score));
-                                    break;
-                                } else break;
+                                }
+                                break;
                             }
                             if (!slides) break;
                             from = (byte) to;
@@ -210,8 +208,8 @@ public class MoveGenerator {
         }
     }
 
-    final static int[] WHITE_CAPTURES = {LEFTCAP, RIGHTCAP};
-    final static int[] BLACK_CAPTURES = {-LEFTCAP, -RIGHTCAP};
+    static final int[] WHITE_CAPTURES = {LEFTCAP, RIGHTCAP};
+    static final int[] BLACK_CAPTURES = {-LEFTCAP, -RIGHTCAP};
 
     private static void generatePawnCaptures(Board120 board, List<Integer> moves, int from,
                                              int ep, int index, Predicate<Byte> isPromotingRank) {
@@ -222,8 +220,8 @@ public class MoveGenerator {
             if (piece != OFF_BOARD && !isPromotingRank.test((byte) from)) {
                 // do not allow capture king
                 if (isOpponentPiece(piece, side) && piece != ((side) ? BKING : WKING)) {
-                    int score = (side) ? MVA_LVA_SCORE[0][piece + 127] :
-                            MVA_LVA_SCORE[0][piece - 1];
+                    int score = (side) ? MVA_LVA[0][piece + 127] :
+                            MVA_LVA[0][piece - 1];
                     moves.add(Move.encodeMove(from, cap, 0, Move.CAPTURE, index, score));
                 }
 
@@ -233,7 +231,7 @@ public class MoveGenerator {
                     // prevent black from capturing OWN en Passant
                     if (side == BLACK && Board120Utils.isOnSeventhRank((byte) from)) continue;
                     moves.add(Move.encodeMove(from, ep,0, Move.EN_PASSANT,
-                            index, MVA_LVA_SCORE[0][0])); // ep captures are always pawns
+                            index, MVA_LVA[0][0])); // ep captures are always pawns
                 }
             }
         }
@@ -254,7 +252,7 @@ public class MoveGenerator {
             byte piece = board.getPieceOnSquare(cap);
             if (piece != OFF_BOARD) {
                 if (isOpponentPiece(piece, side) && piece != ((side) ? BKING : WKING)) {
-                    int score = (side) ? MVA_LVA_SCORE[0][piece + 127] : MVA_LVA_SCORE[0][piece - 1];
+                    int score = (side) ? MVA_LVA[0][piece + 127] : MVA_LVA[0][piece - 1];
                     addPromotionCaptureMoves(moves, from, cap, index, score);
                 }
             }
@@ -275,36 +273,6 @@ public class MoveGenerator {
         moves.add(Move.encodeMove(from, to, KN_PROMO, Move.PROMOTION_CAPTURE, index, score+KN_PROMO));
     }
 
-    // orders by flag then score
-    public static void sortMoves(List<Integer> unordered) {
-        int sz = unordered.size();
-        for (int i = 0; i < sz; i++) {
-            int maxIndex = i;
-            int flag = Move.getFlag(unordered.get(i));
-            //int maxScore = (unordered.get(i) >> 24) & 0xff;
-            int maxScore = Move.getScore(unordered.get(i));
-
-            for (int j = i + 1; j < sz; j++) {
-                int next = Move.getFlag(unordered.get(j));
-                // int nextScore = (unordered.get(j) >>> 24) & 0xff;
-                int nextScore = Move.getScore(unordered.get(j));
-                if (next < flag) continue;
-                if (next > flag) {
-                    maxIndex = j;
-                    flag = next;
-                    maxScore = nextScore;
-                } else if (nextScore > maxScore) {// equal flags
-                    maxIndex = j;
-                    maxScore = nextScore;
-                }
-            }
-            if (i != maxIndex) {
-                int temp = unordered.get(i);
-                unordered.set(i, unordered.get(maxIndex));
-                unordered.set(maxIndex, temp);
-            }
-        }
-    }
 
     public static void sortGen(List<Integer> unordered) {
         unordered.sort((lhs, rhs) -> {
@@ -321,10 +289,6 @@ public class MoveGenerator {
     private static int scoreQuietPawns(Board120 board, int defSq) {
         int defenders = VectorAttack120.getDefenderCount(board, defSq);
         return (defenders != 0) ? 8 * defenders : 5;
-    }
-
-    private static void sortByFlag(List<Integer> unordered) {
-        unordered.sort(Comparator.comparingInt(Move::getFlag));
     }
 
     private static boolean isOpponentPiece(int piece, boolean sideToPlay) {

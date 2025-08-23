@@ -4,11 +4,6 @@ import com.github.fehinti.board.Board120;
 
 
 public class Move {
-    // .Move.encodeMove(from, to, newSquare, 0, com.github.fehinti.board.Move.FLAG_CAPTURE, index);
-    // from = bits 0 - 7, to 8 - 15, 15 - 23, promotion (3),flag (3), index (4  bits)
-    // origin, dest,
-
-    // tactical move flags
     public static final int QUIET = 0;
     public static final int EN_PASSANT = 1;
     public static final int CASTLE = 2;
@@ -18,7 +13,7 @@ public class Move {
     public static final int PROMOTION_CAPTURE = 6;
 
     // ? last flag bytes only needs 3 bytes to so bit 23 to 31 is still avilable
-    // ? may need switch to 64 bytes encoding in the future
+
     // bits
     /**
      * variable (start_inclusive..end_inclusive)
@@ -71,7 +66,7 @@ public class Move {
                 &&  getTargetSquare(lhs) == getTargetSquare(rhs);
     }
 
-    public static String printMove(int move) {
+    public static String asString(int move) {
         StringBuilder sb = new StringBuilder();
         int from = Board120.getMailbox120Number(getFromSquare(move));
         int to = Board120.getMailbox120Number(getTargetSquare(move));
@@ -106,7 +101,7 @@ public class Move {
     }
 
     public static String dbgMove(int move) {
-        return printMove(move) + "\t" + printFlag(getFlag(move));
+        return asString(move) + "\t" + printFlag(getFlag(move));
     }
 
 }

@@ -128,7 +128,7 @@ public class Perft {
            }
            board.unmake(move);
            if (currentDepth == originalDepth) {
-               strList.add(Move.printMove(move) + ": " + nodeCount);
+               strList.add(Move.asString(move) + ": " + nodeCount);
            }
        }
        return nodes;

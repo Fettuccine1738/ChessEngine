@@ -4,7 +4,7 @@ import com.github.fehinti.board.Board120;
 
 public class WeightedCombiEval implements Evaluator {
 
-    private final static WeightedCombiEval instance = new WeightedCombiEval();
+    private static final WeightedCombiEval instance = new WeightedCombiEval();
     private static final PESTO pesto = PESTO.getInstance();
     private static final SimpleEvaluator simple = SimpleEvaluator.getInstance();
 

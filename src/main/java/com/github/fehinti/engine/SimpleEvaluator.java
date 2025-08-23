@@ -20,7 +20,7 @@ public class SimpleEvaluator implements  Evaluator {
     private static final int QUEEN_VAL  = 900;
     private static final int KING_VAL   = 20000;
 
-    final static byte[] WHITE_PAWN = {
+    static final byte[] WHITE_PAWN = {
             0,  0,  0,  0,  0,  0,  0,  0,
             50, 50, 50, 50, 50, 50, 50, 50,
             10, 10, 20, 30, 30, 20, 10, 10,
@@ -31,7 +31,7 @@ public class SimpleEvaluator implements  Evaluator {
             0,  0,  0,  0,  0,  0,  0,  0
     };
 
-    final static byte[] WHITE_KNIGHT = {
+    static final byte[] WHITE_KNIGHT = {
             -50,-40,-30,-30,-30,-30,-40,-50,
             -40,-20,  0,  0,  0,  0,-20,-40,
             -30,  0, 10, 15, 15, 10,  0,-30,
@@ -42,7 +42,7 @@ public class SimpleEvaluator implements  Evaluator {
             -50,-40,-30,-30,-30,-30,-40,-50,
     };
 
-    final static byte[] WHITE_BISHOP = {
+    static final byte[] WHITE_BISHOP = {
             -20,-10,-10,-10,-10,-10,-10,-20,
             -10,  0,  0,  0,  0,  0,  0,-10,
             -10,  0,  5, 10, 10,  5,  0,-10,
@@ -53,7 +53,7 @@ public class SimpleEvaluator implements  Evaluator {
             -20,-10,-10,-10,-10,-10,-10,-20,
     };
 
-    final static byte[] WHITE_ROOK = {
+    static final byte[] WHITE_ROOK = {
             0,  0,  0,  0,  0,  0,  0,  0,
             5, 10, 10, 10, 10, 10, 10,  5,
             -5,  0,  0,  0,  0,  0,  0, -5,
@@ -64,7 +64,7 @@ public class SimpleEvaluator implements  Evaluator {
             0,  0,  0,  5,  5,  0,  0,  0
     };
 
-    final static byte[] WHITE_QUEEN = {
+    static final byte[] WHITE_QUEEN = {
             -20,-10,-10, -5, -5,-10,-10,-20,
             -10,  0,  0,  0,  0,  0,  0,-10,
             -10,  0,  5,  5,  5,  5,  0,-10,
@@ -75,7 +75,7 @@ public class SimpleEvaluator implements  Evaluator {
             -20,-10,-10, -5, -5,-10,-10,-20
     };
 
-    final static byte[] WHITE_KING_MIDDLE = {
+    static final byte[] WHITE_KING_MIDDLE = {
             -30,-40,-40,-50,-50,-40,-40,-30,
             -30,-40,-40,-50,-50,-40,-40,-30,
             -30,-40,-40,-50,-50,-40,-40,-30,
@@ -86,7 +86,7 @@ public class SimpleEvaluator implements  Evaluator {
             20, 30, 10,  0,  0, 10, 30, 20
     };
 
-    final static byte[] WHITE_KING_END = {
+    static final byte[] WHITE_KING_END = {
             -50,-40,-30,-20,-20,-30,-40,-50,
             -30,-20,-10,  0,  0,-10,-20,-30,
             -30,-10, 20, 30, 30, 20,-10,-30,
@@ -117,7 +117,7 @@ public class SimpleEvaluator implements  Evaluator {
                xScore += getPieceValue(bp) + getPieceTableEntry(count, bp, false, xSide[i] & 0xff);
            }
        }
-       return sScore - xScore;
+       return (sScore - xScore) * 1.;
     }
 
     public static int getPieceTableEntry(int pCount, int piece, boolean side, int square) {

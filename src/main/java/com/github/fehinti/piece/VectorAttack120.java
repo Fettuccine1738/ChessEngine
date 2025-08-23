@@ -21,10 +21,10 @@ public class VectorAttack120 {
     public static final int ATTACK_N = 6;   // Knight
 
     // New attack array for a 10x12 board
-    final static int[] ATTACK_ARRAY = new int[240];
-    final static ArrayList<Integer>[][] BLOCKERS = new ArrayList[64][64];
+    static final int[] ATTACK_ARRAY = new int[240];
+    static final ArrayList<Integer>[][] BLOCKERS = new ArrayList[64][64];
     // knight omitted, blockers not available
-    private final static int[] RAY_8 = { 9, 10 , 11, -9, -10, -11, 1, -1, };
+    private static final int[] RAY_8 = { 9, 10 , 11, -9, -10, -11, 1, -1, };
 
     static {
         for (int diff = -119; diff <= 119; diff++) {
@@ -62,8 +62,8 @@ public class VectorAttack120 {
         return ATTACK_NONE;
     }
 
-    private final static boolean WT = true; // white
-    private final static boolean BK = false; // black
+    private static final boolean WT = true; // white
+    private static final boolean BK = false; // black
 
     static boolean isQueenMove(int diff) {
         return isRookMove(diff) || isBishopMove(diff);

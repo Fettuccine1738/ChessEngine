@@ -57,9 +57,9 @@ public final class Board120 {
     };
 
 
-    private final static byte BLACK = (byte) 0b10000000;
-    private final static byte WHITE = (byte) 0b00000000;
-    public final static byte  MOVED_FLAG = (byte) 0b1;
+    private static final byte BLACK = (byte) 0b10000000;
+    private static final byte WHITE = (byte) 0b00000000;
+    public static final byte  MOVED_FLAG = (byte) 0b1;
     public static final int KING_SQ = 15;
     static final int INIT_BUFFER = 512;
 
@@ -937,7 +937,7 @@ public final class Board120 {
 
       for (int m: list) {
           System.out.println();
-          System.out.println((++count) + "\t" + Move.printMove(m));
+          System.out.println((++count) + "\t" + Move.asString(m));
           System.out.println("score"   + Move.getScore(m));
           board.make(m);
           System.out.println("Simple eval " + simple.evaluate(board));
