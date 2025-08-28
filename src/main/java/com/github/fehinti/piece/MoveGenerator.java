@@ -95,8 +95,8 @@ public class MoveGenerator {
                                             MVA_LVA[val][newSquare - 1];
                                     moveList.add(Move.encodeMove(square, to, 0,
                                                  Move.CAPTURE,  index,  score));
-                                }
-                                break;
+                                    break;
+                                } else break;
                             }
                             if (!slides) break;
                             from = (byte) to;
@@ -226,9 +226,8 @@ public class MoveGenerator {
                 }
 
                 if (cap == ep) {
-                    // prevent white from capturing "OWN" en Passant
+                    // prevent from capturing "OWN" en Passant
                     if (side == WHITE && Board120Utils.isOnSecondRank((byte) from)) continue;
-                    // prevent black from capturing OWN en Passant
                     if (side == BLACK && Board120Utils.isOnSeventhRank((byte) from)) continue;
                     moves.add(Move.encodeMove(from, ep,0, Move.EN_PASSANT,
                             index, MVA_LVA[0][0])); // ep captures are always pawns
@@ -252,6 +251,7 @@ public class MoveGenerator {
             byte piece = board.getPieceOnSquare(cap);
             if (piece != OFF_BOARD) {
                 if (isOpponentPiece(piece, side) && piece != ((side) ? BKING : WKING)) {
+                    // + x to map to index 0..6
                     int score = (side) ? MVA_LVA[0][piece + 127] : MVA_LVA[0][piece - 1];
                     addPromotionCaptureMoves(moves, from, cap, index, score);
                 }
@@ -278,11 +278,11 @@ public class MoveGenerator {
         unordered.sort((lhs, rhs) -> {
             int f1 = Move.getFlag(lhs);
             int f2 = Move.getFlag(rhs);
-            if (f1 != f2) return -Integer.compare(f1, f2);
+            if (f1 != f2) return Integer.compare(f2, f1);
 
             int s1 = Move.getScore(lhs);
             int s2 = Move.getScore(rhs);
-            return -Integer.compare(s1, s2);
+            return Integer.compare(s2, s1);
         });
     }
 

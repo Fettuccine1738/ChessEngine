@@ -36,7 +36,7 @@ public class VectorAttack120 {
             for (int j = 0; j < 64; j++) {
                 ArrayList<Integer> blockers  = new ArrayList<>();
                 int diff = Board120.getMailbox64Number(j) - Board120.getMailbox64Number(i);
-                // no knight blockers
+                // no knight blockers or possible blockers with only 1 square between
                 if ((diff < 2 && diff > -2) || isKnightMove(diff)) BLOCKERS[i][j] = blockers;
                 else {
                     int ray = getRay(diff);
@@ -44,7 +44,8 @@ public class VectorAttack120 {
                     int end = Board120.getMailbox64Number(j);
                     // stop at a unit ray before the destination
                     while (st + ray != end) {
-                        blockers.add(st+=ray);
+                        blockers.add(st+ray);
+                        st += ray;
                     }
                     BLOCKERS[i][j] = blockers;
                 }

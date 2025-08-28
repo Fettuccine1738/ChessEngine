@@ -8,7 +8,7 @@
     </appender>
 
     # File appender
-    <appender name="fout" class="ch.qos.logback.core.FileAppender">
+    <appender name="engineout" class="ch.qos.logback.core.FileAppender">
         <file>engine.log</file>
         <append>true</append>
         <encoder>
@@ -21,7 +21,7 @@
     <logger name="com.github.fehinti.engine" level="TRACE"/>
 
     <root level="INFO">
-        <appender-ref ref="stdout" />
-        <appender-ref ref="fout" />
+       <appender-ref ref="stdout" />
+        <appender-ref ref="engineout" />
     </root>
 </configuration>

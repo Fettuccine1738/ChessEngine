@@ -33,28 +33,29 @@ public class Engine {
     private static final int MAX_DEPTH = 16;
     private static final int DRAWN = 0;
 
-    private final Board120 board;
-    private final HashMap<Long, TranspositionEntry> transpositionTable;
-    private final Evaluator evaluator;
-    private final int[][] principalVariation;
-    private final int[] pvLength;
-    private int ply;
-    private int nodecount;
+    private final Board120 _board;
+    private final HashMap<Long, TranspositionEntry> _transpositionTable;
+    private final Evaluator _evaluator;
+    private final int[][] _principalVariation;
+    private final int[] _pvLength;
+    private int _ply;
+    private int _nodecount;
 
     public Engine(String fen, Evaluator ev) {
-        this.board = FENParser.parseFENotation120(fen);
-        transpositionTable = new HashMap<>();
-        this.evaluator = ev;
-        principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
-        pvLength = new int[MAX_DEPTH];
+        logger.info("{}", fen);
+        this._board = FENParser.parseFENotation120(fen);
+        _transpositionTable = new HashMap<>();
+        this._evaluator = ev;
+        _principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
+        _pvLength = new int[MAX_DEPTH];
         clearPV();
-        nodecount = 0;
+        _nodecount = 0;
     }
 
     public int think() {
         clearPV();
         int best = 0;
-        for (int i = 1; i <= 7; i++){
+        for (int i = 1; i <= 8; i++){
             best = iterativeDeepening(i);
             printPVLine(i);
         }
@@ -63,71 +64,71 @@ public class Engine {
 
     private void clearPV() {
         for (int i = 0; i < MAX_DEPTH; i++) {
-            pvLength[i] = 0;
+            _pvLength[i] = 0;
             for (int j = 0; j < MAX_DEPTH; j++) {
-                principalVariation[i][j] = 0;
+                _principalVariation[i][j] = 0;
             }
         }
     }
 
     private void initPVLength() {
         for (int i = 0; i < MAX_DEPTH; i++) {
-            pvLength[i] = 0;
+            _pvLength[i] = 0;
         }
     }
 
     private void updatePV(int move) {
-        principalVariation[ply][0] = move;
-        for (int i = 0; i < pvLength[ply + 1]; i++) {
-            principalVariation[ply][i + 1] = principalVariation[ply + 1][i];
+        _principalVariation[_ply][0] = move;
+        for (int i = 0; i < _pvLength[_ply + 1]; i++) {
+            _principalVariation[_ply][i + 1] = _principalVariation[_ply + 1][i];
         }
-        pvLength[ply] = pvLength[ply + 1] + 1;
+        _pvLength[_ply] = _pvLength[_ply + 1] + 1;
     }
 
     private int iterativeDeepening(int depth) {
-        boolean side = board.getSideToMove();
-        List<Integer> pseudoLegal = MoveGenerator.generatePseudoLegal(board);
-        ply = 0;
+        boolean side = _board.getSideToMove();
+        List<Integer> pseudoLegal = MoveGenerator.generatePseudoLegal(_board);
+        _ply = 0;
 
         initPVLength();
 
         if (depth == 1) {
             pseudoLegal = pseudoLegal.stream().filter(mv -> {
-                board.make(mv);
-                boolean legal = !VectorAttack120.isKingInCheck(board);
-                board.unmake(mv);
+                _board.make(mv);
+                boolean legal = !VectorAttack120.isKingInCheck(_board);
+                _board.unmake(mv);
                 return legal;
             }).collect(Collectors.toList()); // modifiable collection> intentional
         }
 
-        final int pvMv = (pvLength[0] > 0) ? principalVariation[0][0] : -1;
+        final int pvMv = (_pvLength[0] > 0) ? _principalVariation[0][0] : -1;
         orderMoves(pseudoLegal, pvMv);
         int bestMove = pseudoLegal.isEmpty() ? 0 : pseudoLegal.get(0);
         double bestEval = Double.NEGATIVE_INFINITY;
 
         for (int move: pseudoLegal) {
-            board.make(move);
-            nodecount++;
-            if (!VectorAttack120.isKingInCheck(board)) {
-               ply = 1;
+            _board.make(move);
+            _nodecount++;
+            if (!VectorAttack120.isKingInCheck(_board)) {
+               _ply = 1;
                double eval = -negamax(depth - 1, -INIT_BETA, -INIT_ALPHA, side ? -COLOR_WH : COLOR_WH);
-               ply--;
+               _ply--;
                 if (eval > bestEval) {
                     bestMove = move;
                     bestEval = eval;
                     updatePV(bestMove);
                 }
             }
-            board.unmake(move);
+            _board.unmake(move);
         }
         return bestMove;
     }
 
     private double negamax(int depth, double alpha, double beta, int color) {
         double alphaOrig = alpha;
-        pvLength[ply] = 0;
+        _pvLength[_ply] = 0;
 
-        TranspositionEntry tEntry = transpositionTable.get(board.getZobristHash());
+        TranspositionEntry tEntry = _transpositionTable.get(_board.getZobristHash());
         if (tEntry != null && tEntry.depth >= depth) {
             double value = tEntry.eval;
             if (tEntry.nodeType == NODE_TYPE_EXACT) return value;
@@ -138,33 +139,34 @@ public class Engine {
             }
         }
 
-        if (depth == 0) return  color * evaluator.evaluate(board);
-        List<Integer> child = MoveGenerator.generatePseudoLegal(board);
+        if (depth == 0) return  color * _evaluator.evaluate(_board);
+        List<Integer> child = MoveGenerator.generatePseudoLegal(_board);
 
         double mate = isCheckOrStale(depth, child);
         if (!Double.isNaN(mate)) {
             return mate;
         }
 
-        final int pvMove = (ply < MAX_DEPTH - 1 && pvLength[0] > ply) ? principalVariation[ply][0] : -1;
+        final int pvMove = (_ply < MAX_DEPTH - 1 && _pvLength[0] > _ply) ? _principalVariation[_ply][0] : -1;
+
         orderMoves(child, pvMove);
 
         double bestEval = Double.NEGATIVE_INFINITY;
 
         for (Integer mv : child) {
-            board.make(mv);
-            nodecount++;
+            _board.make(mv);
+            _nodecount++;
             double eval = Double.NEGATIVE_INFINITY;
-            if (!VectorAttack120.isKingInCheck(board)) {
-                ply++;
+            if (!VectorAttack120.isKingInCheck(_board)) {
+                _ply++;
                 eval = -negamax(depth - 1, -beta, -alpha, -color);
-                ply--;
+                _ply--;
                 if (eval > bestEval) {
                     bestEval = eval;
                     updatePV(mv);
                 }
             }
-            board.unmake(mv);
+            _board.unmake(mv);
             alpha = Math.max(alpha, eval);
             if (alpha >= beta) break;
         }
@@ -176,7 +178,7 @@ public class Engine {
         else nodeType = NODE_TYPE_EXACT;
 
         TranspositionEntry newEntry = new TranspositionEntry(bestEval, (byte)depth, nodeType);
-        transpositionTable.put(board.getZobristHash(), newEntry);
+        _transpositionTable.put(_board.getZobristHash(), newEntry);
         return bestEval;
     }
 
@@ -205,16 +207,17 @@ public class Engine {
         Iterator<Integer> iterator = pseudoLegal.iterator();
         while (iterator.hasNext()) {
             int mv =  iterator.next();
-            if (!VectorAttack120.isKingInCheck(board)) {
+            _board.make(mv);
+            if (!VectorAttack120.isKingInCheck(_board)) {
                 foundLegal = true;
-                board.unmake(mv);
+                _board.unmake(mv);
                 break;
             } else iterator.remove();
-            board.unmake(mv);
+            _board.unmake(mv);
         }
 
         if (!foundLegal) {
-            if (VectorAttack120.isKingInCheck(board)) {
+            if (VectorAttack120.isKingInCheck(_board)) {
                 return -(100_000 - depth); // score mates at higher nodes
             } else return DRAWN;
         }
@@ -224,8 +227,8 @@ public class Engine {
 
     private void printPVLine(int depth) {
         logger.info("PV (depth   {} +  ", depth);
-        for (int i = 0; i < pvLength[0] && i < depth; i++) {
-            int m = principalVariation[0][i];
+        for (int i = 0; i < _pvLength[0] && i < depth; i++) {
+            int m = _principalVariation[0][i];
             if (m != 0)  {
                 logger.info("{} \t", Move.asString(m));
             }
@@ -234,22 +237,22 @@ public class Engine {
 
     private List<Integer> getPV() {
         List<Integer> pv = new ArrayList<>();
-        for (int i = 0; i < pvLength[0]; i++) {
-            pv.add(principalVariation[0][i]);
+        for (int i = 0; i < _pvLength[0]; i++) {
+            pv.add(_principalVariation[0][i]);
         }
         return pv;
     }
 
     private boolean isDrawBy50MoveRule() {
-        return board.getHalfMoveClock() == DRAW_BY_50;
+        return _board.getHalfMoveClock() == DRAW_BY_50;
     }
 
     private boolean isDrawByThreefold() {
-        long currentHash = board.getZobristHash();
+        long currentHash = _board.getZobristHash();
         int rep = 0;
-        long[] hashes = board.getHashHistory();
-        int halfMoves = board.getHalfMoveClock();
-        int st = board.getPly() - 2; // skip current
+        long[] hashes = _board.getHashHistory();
+        int halfMoves = _board.getHalfMoveClock();
+        int st = _board.getPly() - 2; // skip current
         for (int i = st; i >= st - halfMoves && i >= 0; i -= 2) {
             if (hashes[i] == currentHash) {
                 rep++;
@@ -260,8 +263,8 @@ public class Engine {
     }
 
     private boolean drawByInsufficientMaterial() {
-        int[] wList = board.getWhitePieceList();
-        int[] bList = board.getBlackPieceList();
+        int[] wList = _board.getWhitePieceList();
+        int[] bList = _board.getBlackPieceList();
 
         // [N, B, PRQ] count the number of knights, bishop and other pieces on the board
         // estimates draws based on piece  combinations;
@@ -313,9 +316,11 @@ public class Engine {
 
     public static void main(String[] args) {
         String fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
-        Engine engine = new Engine(fen, WeightedCombiEval.getInstance());
+        String m_4 = "8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1";
+        String m_4_f = "1k6/4qp2/QP4r1/p3P3/2B1bP2/P7/K2R4/8 w - - 0 1";
+        Engine engine = new Engine(m_4_f, WeightedCombiEval.getInstance());
         int best = engine.think();
         logger.info("Best Move {}", Move.asString(best));
-        logger.info("Node count {}", engine.nodecount);
+        logger.info("Node count {}", engine._nodecount);
     }
 }

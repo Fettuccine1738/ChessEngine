@@ -64,24 +64,20 @@ public final class Board120 {
     static final int INIT_BUFFER = 512;
 
     // ! public int lastEntry = 0;
-
-    private final byte[] board120; // 8x8
-    private boolean sideToMove; // white or black's turn
-    private int fullMoveCounter; // full move counter begins at 1 incremented after black's turn
-    private int halfMoveClock; // ply : move of one side only
-    private byte castlingRights;
-    private byte enPassant;
-    private long zobristKey; // hashKey for a single position
-
-    // additional piece list for each type : efficient lookup
-    // for move generation to avoid scanning the board for moves
-    private final int[] whitePieceList;
-    private final int[] blackPieceList;
-    private final int[] playHistory;
-    private final long[] hashHistory;
-    private final int[] irreversibleAspect;
-    private int ply;
-    Stack<Integer> captureEntry;
+    private final byte[] _board120; // 8x8
+    private boolean _sideToMove; // white or black's turn
+    private int _fullMoveCounter; // full move counter begins at 1 incremented after black's turn
+    private int _halfMoveClock; // ply : move of one side only
+    private byte _castlingRights;
+    private byte _enPassant;
+    private long _zobristKey; // hashKey for a single position
+    private final int[] _whitePieceList;
+    private final int[] _blackPieceList;
+    private final int[] _playHistory;
+    private final long[] _hashHistory;
+    private final int[] _irreversibleAspect;
+    private int _ply;
+    private final Stack<Integer> _captureEntry;
 
 
     /**
@@ -97,42 +93,42 @@ public final class Board120 {
     public Board120(byte[] pieces, boolean stm, int fmCounter, int hmClock, byte cRights, byte enPt) {
         if (pieces == null || pieces.length != 120)
             throw new IllegalArgumentException("pieces must have 64 elements");
-        board120 = new byte[pieces.length];
-        System.arraycopy(pieces, 0, board120, 0, pieces.length);
-        sideToMove = stm;
-        fullMoveCounter = fmCounter;
-        halfMoveClock = hmClock;
-        enPassant = enPt;
+        _board120 = new byte[pieces.length];
+        System.arraycopy(pieces, 0, _board120, 0, pieces.length);
+        _sideToMove = stm;
+        _fullMoveCounter = fmCounter;
+        _halfMoveClock = hmClock;
+        _enPassant = enPt;
         setCastlingRights(cRights);
-        whitePieceList = new int[MAX_LEN_16];
-        blackPieceList = new int[MAX_LEN_16];
+        _whitePieceList = new int[MAX_LEN_16];
+        _blackPieceList = new int[MAX_LEN_16];
         fillLists();
-        captureEntry = new Stack<>();
-        playHistory    = new int[INIT_BUFFER];
-        hashHistory    = new long[INIT_BUFFER];
-        irreversibleAspect    = new int[INIT_BUFFER];
-        ply = 0;
-        zobristKey = ZobristHash.hashAtInit(this);
+        _captureEntry = new Stack<>();
+        _playHistory    = new int[INIT_BUFFER];
+        _hashHistory    = new long[INIT_BUFFER];
+        _irreversibleAspect    = new int[INIT_BUFFER];
+        _ply = 0;
+        _zobristKey = ZobristHash.hashAtInit(this);
     }
 
     public Board120(Board120 copy) {
-        this.board120 = new byte[copy.board120.length];
-        this.whitePieceList = new int[copy.whitePieceList.length];
-        this.blackPieceList = new int[copy.blackPieceList.length];
-        this.hashHistory = new long[copy.hashHistory.length];
-        System.arraycopy(copy.board120, 0, this.board120, 0, this.board120.length);
-        System.arraycopy(copy.hashHistory, 0, this.hashHistory, 0, this.hashHistory.length);
-        this.sideToMove = copy.getSideToMove();
-        this.fullMoveCounter = copy.getFullMoveCounter();
-        this.halfMoveClock = copy.getHalfMoveClock();
-        this.enPassant = (byte) copy.getEnPassant();
+        this._board120 = new byte[copy._board120.length];
+        this._whitePieceList = new int[copy._whitePieceList.length];
+        this._blackPieceList = new int[copy._blackPieceList.length];
+        this._hashHistory = new long[copy._hashHistory.length];
+        System.arraycopy(copy._board120, 0, this._board120, 0, this._board120.length);
+        System.arraycopy(copy._hashHistory, 0, this._hashHistory, 0, this._hashHistory.length);
+        this._sideToMove = copy.getSideToMove();
+        this._fullMoveCounter = copy.getFullMoveCounter();
+        this._halfMoveClock = copy.getHalfMoveClock();
+        this._enPassant = (byte) copy.getEnPassant();
         this.setCastlingRights(copy.getCastlingRights());
         fillLists();
-        captureEntry = new Stack<>();
-        playHistory    = new int[INIT_BUFFER];
-        irreversibleAspect    = new int[INIT_BUFFER];
-        ply = 0;
-        this.zobristKey = copy.zobristKey;
+        _captureEntry = new Stack<>();
+        _playHistory    = new int[INIT_BUFFER];
+        _irreversibleAspect    = new int[INIT_BUFFER];
+        _ply = 0;
+        this._zobristKey = copy._zobristKey;
     }
 
     public static int getMailbox64Number(int index) {
@@ -144,8 +140,8 @@ public final class Board120 {
     }
 
     private void fillLists() {
-        Arrays.fill(whitePieceList, OFF_BOARD);
-        Arrays.fill(blackPieceList, OFF_BOARD);
+        Arrays.fill(_whitePieceList, OFF_BOARD);
+        Arrays.fill(_blackPieceList, OFF_BOARD);
 
         int wp= 0;
         int bp= 0;
@@ -153,23 +149,23 @@ public final class Board120 {
 
         for (int sq = 0; sq < BOARD_SIZE; sq++) {
             int square = getMailbox64Number(sq);
-            int value = board120[square];
+            int value = _board120[square];
             if (value > 0) {
-                if (value == WKING) whitePieceList[wk] = ((value << RANK_8) | square);
-                else whitePieceList[wp++] = ((value << RANK_8) | square);
+                if (value == WKING) _whitePieceList[wk] = ((value << RANK_8) | square);
+                else _whitePieceList[wp++] = ((value << RANK_8) | square);
             } else if (value < 0) {
                 // * negate value used because signed bit is still maintained if actual value
                 // * -num removes the signed bits allows us to use the unused bits
-                if (value == BKING) blackPieceList[wk] = ((-value << RANK_8) | square);
-                else blackPieceList[bp++] = ((-value << RANK_8) | square);
+                if (value == BKING) _blackPieceList[wk] = ((-value << RANK_8) | square);
+                else _blackPieceList[bp++] = ((-value << RANK_8) | square);
             }
         }
         // sort list will be valuable when looking for smallest attackers
         // pieces are sorted with minor pieces first (ordering: P, N, B, R, Q , K)
-        Arrays.sort(whitePieceList, 0, KING_SQ);
+        Arrays.sort(_whitePieceList, 0, KING_SQ);
         // sort descending, encoding of pawns > major pieces , this keeps pawns before other pieces
         // allowing us to get smallest attacker for black easily
-        sortDescending(blackPieceList);
+        sortDescending(_blackPieceList);
     }
 
     private void sortDescending(int[] arr) {
@@ -191,19 +187,19 @@ public final class Board120 {
         boolean wq = (rights & WHITE_QUEENSIDE) != 0;
         boolean bk = (rights & BLACK_KINGSIDE) != 0;
         boolean bq = (rights & BLACK_QUEENSIDE) != 0;
-        this.castlingRights = encodeCastlingRights(wk, wq, bk, bq);
+        this._castlingRights = encodeCastlingRights(wk, wq, bk, bq);
     }
 
     /**
      * @return single byte encoding of black and white castling rights
      */
     public byte getCastlingRights() {
-        return castlingRights;
+        return _castlingRights;
     }
 
     public Stack<Integer> getCaptureEntry()
     {
-        return captureEntry;
+        return _captureEntry;
     }
 
     /**
@@ -224,7 +220,7 @@ public final class Board120 {
     }
 
     public boolean canSideCastle(boolean b) {
-        byte castles = castlingRights;
+        byte castles = _castlingRights;
         if (b) { // masks blacks bits if white to play
             castles &= ~(BLACK_QUEENSIDE | BLACK_KINGSIDE);
         } else            castles &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE); // vice versa
@@ -233,21 +229,21 @@ public final class Board120 {
 
     // is king side castling right for white available
     public boolean canWhiteCastleKingside() {
-        return (castlingRights & WHITE_KINGSIDE) != 0;
+        return (_castlingRights & WHITE_KINGSIDE) != 0;
     }
 
     // is queenside castling right for white available
     public  boolean canWhiteCastleQueenside() {
-        return (castlingRights & WHITE_QUEENSIDE) != 0;
+        return (_castlingRights & WHITE_QUEENSIDE) != 0;
     }
 
     // is king side castling right for black available
     public boolean canBlackCastleKingside() {
-        return (castlingRights & BLACK_KINGSIDE) != 0;
+        return (_castlingRights & BLACK_KINGSIDE) != 0;
     }
 
     public  boolean canBlackCastleQueenside() {
-        return (castlingRights & BLACK_QUEENSIDE) != 0;
+        return (_castlingRights & BLACK_QUEENSIDE) != 0;
     }
 
     public static boolean isWhitePiece(byte piece) {
@@ -263,13 +259,13 @@ public final class Board120 {
     }
 
     public boolean getSideToMove() {
-        return sideToMove;
+        return _sideToMove;
     }
 
     public int[] getWhitePieceList() {
         int[] copy = new int[MAX_LEN_16];
         for (int i = 0; i < MAX_LEN_16; i++) {
-            copy[i] = whitePieceList[i];
+            copy[i] = _whitePieceList[i];
         }
         return copy;
     }
@@ -277,26 +273,26 @@ public final class Board120 {
     public int[] getBlackPieceList() {
         int[] copy = new int[MAX_LEN_16];
         for (int i = 0; i < MAX_LEN_16; i++) {
-            copy[i] = blackPieceList[i];
+            copy[i] = _blackPieceList[i];
         }
         return copy;
     }
 
     public byte getPieceOnSquare(int index) {
         if (index < 0 || index > 119) throw new IllegalArgumentException("index out of bounds.");
-        return board120[index];
+        return _board120[index];
     }
 
     public int getBlackKingSq() {
-        return blackPieceList[KING_SQ] & 0xff;
+        return _blackPieceList[KING_SQ] & 0xff;
     }
 
     public int getWhiteKingSq() {
-        return whitePieceList[KING_SQ] & 0xff;
+        return _whitePieceList[KING_SQ] & 0xff;
     }
 
     public int getEnPassant() {
-        return enPassant;
+        return _enPassant;
     }
 
     /**
@@ -304,7 +300,7 @@ public final class Board120 {
      * draw rule. It is reset to zero after a capture or a pawn move and incremented otherwise.
      */
     public int getHalfMoveClock() {
-        return halfMoveClock;
+        return _halfMoveClock;
     }
 
     /**
@@ -312,14 +308,14 @@ public final class Board120 {
      * after each Black's move.
      */
     public int getFullMoveCounter() {
-        return fullMoveCounter;
+        return _fullMoveCounter;
     }
 
     private int getPieceListIndex(int piece, int square, boolean captured) {
         // if this method is called when capture occurs, find the index of the captured piece in its
         // own piece list, else find a piece in our own list (e.g find rook when castling)
-        int[] piecelist = (captured) ?  ((!sideToMove) ? whitePieceList : blackPieceList) :
-                (sideToMove) ? whitePieceList : blackPieceList;
+        int[] piecelist = (captured) ?  ((!_sideToMove) ? _whitePieceList : _blackPieceList) :
+                (_sideToMove) ? _whitePieceList : _blackPieceList;
         for (int index = 0; index < piecelist.length; index++) {
             int pie = (piecelist[index] >> 8) & 0xff; // piece value
             int pos = piecelist[index] & 0xff; // square
@@ -334,9 +330,9 @@ public final class Board120 {
         int from = getFromSquare(move);
         int promotion = getPromotion(move);
         int index = getIndex(move);
-        byte piece = board120[from];
+        byte piece = _board120[from];
         assert(piece != EMPT_SQ);
-        assert(isWhitePiece(piece) == sideToMove);
+        assert(isWhitePiece(piece) == _sideToMove);
 
         addMoveToHistory(move);
         addIrreversibleAspect();
@@ -344,76 +340,76 @@ public final class Board120 {
         if ((piece == WKING || piece == BKING || piece == WROOK || piece == BROOK)
                 && flag != CASTLE) onRookMove(from,  piece, flag);
 
-        int[] side = (sideToMove) ? whitePieceList : blackPieceList;
-        int[] xside = (sideToMove) ? blackPieceList : whitePieceList;
+        int[] side = (_sideToMove) ? _whitePieceList : _blackPieceList;
+        int[] xside = (_sideToMove) ? _blackPieceList : _whitePieceList;
 
         int xindex = OFF_BOARD;
         // every capture will be on the to square except enpassant where piece-to-be-captured
         // will be below enpassant (black) : above enpassant (white)
-        int captured = (flag != EN_PASSANT) ?  Math.abs(board120[to]) :
-                        (sideToMove) ? Math.abs(board120[enPassant - 10]) :
-                        Math.abs(board120[enPassant + 10]);
+        int captured = (flag != EN_PASSANT) ?  Math.abs(_board120[to]) :
+                        (_sideToMove) ? Math.abs(_board120[_enPassant - 10]) :
+                        Math.abs(_board120[_enPassant + 10]);
         int val = Math.abs(piece);
         if (captured != 0) { // capture on the board
             if (flag == EN_PASSANT) {
-                assert((sideToMove) ? board120[to] == BPAWN : board120[to] == WPAWN);
-                int epSq = (sideToMove) ? enPassant - 10 : enPassant + 10;
+                assert((_sideToMove) ? _board120[to] == BPAWN : _board120[to] == WPAWN);
+                int epSq = (_sideToMove) ? _enPassant - 10 : _enPassant + 10;
                 xindex = getPieceListIndex( captured, epSq , true);
             } else xindex = getPieceListIndex(captured, to, true);
             assert(xindex != OFF_BOARD);
-            captureEntry.push(captured << RANK_8 | xindex); // store index of captured piece
+            _captureEntry.push(captured << RANK_8 | xindex); // store index of captured piece
         }
 
         switch (flag) {
             case QUIET, DOUBLE_PAWN_PUSH -> {
-                assert(board120[to] == EMPT_SQ);
+                assert(_board120[to] == EMPT_SQ);
                 makeMove(from, to, piece);
-                halfMoveClock++;
+                _halfMoveClock++;
                 boolean found = incrementalUpdate(side, index, (val << RANK_8 | to), (val << RANK_8 | from));
                 if (!found) throw new RuntimeException("Error f=quiet&dpPush");
                 if (flag == DOUBLE_PAWN_PUSH) {
-                    if (sideToMove) enPassant = (byte) (to - 10);
-                    else enPassant = (byte) (to + 10);
+                    if (_sideToMove) _enPassant = (byte) (to - 10);
+                    else _enPassant = (byte) (to + 10);
                 }
             }
             case EN_PASSANT -> {
-                assert(board120[to] == EMPT_SQ);
-                assert(to == enPassant);
+                assert(_board120[to] == EMPT_SQ);
+                assert(to == _enPassant);
                 if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                         print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
                         + "\n" + Move.dbgMove(move) + "\n" + printMailbox() + " " + captured +
-                        Arrays.toString((sideToMove) ? blackPieceList : whitePieceList));
+                        Arrays.toString((_sideToMove) ? _blackPieceList : _whitePieceList));
                 makeMove(from, to, piece);
                 int xpos = OFF_BOARD;
-                if (sideToMove) {
+                if (_sideToMove) {
                     xpos = to - 10; // black piece to capture is a square below enpassnt
-                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to - 10), BPAWN);
-                    assert(board120[xpos] == BPAWN);
+                    _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to - 10), BPAWN);
+                    assert(_board120[xpos] == BPAWN);
                 }
                 else {
                     xpos = to + 10; // white piece to capture is a square above enpassant
-                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to + 10), WPAWN);
-                    assert(board120[xpos] == WPAWN);
+                    _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to + 10), WPAWN);
+                    assert(_board120[xpos] == WPAWN);
                 }
-                board120[xpos] = EMPT_SQ;
-                halfMoveClock = EMPT_SQ;
+                _board120[xpos] = EMPT_SQ;
+                _halfMoveClock = EMPT_SQ;
                 boolean found1 = incrementalUpdate(side, index, (val << RANK_8 | to), (val << RANK_8 | from));
                 boolean found2 = incrementalUpdate(xside, xindex, OFF_BOARD, (captured << RANK_8 | xpos));
-                if (!found1) throw new RuntimeException("Error f=ep, side" + sideToMove);
-                if (!found2) throw new RuntimeException("Error f=ep, xside  " + sideToMove);
+                if (!found1) throw new RuntimeException("Error f=ep, side" + _sideToMove);
+                if (!found2) throw new RuntimeException("Error f=ep, xside  " + _sideToMove);
             }
             case CAPTURE -> {
-                assert(board120[to] != EMPT_SQ);
+                assert(_board120[to] != EMPT_SQ);
                 if (captured == WROOK || captured == Math.abs(BROOK)) onCaptureRook(to);
                 if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                         print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
                         + "\n" + Move.dbgMove(move));
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece); // XOR out capturER
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to),   board120[to]); // XOR out captured
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to),   piece); // XOR in
-                board120[from] = EMPT_SQ;
-                board120[to]   = piece;
-                halfMoveClock = EMPT_SQ;
+                _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece); // XOR out capturER
+                _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to),   _board120[to]); // XOR out captured
+                _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to),   piece); // XOR in
+                _board120[from] = EMPT_SQ;
+                _board120[to]   = piece;
+                _halfMoveClock = EMPT_SQ;
                 boolean found1 = incrementalUpdate(side, index, (val << RANK_8 | to), (val << RANK_8 | from));
                 boolean found2 = incrementalUpdate(xside, xindex, OFF_BOARD, (captured << RANK_8 | to));
                 if (!found1) throw new RuntimeException("Error f=cap, side");
@@ -421,15 +417,15 @@ public final class Board120 {
             }
             case PROMOTION, PROMOTION_CAPTURE -> {
                 byte pp = getPromotionPiece(promotion);
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece); // xor out pawn
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
-                board120[from] = EMPT_SQ;
-                board120[to] = pp;
+                _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), piece); // xor out pawn
+                _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), pp);
+                _board120[from] = EMPT_SQ;
+                _board120[to] = pp;
                 boolean found2 = incrementalUpdate(side, index,
                         (Math.abs(pp) << RANK_8 | to), (Math.abs(piece) << RANK_8 | from));
                 if (!found2) throw new RuntimeException("Error f=promo, freeslot");
                 if (flag == PROMOTION_CAPTURE) {
-                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), board120[to]);
+                    _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), _board120[to]);
                     if (xindex == OFF_BOARD) throw new IllegalArgumentException("captured piece index not found + \n" +
                             print8x8() +"\n" + FENParser.getFENotation(this) +"\n" + getBoardData()
                             + "\n" + Move.dbgMove(move)
@@ -445,14 +441,14 @@ public final class Board120 {
             case CASTLE ->  makeCastle(from, to, piece);
             default -> throw new IllegalStateException("Unexpected value: " + flag);
         }
-        // enPassant no longer valid after every (non-double pawn push)move
-        if (flag != DOUBLE_PAWN_PUSH) enPassant =  OFF_BOARD;
-        if (!isPieceWhite(piece)) fullMoveCounter++;
-        sideToMove = !sideToMove;
+        // _enPassant no longer valid after every (non-double pawn push)move
+        if (flag != DOUBLE_PAWN_PUSH) _enPassant =  OFF_BOARD;
+        if (!isPieceWhite(piece)) _fullMoveCounter++;
+        _sideToMove = !_sideToMove;
     }
 
     public long getZobristHash() {
-        return zobristKey;
+        return _zobristKey;
     }
 
     /**
@@ -460,43 +456,43 @@ public final class Board120 {
      */
     public void unmake(int move) {
         // change to opponent of side that played
-        sideToMove = !sideToMove;
+        _sideToMove = !_sideToMove;
         int flag = getFlag(move);
         int from = getFromSquare(move);
         int to   = getTargetSquare(move);
         int promo = getPromotion(move);
         int index = getIndex(move);
-        byte piece = board120[to]; // piece has moved to target square
+        byte piece = _board120[to]; // piece has moved to target square
         byte capturedPiece = 0;
-        assert(ply != EMPT_SQ);
-        assert(board120[to] != EMPT_SQ);
-        assert(playHistory[ply - 1] == move);
+        assert(_ply != EMPT_SQ);
+        assert(_board120[to] != EMPT_SQ);
+        assert(_playHistory[_ply - 1] == move);
         unaddIrreversibleAspect();
 
         int xindex = OFF_BOARD;
         if (flag == CAPTURE || flag == PROMOTION_CAPTURE || flag == EN_PASSANT) {
-            int entry = captureEntry.pop();
+            int entry = _captureEntry.pop();
             capturedPiece = (byte) ((entry >> RANK_8) & 0xff);
             xindex = entry & 0xff;
-            if (sideToMove) capturedPiece = (byte) -capturedPiece; // preserves sign bit for black pieces
+            if (_sideToMove) capturedPiece = (byte) -capturedPiece; // preserves sign bit for black pieces
         }
         // update side THAT moveD
         int v = Math.abs(piece);
-        int[] side =  (sideToMove)  ? whitePieceList : blackPieceList;
-        int[] xside = (sideToMove)  ? blackPieceList : whitePieceList;
+        int[] side =  (_sideToMove)  ? _whitePieceList : _blackPieceList;
+        int[] xside = (_sideToMove)  ? _blackPieceList : _whitePieceList;
 
         switch (flag) {
             case QUIET, DOUBLE_PAWN_PUSH -> {
-                assert(board120[from] == EMPT_SQ);
+                assert(_board120[from] == EMPT_SQ);
                 boolean f = incrementalUpdate(side, index, encode(v, from), encode(v, to));
                 if (!f) {
                     throw new RuntimeException("Error unmaking f=quiet&dppush\n" + getBoardData()
-                             +"\n" + print8x8() +"\n" + Arrays.toString((sideToMove) ? whitePieceList : blackPieceList)
-                       + "\n" + Move.dbgMove(move) + "\n" + (encode(v, from)) +"\n" + (encode(v, to))
-                       +"\n" + (blackPieceList[index]) +
-                            "\n" + index +
-                            "\n" + promo +
-                            "\n" + to);
+                             +"\n" + print8x8() +"\n" + Arrays.toString((_sideToMove) ? _whitePieceList : _blackPieceList)
+                       + "\n" + Move.dbgMove(move) + "\nold" + (encode(v, from)) +"\nnew" + (encode(v, to))
+                       +"\n" + (_sideToMove ? _whitePieceList[index] : _blackPieceList[index]) +
+                            "\nind" + index +
+                            "\npro" + promo +
+                            "\nto" + to);
                 }
                 makeMove(to, from, piece);
             }
@@ -504,40 +500,40 @@ public final class Board120 {
                 makeMove(to, from, piece); //reverse capturing pawn to its previous square
                 assert(capturedPiece == WPAWN || capturedPiece == BPAWN);// captured piece is a square above enpassant
                 if (isPieceWhite(capturedPiece))  {
-                    board120[enPassant + 10] = capturedPiece;
-                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(enPassant + 10), capturedPiece);
+                    _board120[_enPassant + 10] = capturedPiece;
+                    _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(_enPassant + 10), capturedPiece);
                 }
                 else {
-                    board120[enPassant - 10] = capturedPiece;
-                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(enPassant - 10), capturedPiece);
+                    _board120[_enPassant - 10] = capturedPiece;
+                    _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(_enPassant - 10), capturedPiece);
                 }
                 boolean f1 = incrementalUpdate(side, index, encode(v, from), encode(v, to));
                 boolean f2 = incrementalUpdate(xside, xindex,
-                        encode(Math.abs(capturedPiece), (sideToMove) ? enPassant - 10 : enPassant + 10), OFF_BOARD);
+                        encode(Math.abs(capturedPiece), (_sideToMove) ? _enPassant - 10 : _enPassant + 10), OFF_BOARD);
                 if (!f1) throw new RuntimeException("Error updating ep capturing piece");
                 if (!f2) throw new RuntimeException("Error updating eP captured piece");
             }
             case CAPTURE -> {
-                assert(board120[from] == EMPT_SQ);
+                assert(_board120[from] == EMPT_SQ);
                 makeMove(to, from, piece); // return capturing piece
                 assert(capturedPiece != EMPT_SQ);
-                board120[to] = capturedPiece; // returned captured piece
-                zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
+                _board120[to] = capturedPiece; // returned captured piece
+                _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
                 boolean f1 = incrementalUpdate(side, index, encode(v, from), encode(v, to));
                 boolean f2 = incrementalUpdate(xside, xindex,  encode(Math.abs(capturedPiece), to), OFF_BOARD);
                 if (!f1) throw new RuntimeException("Error updating capturing pc");
                 if (!f2) throw new RuntimeException("Error updating captured pc");
             }
             case PROMOTION, PROMOTION_CAPTURE -> {
-                assert(board120[from] == EMPT_SQ);
-                if (sideToMove) makeMove(to, from, WPAWN);
+                assert(_board120[from] == EMPT_SQ);
+                if (_sideToMove) makeMove(to, from, WPAWN);
                 else makeMove(to, from, BPAWN);
-                int enc = (sideToMove) ? WPAWN : -BPAWN;
+                int enc = (_sideToMove) ? WPAWN : -BPAWN;
                 boolean found = incrementalUpdate(side, index, encode(enc, from), encode(v, to));
                 if (!found) throw new RuntimeException("Error restoring promoting pawn f=Promotion");
                 if (flag == PROMOTION_CAPTURE) {
-                    board120[to] = capturedPiece;
-                    zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
+                    _board120[to] = capturedPiece;
+                    _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), capturedPiece);
                     // this has encoding would have been set to -1 in the make's incremental update
                     boolean fd = incrementalUpdate(xside, xindex, (Math.abs(capturedPiece) << RANK_8 | to ), OFF_BOARD);
                     if (!fd) throw new RuntimeException("Error rest;oring prev captured f=Promotion");
@@ -546,54 +542,54 @@ public final class Board120 {
             case CASTLE -> unmakeCastle(from, to, side, index);
             default -> throw new IllegalArgumentException();
         }
-        if (!isPieceWhite(piece)) fullMoveCounter--;
+        if (!isPieceWhite(piece)) _fullMoveCounter--;
     }
 
     private void unmakeCastle(int from, int to, int[] side, int index) {
         boolean fRook;
-        int rv = (sideToMove) ? WROOK : -BROOK;
+        int rv = (_sideToMove) ? WROOK : -BROOK;
         int ri = OFF_BOARD;
-        if (sideToMove) {
-            board120[E1] = WKING;
+        if (_sideToMove) {
+            _board120[E1] = WKING;
             if (to == G1) { // short castles
                 // 4 zobrist updates
-                board120[G1] = EMPT_SQ;
-                board120[F1] = EMPT_SQ; // undo rook's move
-                board120[H1] = WROOK;
+                _board120[G1] = EMPT_SQ;
+                _board120[F1] = EMPT_SQ; // undo rook's move
+                _board120[H1] = WROOK;
             } else if (to == C1) { // long castle
-                board120[C1] = EMPT_SQ; // undo king's move
-                board120[D1] = EMPT_SQ; // undo rooks's move
-                board120[A1] = WROOK;
+                _board120[C1] = EMPT_SQ; // undo king's move
+                _board120[D1] = EMPT_SQ; // undo rooks's move
+                _board120[A1] = WROOK;
             }
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), WKING);
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), WKING);
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C1 ? D1 : F1), WROOK);
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C1 ? A1 : H1), WROOK);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), WKING);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), WKING);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C1 ? D1 : F1), WROOK);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C1 ? A1 : H1), WROOK);
             ri = getPieceListIndex(rv, (to == C1) ? D1 : F1, false);
             fRook = incrementalUpdate(side, ri, encode(rv, (to == C1) ? A1 : H1),
                     encode(rv, (to == C1) ? D1 : F1));
         } else {
-            board120[E8] = BKING;
+            _board120[E8] = BKING;
             if (to == G8) { // short castles
-                board120[G8] = EMPT_SQ; // undo king's move
-                board120[F8] = EMPT_SQ; // undo rook's move
-                board120[H8] = BROOK;
+                _board120[G8] = EMPT_SQ; // undo king's move
+                _board120[F8] = EMPT_SQ; // undo rook's move
+                _board120[H8] = BROOK;
             } else if (to == C8) { // long castle
-                board120[C8] = EMPT_SQ; // undo rook's move
-                board120[D8] = EMPT_SQ; // undo rook's move
-                board120[A8] = BROOK; // put rook back on A_8
+                _board120[C8] = EMPT_SQ; // undo rook's move
+                _board120[D8] = EMPT_SQ; // undo rook's move
+                _board120[A8] = BROOK; // put rook back on A_8
             }
             ri = getPieceListIndex(rv, (to == C8) ? D8 : F8, false);
             fRook = incrementalUpdate(side, ri, encode(rv, (to == C8) ? A8 : H8),
                     encode(rv, (to == C8) ? D8 : F8));
 
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), BKING);
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), BKING);
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C8 ? D8 : F8), BROOK);
-            zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C8 ? A8 : H8), BROOK);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), BKING);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), BKING);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C8 ? D8 : F8), BROOK);
+            _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number((to) == C8 ? A8 : H8), BROOK);
         }
         if (!fRook) throw new RuntimeException("Error updating Rook f=castle");
-        int enc = (sideToMove) ? WKING : -BKING;
+        int enc = (_sideToMove) ? WKING : -BKING;
         assert(index == 0);
         boolean f1 = incrementalUpdate(side, index, encode(enc, from), encode(enc, to));
         if (!f1) throw new RuntimeException("Error updating kingside");
@@ -606,9 +602,9 @@ public final class Board120 {
     private void makeCastle(int from, int to, byte p){
         int rookFr = 0;
         int rookTo = 0;
-        if (!canSideCastle(sideToMove)) return; // we cannot castle
-        if (sideToMove) {
-            assert(board120[from] == WKING);
+        if (!canSideCastle(_sideToMove)) return; // we cannot castle
+        if (_sideToMove) {
+            assert(_board120[from] == WKING);
             if (to == C1) {
                 rookFr = A1;  // queenside castle
                 rookTo = D1;
@@ -616,9 +612,9 @@ public final class Board120 {
                 rookFr = H1; // kingside castles
                 rookTo = F1;
             } else throw new IllegalArgumentException("invalid castle");
-            castlingRights &= ~(WHITE_QUEENSIDE | WHITE_KINGSIDE); // remove kside and qside castling
+            _castlingRights &= ~(WHITE_QUEENSIDE | WHITE_KINGSIDE); // remove kside and qside castling
         } else {
-            assert(board120[from] == BKING);
+            assert(_board120[from] == BKING);
             if (to == C8)  { // queenside
                 rookFr = A8;
                 rookTo = D8;
@@ -626,17 +622,17 @@ public final class Board120 {
                 rookFr = H8;
                 rookTo = F8;
             } else throw new IllegalArgumentException("invalid castle");
-            castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
+            _castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
         }
         // TODO mask out the moved flag
-        int[] side = (sideToMove) ? whitePieceList : blackPieceList;
-        byte val = (sideToMove) ? WROOK : BROOK;
+        int[] side = (_sideToMove) ? _whitePieceList : _blackPieceList;
+        byte val = (_sideToMove) ? WROOK : BROOK;
         makeMove(from, to, p); // for king
         makeMove(rookFr, rookTo, val); // for rook
         boolean kEntry = incrementalUpdate(side, 15, (Math.abs(p) << RANK_8 | to),
                 ((Math.abs(p) << RANK_8) | from)); // king is always on index 15
         if (!kEntry) throw new RuntimeException("Error updating kingside");
-        assert(board120[rookFr] == WROOK || board120[rookFr] == BROOK);
+        assert(_board120[rookFr] == WROOK || _board120[rookFr] == BROOK);
         boolean rEntry = incrementalUpdate(side,
                 getPieceListIndex(Math.abs(val), rookFr, false),
                 (Math.abs(val) << RANK_8 | rookTo),
@@ -645,13 +641,13 @@ public final class Board120 {
     }
 
     private void makeMove(int from, int to, byte p) {
-        board120[from] = EMPT_SQ;
-        board120[to] = p;
-        zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), p);
-        zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), p);
+        _board120[from] = EMPT_SQ;
+        _board120[to] = p;
+        _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(from), p);
+        _zobristKey ^= ZobristHash.zobristKey(getMailbox120Number(to), p);
     }
 
-    public int getPly() {return ply;}
+    public int getPly() {return _ply;}
 
     private boolean incrementalUpdate(int[] side, int index, int encode, int validate) {
         // if entry is 'off boarded' (captured) do not bother to check if encoding matches previous state
@@ -667,85 +663,85 @@ public final class Board120 {
 
     // remove castling rights when rooks move;
     private void onRookMove(int from, byte piece, int flag) {
-        boolean side = canSideCastle(sideToMove);
+        boolean side = canSideCastle(_sideToMove);
         // there are no castling rights to update, castles updated separately
         if (!side || flag == CASTLE) return;
         assert(piece == WROOK || piece == WKING ||piece == BKING ||piece == BROOK);
-        if (sideToMove) { // white
+        if (_sideToMove) { // white
             if (piece == WKING) {
-                castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
+                _castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
                 // whitePieceList[15] &= ~(MOVED_FLAG << 16); // remove moved bit,
             }
             else {
-                if (canWhiteCastleQueenside() && from == A1) castlingRights &= ~WHITE_QUEENSIDE;
-                if (canWhiteCastleKingside() && from == H1) castlingRights &= ~WHITE_KINGSIDE;
+                if (canWhiteCastleQueenside() && from == A1) _castlingRights &= ~WHITE_QUEENSIDE;
+                if (canWhiteCastleKingside() && from == H1) _castlingRights &= ~WHITE_KINGSIDE;
             }
         }
         else {
             if (piece == BKING) {
-                castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
-                // blackPieceList[15] &= ~(MOVED_FLAG << 16);
+                _castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
+                // _blackPieceList[15] &= ~(MOVED_FLAG << 16);
             }
             else {
-                if (canBlackCastleQueenside() && from == A8) castlingRights &= ~BLACK_QUEENSIDE;
-                if (canBlackCastleKingside() && from == H8) castlingRights &= ~BLACK_KINGSIDE;
+                if (canBlackCastleQueenside() && from == A8) _castlingRights &= ~BLACK_QUEENSIDE;
+                if (canBlackCastleKingside() && from == H8) _castlingRights &= ~BLACK_KINGSIDE;
             }
         }
     }
 
     // removes opponents castlign rights  when rooks are captured
     private void onCaptureRook(int square) {
-        if (!canSideCastle(!sideToMove)) return; // opponent has no castles
-        if (sideToMove) {
-            if (square == A8) castlingRights &= ~BLACK_QUEENSIDE;
-            else if (square == H8) castlingRights &= ~BLACK_KINGSIDE;
+        if (!canSideCastle(!_sideToMove)) return; // opponent has no castles
+        if (_sideToMove) {
+            if (square == A8) _castlingRights &= ~BLACK_QUEENSIDE;
+            else if (square == H8) _castlingRights &= ~BLACK_KINGSIDE;
         } else {
-            if (square == A1) castlingRights &= ~WHITE_QUEENSIDE;
-            else if (square == H1) castlingRights &= ~WHITE_KINGSIDE;
+            if (square == A1) _castlingRights &= ~WHITE_QUEENSIDE;
+            else if (square == H1) _castlingRights &= ~WHITE_KINGSIDE;
         }
     }
 
     private void addMoveToHistory(int move) {
-        playHistory[ply] = move;
+        _playHistory[_ply] = move;
     }
 
     public int getMoveFromHistory() {
-        return playHistory[ply];
+        return _playHistory[_ply];
     }
 
     public int[] getPlayHistory() {
-        int[] copy = new int[playHistory.length];
-        for (int i : playHistory) {
-            copy[i] = playHistory[i];
+        int[] copy = new int[_playHistory.length];
+        for (int i : _playHistory) {
+            copy[i] = _playHistory[i];
         }
         return copy;
     }
 
     public long[] getHashHistory() {
-       // int[] copy = new int[playHistory.length];
-       // for (int i : playHistory) {
-       //     copy[i] = playHistory[i];
+       // int[] copy = new int[_playHistory.length];
+       // for (int i : _playHistory) {
+       //     copy[i] = _playHistory[i];
        // }
        // return copy;
-        return hashHistory;
+        return _hashHistory;
     }
 
-    private void addIrreversibleAspect() { int ep = (enPassant & 0xff);   // Mask to 6 bits
-        int cR = (castlingRights & 0xF) << 8; // Shift and mask to 4 bits
-        int hM = (halfMoveClock & 0x3F) << 16; // Shift and mask to 6 bits
-        hashHistory[ply] = this.zobristKey;
-        irreversibleAspect[ply++] = (ep | cR | hM);
+    private void addIrreversibleAspect() { int ep = (_enPassant & 0xff);   // Mask to 6 bits
+        int cR = (_castlingRights & 0xF) << 8; // Shift and mask to 4 bits
+        int hM = (_halfMoveClock & 0x3F) << 16; // Shift and mask to 6 bits
+        _hashHistory[_ply] = this._zobristKey;
+        _irreversibleAspect[_ply++] = (ep | cR | hM);
     }
 
     private void unaddIrreversibleAspect() {
-        int irreversible = irreversibleAspect[--ply];
+        int irreversible = _irreversibleAspect[--_ply];
         int ep = (irreversible & 0xff);
         ep = (ep == 63) ?  OFF_BOARD : ep; // don't remember why 63 is here
         int cR = (irreversible >> 8) & 0x3f;
         int hM = (irreversible >> 16) & 0x3f;
-        enPassant  = (byte) ep;
-        castlingRights = ((byte) cR);
-        halfMoveClock = hM;
+        _enPassant  = (byte) ep;
+        _castlingRights = ((byte) cR);
+        _halfMoveClock = hM;
     }
 
     public byte getPromotionPiece(int flag) {
@@ -757,7 +753,7 @@ public final class Board120 {
             case 3: piece = WQUEEN; break;
             default:
         }
-        return (sideToMove) ? piece : (byte) (BLACK | piece);
+        return (_sideToMove) ? piece : (byte) (BLACK | piece);
     }
 
 
@@ -802,7 +798,7 @@ public final class Board120 {
     public void print() {
         for (int i = 11; i >= 0; i--) {
             for(int j = 0; j < 10; j++) {
-                System.out.print(mapByteToChar(board120[i * 10 + j]) + " ");
+                System.out.print(mapByteToChar(_board120[i * 10 + j]) + " ");
             }
             System.out.println();
         }
@@ -812,7 +808,7 @@ public final class Board120 {
         StringBuilder sb = new StringBuilder();
         for (int i = 11; i >= 0; i--) {
             for(int j = 0; j < 10; j++) {
-                sb.append(mapByteToChar(board120[i * 10 + j]) + " ");
+                sb.append(mapByteToChar(_board120[i * 10 + j]) + " ");
             }
             sb.append("\n");
         }
@@ -821,7 +817,7 @@ public final class Board120 {
 
     // returns string represntation of en passant square
     public String getEnpassantString() {
-        byte sq = (enPassant == OFF_BOARD) ? enPassant : (byte) getMailbox120Number(enPassant);
+        byte sq = (_enPassant == OFF_BOARD) ? _enPassant : (byte) getMailbox120Number(_enPassant);
         if (sq == OFF_BOARD) return "-";
         if (sq < EMPT_SQ || sq >= BOARD_SIZE) throw new IllegalArgumentException();
         StringBuilder sb = new StringBuilder(2);
@@ -835,10 +831,10 @@ public final class Board120 {
         StringBuilder info = new StringBuilder();
         info.append("\nEnPassant:\t").append(getEnpassantString()).append("\n");
         info.append("Castles: ").append(FENParser.getCastlingRightsFENotation(this));
-        info.append("\n").append("fullCount = ").append(fullMoveCounter);
-        info.append("\n").append("halfMove = ").append(halfMoveClock);
-        info.append("\nSide:\t").append((sideToMove) ? "white" : "black").append("\n");
-        info.append("Zobristhash: ").append(zobristKey).append("\n");
+        info.append("\n").append("fullCount = ").append(_fullMoveCounter);
+        info.append("\n").append("halfMove = ").append(_halfMoveClock);
+        info.append("\nSide:\t").append((_sideToMove) ? "white" : "black").append("\n");
+        info.append("Zobristhash: ").append(_zobristKey).append("\n");
         return info.toString();
     }
 
@@ -856,11 +852,11 @@ public final class Board120 {
         for (rank = RANK_8; rank > EMPT_SQ; rank--) {
             board.append(rank).append('\t').append('|');
             for (file = FILE_A; file < FILE_H; file++) {
-                byte piece = board120[(byte) Board120.getMailbox64Number((rank - 1) * FILE_H + file)];
+                byte piece = _board120[(byte) Board120.getMailbox64Number((rank - 1) * FILE_H + file)];
                 char c = mapByteToChar(piece);
                 if (c == 'k' || c == 'K') board.append('[').append(c).append(']').append('|');
                 else if (c == '.') {
-                    if (getMailbox64Number(((rank - 1) * RANK_8 + file)) == enPassant) {
+                    if (getMailbox64Number(((rank - 1) * RANK_8 + file)) == _enPassant) {
                         board.append(' ').append("o ").append('|');
                     } else board.append(' ').append(' ').append(' ').append('|');
                 } else board.append(' ').append(c).append(' ').append('|');
@@ -882,8 +878,8 @@ public final class Board120 {
     public int getTotalPcCount() {
         int count = 0;
         for (int i = 0; i < 16; i++) {
-            if (blackPieceList[i] != OFF_BOARD) count++;
-            if (whitePieceList[i] != OFF_BOARD) count++;
+            if (_blackPieceList[i] != OFF_BOARD) count++;
+            if (_whitePieceList[i] != OFF_BOARD) count++;
         }
         return count;
     }
@@ -891,7 +887,7 @@ public final class Board120 {
     public int getBlackPcCount() {
         int count = 0;
         for (int i = 0; i < 16; i++) {
-           if (blackPieceList[i] != OFF_BOARD) count++;
+           if (_blackPieceList[i] != OFF_BOARD) count++;
         }
         return count;
     }
@@ -899,7 +895,7 @@ public final class Board120 {
     public int getWhitePcCount() {
         int count = 0;
         for (int i = 0; i < 16; i++) {
-            if (whitePieceList[i] != OFF_BOARD) count++;
+            if (_whitePieceList[i] != OFF_BOARD) count++;
         }
         return count;
     }
