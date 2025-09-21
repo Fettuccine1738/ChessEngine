@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import static com.github.fehinti.board.Board120Utils.*;
-import static com.github.fehinti.piece.Move.CASTLE;
+import static com.github.fehinti.piece.Move.*;
 
 public class MoveGenerator {
     //    index like so --------->      { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING_;
@@ -29,14 +29,14 @@ public class MoveGenerator {
     static final int LEFTCAP = 9;
     static final int RIGHTCAP = 11;
 
-    // MVA_LVA_SCORE[victim][attacker]
+    // MVA_LVA_SCORE[attacker][victim]
     private static final int[][] MVA_LVA =  {
             {  100, 110, 110, 130, 140, 150 }, /* PAWN */
             {  70, 100, 100, 120, 140, 150 }, /* KNIGHT */
             {  70, 100, 100, 120, 140, 150 }, /* BISHOP */
             {  60, 65,  65, 100,  140, 150 }, /* ROOK */
             {  20, 30,  30,  40, 100, 150 }, /* QUEEN */
-            {  10, 20, 20, 30, 140, 150 }  /* KING */
+            {  10, 20, 20, 30, 140,  150 }  /* KING */
     };
 
 
@@ -106,6 +106,17 @@ public class MoveGenerator {
             }
         }
         return moveList;
+    }
+
+    // this list assumes the list is already filtered
+    public static List<Integer> selectCaptures(List<Integer> list) {
+        if (list == null || list.size() == 0) return List.of();
+        List<Integer> captures = new ArrayList<>();
+        for (int i : list) {
+            int flag = Move.getFlag(i);
+            if (flag == CAPTURE || flag == PROMOTION_CAPTURE || flag == EN_PASSANT) captures.add(i);
+        }
+        return captures;
     }
 
     /**

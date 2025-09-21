@@ -40,16 +40,34 @@ public class Engine {
     private final int[] _pvLength;
     private int _ply;
     private int _nodecount;
+    private long elapsedTime;
 
     public Engine(String fen, Evaluator ev) {
         logger.info("{}", fen);
-        this._board = FENParser.parseFENotation120(fen);
+        _board = FENParser.parseFENotation120(fen);
         _transpositionTable = new HashMap<>();
-        this._evaluator = ev;
+        _evaluator = ev;
         _principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
         _pvLength = new int[MAX_DEPTH];
         clearPV();
         _nodecount = 0;
+    }
+
+    public int think(int depth) {
+        long start = System.currentTimeMillis();
+        clearPV();
+        int best = 0;
+        double bestEval = 0.;
+        // private double negamax(int depth, double alpha, double beta, int color) {
+        // -negamax(depth - 1, -INIT_BETA, -INIT_ALPHA, side ? -COLOR_WH : COLOR_WH);
+        boolean side = _board.getSideToMove();
+        for (int i = 1; i <= Math.min(MAX_DEPTH, depth); i++){
+            bestEval = negamax(i, INIT_ALPHA, INIT_BETA, (side ? COLOR_WH : -COLOR_WH));
+            best = _principalVariation[0][0];
+            printPVLine(i);
+        }
+        elapsedTime = System.currentTimeMillis() - start;
+        return best;
     }
 
     public int think() {
@@ -122,6 +140,28 @@ public class Engine {
             _board.unmake(move);
         }
         return bestMove;
+    }
+
+
+    private double quiesence(double alpha, double beta, int color, List<Integer> moves) {
+        double static_eval = _evaluator.evaluate(_board);
+        // stand pat
+        double best = static_eval;
+        if (best >= beta) return best * color;
+        if (best > alpha) alpha = best;
+
+        for (int i = 0; i < moves.size(); i++) {
+            _board.make(moves.get(i));
+            double current = 0.;
+            if (!VectorAttack120.isKingInCheck(_board)) {
+                current = -quiesence(-beta, -alpha, -color, moves);
+            }
+            _board.unmake(moves.get(i));
+            if (current >= beta) return current * color;
+            if (current > best) best = current;
+            if (current > alpha) alpha = current;
+        }
+        return best;
     }
 
     private double negamax(int depth, double alpha, double beta, int color) {
@@ -198,8 +238,8 @@ public class Engine {
     }
 
    public boolean isGameDrawn() {
-        return isDrawBy50MoveRule() || isDrawByThreefold() || drawByInsufficientMaterial();
-    }
+        return isDrawBy50MoveRule() || drawByInsufficientMaterial() || isDrawByThreefold();
+   }
 
 
     private double isCheckOrStale(int depth, List<Integer> pseudoLegal) {
@@ -247,6 +287,7 @@ public class Engine {
         return _board.getHalfMoveClock() == DRAW_BY_50;
     }
 
+    // TODO: test this code
     private boolean isDrawByThreefold() {
         long currentHash = _board.getZobristHash();
         int rep = 0;
@@ -293,7 +334,8 @@ public class Engine {
             }
             else if (bList[i] != OFF_BOARD) bPc[2]++;
         }
-        // King vs. king
+        // piece combinations that could lead to a draw
+        // not interested in accurately evaluating these positions anyway
         boolean  onlyBlackKing = bPc[0] == 0 && bPc[1] == 0 && bPc[2] == 1;
         boolean  onlyWhiteKing = wPc[0] == 0 && wPc[1] == 0 && wPc[2] == 1;
         boolean  whiteKingKnight = (wPc[0] == 1 && wPc[1] == 0 && wPc[2] == 1);
@@ -301,12 +343,12 @@ public class Engine {
         boolean  whiteKingBishop = (wPc[0] == 0 && wPc[1] == 1 && wPc[2] == 1);
         boolean  blackKingBishop = (bPc[0] == 0 && bPc[1] == 1 && bPc[2] == 1);
 
-        if (onlyWhiteKing &&  onlyBlackKing) return true; // King vs king
-        else if ( whiteKingKnight &&  onlyBlackKing)  return true; // KN vs k
-        else if ( blackKingKnight &&  onlyWhiteKing)  return true; // kn vs K
-        else if ( whiteKingBishop &&  onlyBlackKing)  return true;
-        else if ( blackKingBishop &&  onlyWhiteKing)  return true;
-        else if ( whiteKingBishop && blackKingBishop) {
+        if (onlyWhiteKing &&  onlyBlackKing) return true;
+        else if (whiteKingKnight &&  onlyBlackKing)  return true;
+        else if (blackKingKnight &&  onlyWhiteKing)  return true;
+        else if (whiteKingBishop &&  onlyBlackKing)  return true;
+        else if (blackKingBishop &&  onlyWhiteKing)  return true;
+        else if (whiteKingBishop && blackKingBishop) {
             // check if the bishops are of the same color => stalemate
             return Board120Utils.COLOR[bSquare] == Board120Utils.COLOR[wSquare];
         }
@@ -318,9 +360,10 @@ public class Engine {
         String fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
         String m_4 = "8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1";
         String m_4_f = "1k6/4qp2/QP4r1/p3P3/2B1bP2/P7/K2R4/8 w - - 0 1";
-        Engine engine = new Engine(m_4_f, WeightedCombiEval.getInstance());
-        int best = engine.think();
+        String unkn = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        Engine engine = new Engine(m_4, WeightedCombiEval.getInstance());
+        int best = engine.think(9);
         logger.info("Best Move {}", Move.asString(best));
-        logger.info("Node count {}", engine._nodecount);
+        logger.info("Node count {} in {}", engine._nodecount, engine.elapsedTime);
     }
 }
