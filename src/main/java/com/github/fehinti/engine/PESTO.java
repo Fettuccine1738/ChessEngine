@@ -4,10 +4,6 @@ import com.github.fehinti.board.Board120;
 
 import static com.github.fehinti.board.Board120Utils.*;
 
-/***
- * Piece Square Tables Only returns strictly postional evaluation of the position
- * and does not consider material dis-/advantage
- ***/
 public class PESTO implements Evaluator {
 
     static final PESTO INSTANCE = new PESTO();
