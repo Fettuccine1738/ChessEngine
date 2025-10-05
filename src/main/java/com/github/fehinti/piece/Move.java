@@ -62,8 +62,8 @@ public class Move {
     public static boolean compareMoves(int lhs, int rhs) {
        return getFlag(lhs) == getFlag(rhs)
                 && getFromSquare(lhs) == getFromSquare(rhs)
-                && getPromotion(lhs) == getPromotion(rhs)
-                &&  getTargetSquare(lhs) == getTargetSquare(rhs);
+                &&  getTargetSquare(lhs) == getTargetSquare(rhs)
+                && getPromotion(lhs) == getPromotion(rhs);
     }
 
     public static String asString(int move) {
@@ -72,7 +72,7 @@ public class Move {
         int to = Board120.getMailbox120Number(getTargetSquare(move));
         int fromRank = (from / 8) + 1; // adjust for zero based index
         int fromFile = from % 8;
-        int toRank = 1 + (to / 8);
+        int toRank = (to / 8) + 1;
         int toFile = to % 8;
         sb.append((char) ('a' + fromFile))
                 .append(fromRank)
@@ -88,7 +88,7 @@ public class Move {
         return sb.toString();
     }
 
-    private static String printFlag(int flag) {
+    private static String getFlagAsString(int flag) {
         return switch (flag) {
             case QUIET -> "Quiet";
             case EN_PASSANT -> "Ep";
@@ -101,7 +101,7 @@ public class Move {
     }
 
     public static String dbgMove(int move) {
-        return asString(move) + "\t" + printFlag(getFlag(move));
+        return "(" + asString(move) + "\t" + getScore(move)  + "\t" + getFlagAsString(getFlag(move)) + ")";
     }
 
 }

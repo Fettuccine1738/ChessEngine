@@ -108,6 +108,58 @@ public class MoveGenerator {
         return moveList;
     }
 
+    public static List<Integer> generatePseudoCaptures(Board120 board) {
+        if (board == null) throw new IllegalArgumentException("possible moves invoked with null board");
+        boolean side = board.getSideToMove();
+        List<Integer> moveList = new ArrayList<>();
+
+        int[] piecelist = (side) ? board.getWhitePieceList() : board.getBlackPieceList();
+        int val;
+        int isPawn = 0;
+
+        for (int index = 0; index < piecelist.length; index++) {
+            int encoding = piecelist[index];
+            if (encoding != OFF_BOARD) {
+                val    = (encoding >> 8) & 0xff;
+                byte square = (byte) (encoding & 0xff);
+
+                int piece = (side) ? val - 1 : (128 - val - 1); // zero index
+
+                if (piece == isPawn) {
+                    generatePawnCaptures(board, moveList, square, board.getEnPassant(), index,
+                    (side) ? Board120Utils::isOnSeventhRank : Board120Utils::isOnSecondRank);
+                } else if (piece != OFF_BOARD) {
+                    int[]  coordinates = VECTOR_COORDINATES[piece];
+                    boolean slides = IS_SLIDING[piece];
+
+                    int N = DIRECTIONS[piece];
+                    for (int i = 0; i < N; i++) {
+                        byte from = square;
+                        byte newSquare = 0;
+                        while (true) {
+                            int to = from + coordinates[i];
+                            newSquare = board.getPieceOnSquare(to);
+                            if (newSquare == OFF_BOARD) break;
+                            if (newSquare != Board120Utils.EMPTY) {
+                                boolean xside = board.isPieceWhite(newSquare);
+                                if (side != xside) {
+                                    int score = (side) ? MVA_LVA[piece][(127 + newSquare)] :
+                                            MVA_LVA[piece][newSquare - 1];
+                                    moveList.add(Move.encodeMove(square, to, 0,
+                                            Move.CAPTURE,  index,  score));
+                                    break;
+                                } else break;
+                            }
+                            if (!slides) break;
+                            from = (byte) to;
+                        }
+                    }
+                }
+            }
+        }
+        return moveList;
+    }
+
     // this list assumes the list is already filtered
     public static List<Integer> selectCaptures(List<Integer> list) {
         if (list == null || list.size() == 0) return List.of();

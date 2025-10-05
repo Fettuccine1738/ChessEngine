@@ -711,9 +711,7 @@ public final class Board120 {
 
     public int[] getPlayHistory() {
         int[] copy = new int[_playHistory.length];
-        for (int i : _playHistory) {
-            copy[i] = _playHistory[i];
-        }
+        System.arraycopy(_playHistory, 0, copy, 0, _playHistory.length);
         return copy;
     }
 
@@ -916,7 +914,7 @@ public final class Board120 {
       System.out.printf(board.getBoardData());
       System.out.println(board.print8x8());
 
-      List<Integer> list = MoveGenerator.generatePseudoLegal(board);
+      List<Integer> list = MoveGenerator.generatePseudoCaptures(board);
       MoveGenerator.sortGen(list);
 
       int count = 0;
@@ -945,6 +943,7 @@ public final class Board120 {
           board.unmake(m);
           //System.out.printf(board.getBoardData());
       }
+
   }
 }
 
