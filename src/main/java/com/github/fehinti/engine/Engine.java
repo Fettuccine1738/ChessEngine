@@ -1,6 +1,5 @@
 package com.github.fehinti.engine;
 
-import edu.princeton.cs.algs4.StdOut;
 import org.slf4j.Logger;
 import com.github.fehinti.LogManager;
 import com.github.fehinti.board.Board120;
@@ -19,7 +18,7 @@ import static com.github.fehinti.board.Board120Utils.*;
 
 public class Engine {
 
-    private static enum TimeControl {
+    private enum TimeControl {
         BLITZ(1, 0),
         BLITZ_1_1(1, 1),
         BLITZ_2_1(2, 1),
@@ -48,6 +47,22 @@ public class Engine {
             nMoves = 0;
             line = new int[MAX_DEPTH];
         }
+
+        void updateLine(int move, PVLine other) {
+            line[0] = move;
+            System.arraycopy(other.line, 0, line, 1, other.nMoves);
+            this.nMoves = other.nMoves + 1;
+        }
+
+        int copyFrom(PVLine other) {
+            System.arraycopy(other.line, 0, line, 0, other.line.length);
+            return line[0];
+        }
+
+        void clear() {
+            this.nMoves = 0;
+            Arrays.fill(line, 0);
+        }
     }
 
     private static final Logger logger = LogManager.getClassLogger(Engine.class);
@@ -55,6 +70,8 @@ public class Engine {
     private static final double INIT_BETA  = Double.POSITIVE_INFINITY;
     private static final long   MAX_NODE_COUNT  = 10_000_000;
     private static final int TIME_CHECK_INTERVAL = 2047;
+    private static final double TIMEOUT = Double.NaN;
+
     private static final int DRAW_BY_50 = 50;
     private static final int COLOR_WH = 1;
     private static final int MAX_DEPTH = 16;
@@ -64,9 +81,7 @@ public class Engine {
     private final Board120 _board;
     private final TranspositionTable _transpositionTable;
     private final Evaluator _evaluator;
-    private final int[][] _principalVariation;
     private final int[][] _killerMoves;
-    private final int[] _pvLength;
     private int _ply;
     private int _nodecount;
     private long elapsedTime;
@@ -88,28 +103,26 @@ public class Engine {
         _board = FENParser.parseFENotation120(fen);
         _transpositionTable = new TranspositionTable();
         _evaluator = ev;
-        _principalVariation = new int[MAX_DEPTH][MAX_DEPTH];
         _killerMoves = new int[MAX_DEPTH][2];
-        _pvLength = new int[MAX_DEPTH];
-        clearPV();
         _nodecount = 0;
         dbugMoveOrder = new ArrayList<>();
         pvLine = new PVLine();
+        resetSearchHelpers();
     }
 
     public int think(long minutes) {
         this.stop = minutes * 60 * 1000;
         this.start = System.currentTimeMillis();
-        clearPV();
-        // double bestEval = 0.;
+        resetSearchHelpers();
+        PVLine tempLine = new PVLine();
         boolean side = _board.getSideToMove();
         int depth = 1;
         while (!isTimeLimitReached) {
-            double bestEval = negamax(depth, INIT_ALPHA, INIT_BETA, (side ? COLOR_WH : -COLOR_WH), pvLine);
+            double bestEval = negamax(depth, INIT_ALPHA, INIT_BETA, (side ? COLOR_WH : -COLOR_WH), tempLine);
             logger.info("best eval {}", bestEval);
             if (isTimeLimitReached) break;
-            bestEvalFound = Math.max(bestEvalFound, bestEval);
-            this.bestMoveFound = _principalVariation[0][0];
+            this.bestEvalFound = Math.max(bestEvalFound, bestEval);
+            this.bestMoveFound = pvLine.copyFrom(tempLine);
             printPVLine(depth++);
             checkTime();
         }
@@ -125,40 +138,22 @@ public class Engine {
         return isTimeLimitReached;
     }
 
-    private void clearPV() {
+    private void resetSearchHelpers() {
         this.bestMoveFound = 0;
         this.bestEvalFound = 0;
         _ply = 0;
         _nodecount = 0;
         elapsedTime = 0;
         isTimeLimitReached = false;
-        // long timeLimit = calcluate time to go or depth
-        for (int i = 0; i < MAX_DEPTH; i++) {
-            _pvLength[i] = 0;
-            for (int j = 0; j < MAX_DEPTH; j++) {
-                _principalVariation[i][j] = 0;
-            }
-        }
+        pvLine.clear();
     }
-
-    private void updatePV(int move) {
-        if (isTimeLimitReached) return;
-        _principalVariation[_ply][0] = move;
-        for (int i = 0; i < _pvLength[_ply + 1]; i++) {
-            _principalVariation[_ply][i + 1] = _principalVariation[_ply + 1][i];
-        }
-        _pvLength[_ply] = _pvLength[_ply + 1] + 1;
-    }
-
 
     private double quiescence(double alpha, double beta) {
         if (isTimeLimitReached) return alpha;
         if (checkTime()) {
-            return alpha;
+            return TIMEOUT;
         }
         double best = _evaluator.evaluate(_board);
-        // stand pat
-        // double best = static_eval;
         if (best >= beta) return best;
         if (best > alpha) alpha = best;
 
@@ -166,7 +161,7 @@ public class Engine {
         List<Integer> moves = MoveGenerator.generatePseudoCaptures(_board);
         for (int i = 0; i < moves.size(); i++) {
             if (checkTime()) {
-                return alpha;
+                return TIMEOUT;
             }
             _board.make(moves.get(i));
             double current = 0.;
@@ -185,9 +180,9 @@ public class Engine {
     }
 
     private double negamax(int depth, double alpha, double beta, int color, PVLine pvLine) {
-        if (isTimeLimitReached) return alpha;
+        if (isTimeLimitReached) return TIMEOUT;
         double alphaOrig = alpha;
-        _pvLength[_ply] = 0;
+        //_pvLength[_ply] = 0;
 
         int value = _transpositionTable.probe(_board.getZobristHash(), depth, (int) alpha, (int) beta);
         if (value != TranspositionTable.UNKNOWN) return value;
@@ -203,20 +198,19 @@ public class Engine {
             return mate;
         }
         if (checkTime()) {
-            return alphaOrig;
+            return TIMEOUT;
         }
 
-        final int pvMove = (_ply < MAX_DEPTH - 1 && _pvLength[0] > _ply) ? _principalVariation[_ply][0] : -1;
+        final int pvMove = (_ply < MAX_DEPTH - 1 && pvLine.nMoves > _ply) ?  pvLine.line[0] : -1;
         orderMoves(child, pvMove);
-        if (dbugMoveOrder.size() < MAX_DEPTH) {
-            List<String> asStrings = child.stream().map(Move::dbgMove).toList();
-            dbugMoveOrder.add(asStrings);
-        }
+       // if (dbugMoveOrder.size() < MAX_DEPTH) {
+       //     List<String> asStrings = child.stream().map(Move::dbgMove).toList();
+       //     dbugMoveOrder.add(asStrings);
+       // }
 
        double bestEval = Double.NEGATIVE_INFINITY;
 
         for (Integer mv : child) {
-
             _board.make(mv);
             double eval = Double.NEGATIVE_INFINITY;
             if (!VectorAttack120.isKingInCheck(_board)) {
@@ -224,21 +218,24 @@ public class Engine {
                 _ply++;
                 eval = -negamax(depth - 1, -beta, -alpha, -color, localPvLine);
                 _ply--;
-                if (eval > bestEval && !isTimeLimitReached) {
-                    bestEval = eval;
-                    updatePV(mv);
-                    pvLine.line[0] = mv;
-                    System.arraycopy(localPvLine.line, 0, pvLine.line, 1,
-                            localPvLine.nMoves);
-                    pvLine.nMoves = localPvLine.nMoves + 1;
-                }
             }
             _board.unmake(mv);
+
+            if (Double.isNaN(eval)) return TIMEOUT;
+            if (eval > bestEval) {
+                bestEval = eval;
+                // ? updatePV(mv);
+
+                // pvLine.line[0] = mv;
+                // System.arraycopy(localPvLine.line, 0, pvLine.line, 1,
+                //         localPvLine.nMoves);
+                pvLine.updateLine(mv, localPvLine);
+            }
             alpha = Math.max(alpha, eval);
             if (alpha >= beta && !isTimeLimitReached) {
                 updateKillerMoves(mv);
                 break;
-            } else if (isTimeLimitReached) return alpha;
+            } else if (isTimeLimitReached) return TIMEOUT;
         }
 
         _transpositionTable.put(_board.getZobristHash(), depth, (int) bestEval, (int) alpha, (int) beta);
@@ -307,22 +304,13 @@ public class Engine {
 
     private void printPVLine(int depth) {
         logger.info("PV (depth   {} +  ", depth);
-        for (int i = 0; i < _pvLength[0] && i < depth; i++) {
-            int m = _principalVariation[0][i];
-            if (m != 0)  {
-                String mvStr = Move.asString(m);
-                logger.info("{} \t", mvStr);
-            }
+        for (int i = 0; i < pvLine.line.length; i++) {
+            int m = pvLine.line[i];
+            if (m == 0) break;
+            String mvStr = Move.asString(m);
+            logger.info("{} \t", mvStr);
         }
         logger.info("Node count {} in {}", _nodecount, elapsedTime);
-    }
-
-    private List<Integer> getPV() {
-        List<Integer> pv = new ArrayList<>();
-        for (int i = 0; i < _pvLength[0]; i++) {
-            pv.add(_principalVariation[0][i]);
-        }
-        return pv;
     }
 
     private boolean isDrawBy50MoveRule() {
@@ -402,21 +390,15 @@ public class Engine {
         String m_4 = "8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1";
         String m_4_f = "1k6/4qp2/QP4r1/p3P3/2B1bP2/P7/K2R4/8 w - - 0 1";
         String unkn = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-        Engine engine = new Engine(m_4_f, SimpleEvaluator.getInstance());
-        int best = engine.think(10);
+        Engine engine = new Engine(m_4, SimpleEvaluator.getInstance());
+        int best = engine.think(1);
         String bb = Move.asString(best);
+
         logger.info("Best Move {}", bb);
-        for (int i = 0; i < engine._principalVariation.length; i++) {
-         //   System.out.println(Arrays.toString(engine._principalVariation[i]));
-            for (int j = 0; j < engine._principalVariation[i].length; j++) {
-                String asStr = (engine._principalVariation[i][j] == 0) ? "" :
-                        Move.asString(engine._principalVariation[i][j]);
-                System.out.print(asStr + "\t");
-            }
-            System.out.println();
-        }
-       // System.out.println(Arrays.toString(engine._board.getPlayHistory()));
         System.out.println(engine._board.print8x8());
+
         System.out.println(FENParser.getFENotation(engine._board));
+        Arrays.stream(engine.pvLine.line).filter(x -> x > 0)
+                .forEach(mv -> System.out.println(Move.asString(mv)));
     }
 }
