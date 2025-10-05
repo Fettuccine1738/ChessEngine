@@ -1,17 +1,10 @@
 package com.github.fehinti.board;
 
-import com.github.fehinti.engine.Evaluator;
-import com.github.fehinti.engine.PESTO;
-import com.github.fehinti.engine.SimpleEvaluator;
-import com.github.fehinti.engine.WeightedCombiEval;
-import com.github.fehinti.piece.Move;
-import com.github.fehinti.piece.MoveGenerator;
-
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Stack;
 
+import com.github.fehinti.piece.Move;
 import static com.github.fehinti.board.Board120Utils.*;
 import static com.github.fehinti.board.Board120Utils.BOARD_SIZE;
 import static com.github.fehinti.piece.Move.*;
@@ -163,8 +156,6 @@ public final class Board120 {
         // sort list will be valuable when looking for smallest attackers
         // pieces are sorted with minor pieces first (ordering: P, N, B, R, Q , K)
         Arrays.sort(_whitePieceList, 0, KING_SQ);
-        // sort descending, encoding of pawns > major pieces , this keeps pawns before other pieces
-        // allowing us to get smallest attacker for black easily
         sortDescending(_blackPieceList);
     }
 
@@ -872,7 +863,7 @@ public final class Board120 {
         return board.toString();
     }
 
-    // use this to determine if we are in the endgame, middlegame, start
+    // use this to determine if we are in the endgame, middlegame, start (future use)
     public int getTotalPcCount() {
         int count = 0;
         for (int i = 0; i < 16; i++) {
@@ -897,53 +888,5 @@ public final class Board120 {
         }
         return count;
     }
-
-
-  // has piece
-  public static void main(String[] args) {
-      Board120  board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
-      Evaluator simple = SimpleEvaluator.getInstance();
-      Evaluator pesto  = PESTO.getInstance();
-      Evaluator weg    = WeightedCombiEval.getInstance();
-
-
-      board.print();
-      double eval1 = simple.evaluate(board);
-      System.out.println("Simple eval " + eval1);
-      System.out.println("Pesto eval " + pesto.evaluate(board));
-      System.out.printf(board.getBoardData());
-      System.out.println(board.print8x8());
-
-      List<Integer> list = MoveGenerator.generatePseudoCaptures(board);
-      MoveGenerator.sortGen(list);
-
-      int count = 0;
-      System.out.println("Leafs : " + list.size());
-
-     // List<Integer> valid = list.stream().filter(
-     //         x -> {
-     //             board.make(x);
-     //             boolean checked = VectorAttack120.isKingInCheck(board);
-     //             board.unmake(x);
-     //             return !checked;
-     //         }
-     // ).toList();
-
-      for (int m: list) {
-          System.out.println();
-          System.out.println((++count) + "\t" + Move.asString(m));
-          System.out.println("score"   + Move.getScore(m));
-          board.make(m);
-          System.out.println("Simple eval " + simple.evaluate(board));
-          System.out.println("Pesto eval  " + pesto.evaluate(board));
-          System.out.println("Weg eval  " + weg.evaluate(board));
-         // System.out.println(board.print8x8());
-         // System.out.printf(board.getBoardData());
-
-          board.unmake(m);
-          //System.out.printf(board.getBoardData());
-      }
-
-  }
 }
 

@@ -33,9 +33,9 @@ public class Engine {
         byte minute;
         byte second;
 
-        TimeControl(int minutes, int seconds) {
+        TimeControl(int minutes, int increment) {
             this.minute = (byte) minutes;
-            this.second = (byte) seconds;
+            this.second = (byte) increment;
         }
     }
 
@@ -90,10 +90,18 @@ public class Engine {
     private PVLine pvLine;
 
 
+    /***
+     * Drawing on the observation that terminating a depth halfway is wasteful, a large
+     * enhancement to a basic time management scheme is to introduce two levels of time allocation.
+     * Namely, one optimium time threshold (soft bound), and one maximum time threshold
+     * (hard bound). During search, the optimum time threshold is checked on each iteration of iterative
+     * deepening, while the maximum time threshold is checked periodically, usually by every set amount of nodes.
+     * base / 20 + increment / 2
+     */
+    private TimeControl _timeControl = TimeControl.NONE;
     private boolean isTimeLimitReached = false;
     private long start;
     private long stop;
-    private TimeControl _timeControl = TimeControl.NONE;
 
      // ! debug only
      static List<List<String>> dbugMoveOrder;
@@ -203,43 +211,38 @@ public class Engine {
 
         final int pvMove = (_ply < MAX_DEPTH - 1 && pvLine.nMoves > _ply) ?  pvLine.line[0] : -1;
         orderMoves(child, pvMove);
-       // if (dbugMoveOrder.size() < MAX_DEPTH) {
-       //     List<String> asStrings = child.stream().map(Move::dbgMove).toList();
-       //     dbugMoveOrder.add(asStrings);
-       // }
 
        double bestEval = Double.NEGATIVE_INFINITY;
+       for (Integer mv : child) {
+           _board.make(mv);
+           double eval = Double.NEGATIVE_INFINITY;
+           if (!VectorAttack120.isKingInCheck(_board)) {
+               _nodecount++;
+               _ply++;
+               eval = -negamax(depth - 1, -beta, -alpha, -color, localPvLine);
+               _ply--;
+           }
+           _board.unmake(mv);
 
-        for (Integer mv : child) {
-            _board.make(mv);
-            double eval = Double.NEGATIVE_INFINITY;
-            if (!VectorAttack120.isKingInCheck(_board)) {
-                _nodecount++;
-                _ply++;
-                eval = -negamax(depth - 1, -beta, -alpha, -color, localPvLine);
-                _ply--;
-            }
-            _board.unmake(mv);
+           if (Double.isNaN(eval)) return TIMEOUT;
+           if (eval > bestEval) {
+               bestEval = eval;
+               // ? updatePV(mv);
 
-            if (Double.isNaN(eval)) return TIMEOUT;
-            if (eval > bestEval) {
-                bestEval = eval;
-                // ? updatePV(mv);
+               // pvLine.line[0] = mv;
+               // System.arraycopy(localPvLine.line, 0, pvLine.line, 1,
+               //         localPvLine.nMoves);
+               pvLine.updateLine(mv, localPvLine);
+           }
+           alpha = Math.max(alpha, eval);
+           if (alpha >= beta && !isTimeLimitReached) {
+               updateKillerMoves(mv);
+               break;
+           } else if (isTimeLimitReached) return TIMEOUT;
+       }
 
-                // pvLine.line[0] = mv;
-                // System.arraycopy(localPvLine.line, 0, pvLine.line, 1,
-                //         localPvLine.nMoves);
-                pvLine.updateLine(mv, localPvLine);
-            }
-            alpha = Math.max(alpha, eval);
-            if (alpha >= beta && !isTimeLimitReached) {
-                updateKillerMoves(mv);
-                break;
-            } else if (isTimeLimitReached) return TIMEOUT;
-        }
-
-        _transpositionTable.put(_board.getZobristHash(), depth, (int) bestEval, (int) alpha, (int) beta);
-        return bestEval;
+       _transpositionTable.put(_board.getZobristHash(), depth, (int) bestEval, (int) alpha, (int) beta);
+       return bestEval;
     }
 
     private void updateKillerMoves(int move) {
