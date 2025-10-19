@@ -77,7 +77,7 @@ public class Engine {
     private static final int DRAWN = 0;
     private static final int MATED = 100_000;
 
-    public final Board120 _board;
+    private final Board120 _board;
     private final TranspositionTable _transpositionTable;
     private final Evaluator _evaluator;
     private final int[][] _killerMoves;
@@ -99,8 +99,12 @@ public class Engine {
      */
     private TimeControl _timeControl = TimeControl.NONE;
     private boolean isTimeLimitReached = false;
-    private long start;
-    private long stop;
+    private long _start;
+    private long _stop;
+
+    public Engine(Evaluator ev) {
+        this(FENParser.START_POS, ev);
+    }
 
     public Engine(String fen, Evaluator ev) {
         logger.info("{}", fen);
@@ -123,10 +127,10 @@ public class Engine {
         resetSearchHelpers();
     }
 
-    public int think(long minutes) {
+    public int think() {
         resetSearchHelpers();
-        this.stop = minutes * 60 * 1000;
-        this.start = System.currentTimeMillis();
+        this._stop = setTimeLimit();
+        this._start = System.currentTimeMillis();
         PVLine tempLine = new PVLine();
         boolean side = _board.getSideToMove();
         int depth = 1;
@@ -142,10 +146,40 @@ public class Engine {
         return _bestMoveFound;
     }
 
+    // base / 20 + increment / 2
+    private long setTimeLimit() {
+        if (_timeControl == TimeControl.NONE) return 3 * 60 * 1000;
+        else return (_timeControl.minute / 20 + _timeControl.second / 2);
+    }
+
+    public void _stopThink() {
+        isTimeLimitReached = true;
+        logger.info("GUI _stopped search..");
+    }
+
+    public int think(long minutes) {
+        resetSearchHelpers();
+        this._stop = minutes * 60 * 1000;
+        this._start = System.currentTimeMillis();
+        PVLine tempLine = new PVLine();
+        boolean side = _board.getSideToMove();
+        int depth = 1;
+        while (!isTimeLimitReached) {
+            double bestEval = negamax(depth, INIT_ALPHA, INIT_BETA, (side ? COLOR_WH : -COLOR_WH), tempLine);
+            logger.info("best eval {}", bestEval);
+            if (isTimeLimitReached) break;
+            _bestEvalFound = Math.max(_bestEvalFound, bestEval);
+            _bestMoveFound = _pvLine.copyFrom(tempLine);
+            printPVLine(depth++);
+            checkTime();
+        }
+        return _bestMoveFound;
+    }
+
     private boolean checkTime() {
-        if (System.currentTimeMillis() - start > stop) {
+        if (System.currentTimeMillis() - _start > _stop) {
             isTimeLimitReached = true;
-            _elapsedTime = System.currentTimeMillis() - start;
+            _elapsedTime = System.currentTimeMillis() - _start;
             System.out.println("Time limit reached with " + _ply + " and searched. " + _nodecount);
         }
         return isTimeLimitReached;

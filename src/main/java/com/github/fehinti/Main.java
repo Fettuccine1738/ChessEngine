@@ -75,7 +75,7 @@ public class Main {
         System.out.println(noMoveFound);
     }
 
-    public static void readBuffer() {
+    public static void readUCIBuffer() {
         lock.lock();
         try {
             while (buffer.isEmpty()) {
@@ -91,7 +91,7 @@ public class Main {
         }
     }
 
-    public static void writeBuffer() {
+    public static void writeUCIBuffer() {
         try {
             lock.lock();
             takeAction();
@@ -107,11 +107,10 @@ public class Main {
     public static void main(String[] args) {
         if (args.length == 1) {
             String argument = args[0];
-            new Thread(Main::readBuffer).start();
-            new Thread(Main::writeBuffer).start();
+            new Thread(Main::readUCIBuffer).start();
+            new Thread(Main::writeUCIBuffer).start();
         } else {
             runConsole();
         }
-
     }
 }
