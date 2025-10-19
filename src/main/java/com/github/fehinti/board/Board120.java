@@ -10,9 +10,11 @@ import static com.github.fehinti.board.Board120Utils.BOARD_SIZE;
 import static com.github.fehinti.piece.Move.*;
 
 /**
- * The {@code Board} class is a Hybrid solution for representing a board in Chess
+ * The {@code Board120} class is a Hybrid solution for representing a board in Chess
  * my representation uses a Square centric 8 by 8 enum array of
- * {@code Piece} enums that represents all piece types of both colors as well as
+ * {@code Piece} uses bytes (1,-127 (white , black pawn), 2, -126 (knights)
+ *  3,-125 (bishop)  4,-124(rook)  5,-123(queen) 6,-122 (king)
+ *  that represents all piece types of both colors as well as
  * empty tiles. A Piece-centric disjoint list of all Piece types is used for efficient
  * move generation to avoid scanning the entire board, type and color of pieces are
  * associated by a certain index range or disjoint lists or arrays, index range can be
@@ -784,13 +786,8 @@ public final class Board120 {
         return OFF_BOARD;
     }
 
-    public void print() {
-        for (int i = 11; i >= 0; i--) {
-            for(int j = 0; j < 10; j++) {
-                System.out.print(mapByteToChar(_board120[i * 10 + j]) + " ");
-            }
-            System.out.println();
-        }
+    public void display() {
+        System.out.println(print8x8());
     }
 
     public String printMailbox() {
@@ -830,7 +827,7 @@ public final class Board120 {
     /**
      * @return combination of board representationg and board info
      */
-    public String print8x8() {
+     String print8x8() {
         StringBuilder board = new StringBuilder();
         int rank; int file;
         String newline = "+---";

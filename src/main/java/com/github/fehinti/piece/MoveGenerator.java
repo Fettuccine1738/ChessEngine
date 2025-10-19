@@ -4,6 +4,7 @@ import com.github.fehinti.board.Board120;
 import com.github.fehinti.board.Board120Utils;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -39,6 +40,22 @@ public class MoveGenerator {
             {  10, 20, 20, 30, 140,  150 }  /* KING */
     };
 
+
+    public static List<Integer> generateLegal(Board120 board) {
+        List<Integer> moves = MoveGenerator.generatePseudoLegal(board);
+        Iterator<Integer> iterator = moves.iterator();
+
+        while (iterator.hasNext()) {
+            int pseudo = iterator.next();
+            board.make(pseudo);
+            if (VectorAttack120.isKingInCheck(board)) {
+                iterator.remove();
+            }
+            board.unmake(pseudo);
+        }
+
+        return moves;
+    }
 
     /**
      * @param board  current position
@@ -365,6 +382,8 @@ public class MoveGenerator {
     private static boolean isOnPromoteRank(int square, boolean sideToPlay) {
         return sideToPlay ?  Board120Utils.isOnSeventhRank((byte) square) : Board120Utils.isOnSecondRank((byte) square);
     }
+
+
 
 }
 

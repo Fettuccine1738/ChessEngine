@@ -10,7 +10,7 @@
     # File appender
     <appender name="engineout" class="ch.qos.logback.core.FileAppender">
         <file>engine.log</file>
-        <append>true</append>
+        <append>false</append>
         <encoder>
             # Pattern of log message for file appender
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</pattern>

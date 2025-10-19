@@ -8,7 +8,7 @@ import static com.github.fehinti.board.Board120Utils.*;
 public class FENParser {
 
     // private static final Pattern pattern  = Pattern.compile("[pbnkrqPBNRQK1-9]/{8}\\s+[wb]\\s+");
-    private static final String START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    public static final String START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     /**
      * @return the starting position on a board, white to play,

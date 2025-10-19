@@ -9,7 +9,6 @@ import com.github.fehinti.piece.MoveGenerator;
 import com.github.fehinti.piece.VectorAttack120;
 import com.github.fehinti.piece.Move;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -30,8 +29,8 @@ public class Engine {
         RAPID_30_0(30, 0),
         NONE(0, 0);
 
-        byte minute;
-        byte second;
+        final byte minute;
+        final byte second;
 
         TimeControl(int minutes, int increment) {
             this.minute = (byte) minutes;
@@ -39,7 +38,7 @@ public class Engine {
         }
     }
 
-    private class PVLine {
+    private static class PVLine {
         int nMoves;
         int[] line;
 
@@ -78,16 +77,16 @@ public class Engine {
     private static final int DRAWN = 0;
     private static final int MATED = 100_000;
 
-    private final Board120 _board;
+    public final Board120 _board;
     private final TranspositionTable _transpositionTable;
     private final Evaluator _evaluator;
     private final int[][] _killerMoves;
     private int _ply;
     private int _nodecount;
-    private long elapsedTime;
-    private int bestMoveFound;
-    private double bestEvalFound;
-    private PVLine pvLine;
+    private long _elapsedTime;
+    private int _bestMoveFound;
+    private double _bestEvalFound;
+    private PVLine _pvLine;
 
 
     /***
@@ -103,9 +102,6 @@ public class Engine {
     private long start;
     private long stop;
 
-     // ! debug only
-     static List<List<String>> dbugMoveOrder;
-
     public Engine(String fen, Evaluator ev) {
         logger.info("{}", fen);
         _board = FENParser.parseFENotation120(fen);
@@ -113,15 +109,24 @@ public class Engine {
         _evaluator = ev;
         _killerMoves = new int[MAX_DEPTH][2];
         _nodecount = 0;
-        dbugMoveOrder = new ArrayList<>();
-        pvLine = new PVLine();
+        _pvLine = new PVLine();
+        resetSearchHelpers();
+    }
+
+    public Engine(Board120 board, Evaluator evaluator) {
+        _board = board;
+        _transpositionTable = new TranspositionTable();
+        _evaluator = evaluator;
+        _killerMoves = new int[MAX_DEPTH][2];
+        _nodecount = 0;
+        _pvLine = new PVLine();
         resetSearchHelpers();
     }
 
     public int think(long minutes) {
+        resetSearchHelpers();
         this.stop = minutes * 60 * 1000;
         this.start = System.currentTimeMillis();
-        resetSearchHelpers();
         PVLine tempLine = new PVLine();
         boolean side = _board.getSideToMove();
         int depth = 1;
@@ -129,31 +134,31 @@ public class Engine {
             double bestEval = negamax(depth, INIT_ALPHA, INIT_BETA, (side ? COLOR_WH : -COLOR_WH), tempLine);
             logger.info("best eval {}", bestEval);
             if (isTimeLimitReached) break;
-            this.bestEvalFound = Math.max(bestEvalFound, bestEval);
-            this.bestMoveFound = pvLine.copyFrom(tempLine);
+            this._bestEvalFound = Math.max(_bestEvalFound, bestEval);
+            this._bestMoveFound = _pvLine.copyFrom(tempLine);
             printPVLine(depth++);
             checkTime();
         }
-        elapsedTime = System.currentTimeMillis() - start;
-        return bestMoveFound;
+        return _bestMoveFound;
     }
 
     private boolean checkTime() {
         if (System.currentTimeMillis() - start > stop) {
             isTimeLimitReached = true;
+            _elapsedTime = System.currentTimeMillis() - start;
             System.out.println("Time limit reached with " + _ply + " and searched. " + _nodecount);
         }
         return isTimeLimitReached;
     }
 
     private void resetSearchHelpers() {
-        this.bestMoveFound = 0;
-        this.bestEvalFound = 0;
+        _bestMoveFound = 0;
+        _bestEvalFound = 0;
         _ply = 0;
         _nodecount = 0;
-        elapsedTime = 0;
+         _elapsedTime = 0;
         isTimeLimitReached = false;
-        pvLine.clear();
+        _pvLine.clear();
     }
 
     private double quiescence(double alpha, double beta) {
@@ -227,11 +232,6 @@ public class Engine {
            if (Double.isNaN(eval)) return TIMEOUT;
            if (eval > bestEval) {
                bestEval = eval;
-               // ? updatePV(mv);
-
-               // pvLine.line[0] = mv;
-               // System.arraycopy(localPvLine.line, 0, pvLine.line, 1,
-               //         localPvLine.nMoves);
                pvLine.updateLine(mv, localPvLine);
            }
            alpha = Math.max(alpha, eval);
@@ -307,13 +307,13 @@ public class Engine {
 
     private void printPVLine(int depth) {
         logger.info("PV (depth   {} +  ", depth);
-        for (int i = 0; i < pvLine.line.length; i++) {
-            int m = pvLine.line[i];
+        for (int i = 0; i < _pvLine.line.length; i++) {
+            int m = _pvLine.line[i];
             if (m == 0) break;
             String mvStr = Move.asString(m);
             logger.info("{} \t", mvStr);
         }
-        logger.info("Node count {} in {}", _nodecount, elapsedTime);
+        logger.info("Node count {} in {}", _nodecount, _elapsedTime);
     }
 
     private boolean isDrawBy50MoveRule() {
@@ -388,20 +388,20 @@ public class Engine {
     }
 
 
-    public static void main(String[] args) {
-        String fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
-        String m_4 = "8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1";
-        String m_4_f = "1k6/4qp2/QP4r1/p3P3/2B1bP2/P7/K2R4/8 w - - 0 1";
-        String unkn = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-        Engine engine = new Engine(m_4, SimpleEvaluator.getInstance());
-        int best = engine.think(1);
-        String bb = Move.asString(best);
-
-        logger.info("Best Move {}", bb);
-        System.out.println(engine._board.print8x8());
-
-        System.out.println(FENParser.getFENotation(engine._board));
-        Arrays.stream(engine.pvLine.line).filter(x -> x > 0)
-                .forEach(mv -> System.out.println(Move.asString(mv)));
-    }
+    //public static void main(String[] args) {
+        //String fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1";
+        //String m_4 = "8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1";
+        //String m_4_f = "1k6/4qp2/QP4r1/p3P3/2B1bP2/P7/K2R4/8 w - - 0 1";
+        //String unkn = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        //Engine engine = new Engine(m_4, SimpleEvaluator.getInstance());
+        //int best = engine.think(1);
+        //String bb = Move.asString(best);
+//
+        //logger.info("Best Move {}", bb);
+        //System.out.println(engine._board.print8x8());
+//
+        //System.out.println(FENParser.getFENotation(engine._board));
+        //Arrays.stream(engine._pvLine.line).filter(x -> x > 0)
+                //.forEach(mv -> System.out.println(Move.asString(mv)));
+    //}
 }

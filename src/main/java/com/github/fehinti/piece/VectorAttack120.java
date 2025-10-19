@@ -8,8 +8,6 @@ import com.github.fehinti.board.Board120;
 import static com.github.fehinti.board.Board120Utils.*;
 import static com.github.fehinti.board.Board120Utils.BOARD_SIZE_120;
 
-// TODO: profiler shows cpu time is spent tracing attack ray for every piece type to king
-// * optimize
 public class VectorAttack120 {
 
     public static final int ATTACK_NONE = 0; // no piece can attack the square

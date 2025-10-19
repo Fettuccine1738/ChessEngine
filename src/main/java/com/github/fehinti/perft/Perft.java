@@ -5,8 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +43,7 @@ public class Perft {
    static {
        board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
        // board = FENParser.startPos120();
-       System.out.println(board.print8x8());
+       board.display();
        System.out.println(board.getBoardData());
        file = new File(FILEPATH);
 
@@ -144,31 +142,4 @@ public class Perft {
        }
    }
 
-
-    public static void main(String[] args) {
-       if (args.length != 1) { // adjust length to 2 when debugging with perftree
-           System.out.println("Provide a depth please");
-       }
-       int depth = Integer.parseInt(args[0]);
-       System.out.println("go perft " + depth);
-
-       Instant st = Instant.now();
-       List<String> list = new ArrayList<>();
-       long total = divide(depth, depth, list);
-       list.removeIf(Perft::matchIllegalMoves);
-       System.out.println("TOtal " + total);
-       for (String str : list) System.out.println(str);
-
-       Instant end = Instant.now();
-       Duration duration = Duration.between(st, end);
-
-        System.out.println("Duration : " + duration.getSeconds() + " seconds");
-        System.out.println( duration.getSeconds() / total  + " seconds");
-        System.out.println("captures " + (CAPTURE + EnP));
-        System.out.println("Checks: " + CHECKS);
-        System.out.println("Enpassant " + EnP);
-        System.out.println("Castles: " + castles);
-   //     long total = pseudoPerformanceTest(depth);
-        closeWriter();
-    }
 }
