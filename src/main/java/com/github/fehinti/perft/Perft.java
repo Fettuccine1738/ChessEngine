@@ -41,17 +41,17 @@ public class Perft {
    static long CAPTURE = 0;
 
    static {
-       board = FENParser.parseFENotation120("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
-       // board = FENParser.startPos120();
+//       board = FENParser.parseFENotation("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1 ");
+       board = FENParser.startPos();
        board.display();
        System.out.println(board.getBoardData());
-       file = new File(FILEPATH);
-
-       try {
-           bufferedWriter = Files.newBufferedWriter(Paths.get(FILEPATH));
-       } catch(IOException e) {
-           System.out.println(e.getMessage());
-       }
+//       file = new File(FILEPATH);
+//
+//       try {
+//           bufferedWriter = Files.newBufferedWriter(Paths.get(FILEPATH));
+//       } catch(IOException e) {
+//           System.out.println(e.getMessage());
+//       }
    }
 
    static void writeFENToFile(String fen) {
@@ -73,7 +73,7 @@ public class Perft {
    }
 
    static TestPerftAgainstStockfish.StockFishResult getPerftResult(String fen) {
-       board = FENParser.parseFENotation120(fen);
+       board = FENParser.parseFENotation(fen);
        List<String> strList = new ArrayList<>();
        long dres = divide(TestPerftAgainstStockfish.DEPTH, TestPerftAgainstStockfish.DEPTH, strList);
        strList.removeIf(Perft::matchIllegalMoves); // ignore illegal moves leaf node count (always 0)
@@ -142,4 +142,12 @@ public class Perft {
        }
    }
 
+    public static void main(String[] args) {
+        List<String> strList = new ArrayList<>();
+        long total = divide(7, 7, strList);
+        System.out.println("total nodes: " + total);
+        for (String s : strList) {
+            System.out.println(s);
+        }
+    }
 }

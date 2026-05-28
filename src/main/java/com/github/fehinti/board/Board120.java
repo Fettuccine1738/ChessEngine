@@ -1,8 +1,6 @@
 package com.github.fehinti.board;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Stack;
+import java.util.*;
 
 import com.github.fehinti.piece.Move;
 import static com.github.fehinti.board.Board120Utils.*;
@@ -72,7 +70,7 @@ public final class Board120 {
     private final long[] _hashHistory;
     private final int[] _irreversibleAspect;
     private int _ply;
-    private final Stack<Integer> _captureEntry;
+    private final Deque<Integer> _captureEntry;
 
 
     /**
@@ -98,7 +96,7 @@ public final class Board120 {
         _whitePieceList = new int[MAX_LEN_16];
         _blackPieceList = new int[MAX_LEN_16];
         fillLists();
-        _captureEntry = new Stack<>();
+        _captureEntry = new LinkedList<>();
         _playHistory    = new int[INIT_BUFFER];
         _hashHistory    = new long[INIT_BUFFER];
         _irreversibleAspect    = new int[INIT_BUFFER];
@@ -119,7 +117,7 @@ public final class Board120 {
         this._enPassant = (byte) copy.getEnPassant();
         this.setCastlingRights(copy.getCastlingRights());
         fillLists();
-        _captureEntry = new Stack<>();
+        _captureEntry = new LinkedList<>();
         _playHistory    = new int[INIT_BUFFER];
         _irreversibleAspect    = new int[INIT_BUFFER];
         _ply = 0;
@@ -190,7 +188,7 @@ public final class Board120 {
         return _castlingRights;
     }
 
-    public Stack<Integer> getCaptureEntry()
+    public Deque<Integer> getCaptureEntry()
     {
         return _captureEntry;
     }
@@ -304,11 +302,31 @@ public final class Board120 {
         return _fullMoveCounter;
     }
 
+    /**
+     *
+     * This method returns the index of piece from a piece list (using its position and type(e.g pawn etc).
+     * captured = true flag indicates the index of the piece should be from the opponents piece list.
+     * captured = false flag searches for the index from the side's piece list.
+     * e.g find the index of a rook during castling.
+     * @param piece the integer representation of a piece type from the 12 possible types
+     * @param square the square 0..63 on which the piece sits.
+     * @param captured true if the piece is captured,
+     * @return the index of the piece in the piece list.
+     */
     private int getPieceListIndex(int piece, int square, boolean captured) {
         // if this method is called when capture occurs, find the index of the captured piece in its
-        // own piece list, else find a piece in our own list (e.g find rook when castling)
-        int[] piecelist = (captured) ?  ((!_sideToMove) ? _whitePieceList : _blackPieceList) :
-                (_sideToMove) ? _whitePieceList : _blackPieceList;
+        // opponents piece list, else find a piece in our own list (e.g find rook when castling)
+        int[] piecelist;
+        if (captured) { // set piece list to opponents piece list.
+            if (_sideToMove) piecelist = _blackPieceList;
+            else piecelist = _whitePieceList;
+        } else {
+            if (_sideToMove) piecelist = _whitePieceList;
+            else piecelist = _blackPieceList;
+        }
+
+//        int[] piecelist = (captured) ?  ((!_sideToMove) ? _whitePieceList : _blackPieceList) :
+//                (_sideToMove) ? _whitePieceList : _blackPieceList;
         for (int index = 0; index < piecelist.length; index++) {
             int pie = (piecelist[index] >> 8) & 0xff; // piece value
             int pos = piecelist[index] & 0xff; // square

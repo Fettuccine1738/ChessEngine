@@ -20,7 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Main {
 
-    static final Board120 board = FENParser.startPos120();
+    static final Board120 board = FENParser.startPos();
     static final Engine engine = new Engine(board, SimpleEvaluator.getInstance());
     static final BufferedReader buffReader = new BufferedReader(new InputStreamReader(System.in));
     static final BufferedWriter buffWriter = new BufferedWriter(new OutputStreamWriter(System.out));

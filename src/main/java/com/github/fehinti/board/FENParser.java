@@ -1,7 +1,6 @@
 package com.github.fehinti.board;
 
 import java.util.Arrays;
-import java.util.regex.Pattern;
 
 import static com.github.fehinti.board.Board120Utils.*;
 
@@ -14,8 +13,8 @@ public class FENParser {
      * @return the starting position on a board, white to play,
      *  both side have long and short castles and no enpassant on the board
      */
-    public static Board120 startPos120() {
-        return parseFENotation120(START_POS);
+    public static Board120 startPos() {
+        return parseFENotation(START_POS);
     }
 
     public static String getFENotation(Board120 board) {
@@ -91,7 +90,7 @@ public class FENParser {
      * @param notation FEN Notation of a chess position
      * @return Board120 instance of exact position from a FEN string
      */
-    public static Board120 parseFENotation120(String notation) {
+    public static Board120 parseFENotation(String notation) {
         if (notation == null || notation.isEmpty()) throw new IllegalArgumentException("Null string in FEN" + notation);
         byte[] array = new byte[BOARD_SIZE_120];
         int halfMoveClock, fullMoveCounter;

@@ -108,7 +108,7 @@ public class Engine {
 
     public Engine(String fen, Evaluator ev) {
         logger.info("{}", fen);
-        _board = FENParser.parseFENotation120(fen);
+        _board = FENParser.parseFENotation(fen);
         _transpositionTable = new TranspositionTable();
         _evaluator = ev;
         _killerMoves = new int[MAX_DEPTH][2];

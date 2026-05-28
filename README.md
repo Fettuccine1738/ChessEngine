@@ -1,44 +1,46 @@
-# ChessEngine *Ongoing*
-Chess engine using Object Oriented concepts.
+# ChessEngine
+A chess engine built using resources from the online wiki *chessprogrammingwiki.com*.
 
-- Square centric Mailboard implemantaion using  10 x 12 array of bytes that encodes guard bands, piece and square info
+## Features
 
-- Forsyth Edward Notation: helper class that creates board from an FEN string, utilized for testing different positions.
+- **Mailbox Board Representation** — Square-centric 10×12 byte array encoding guard bands, piece data, and square info
+- **Forsyth-Edwards Notation (FEN)** — Helper class for initializing board state from FEN strings, used for testing arbitrary positions
+- **Move Generation** — Sliding and non-sliding piece movement based on directional orientation
+- **Performance** — ~3.2 million nodes/second
+- **Mate Solver** — Reliably solves mate-in-4 puzzles in under a minute
 
-- Move generation for pieces based on move orientation(sliding and non sliding).
-- 3.2 million nodes / second. 
-- ABILITY: Easily solves mate in 4  in  under a minute. 
-- 
-- ```java
-     
-Time limit reached with 9 and searched. 85339517
-2025-10-05 19:38:33 INFO  best eval NaN
-2025-10-05 19:38:33 INFO  Best Move d7d1
+## Sample Output
+
+```
+Time limit reached at depth 9 — 85,339,517 nodes searched
+Best eval: NaN
+Best move: d7d1
+```
+
+```
  +---+---+---+---+---+---+---+---+
- 8	|   |   |   |   |   |   |   |   |
+ |   |   |   |   |   |   |   |   | 8
  +---+---+---+---+---+---+---+---+
- 7	|[k]|   |   | r |   |   |   |   |
+ |[k]|   |   | r |   |   |   |   | 7
  +---+---+---+---+---+---+---+---+
- 6	| p |   |   |   |   |   |   |   |
+ | p |   |   |   |   |   |   |   | 6
  +---+---+---+---+---+---+---+---+
- 5	|   |   | b |   | B | p |   |   |
+ |   |   | b |   | B | p |   |   | 5
  +---+---+---+---+---+---+---+---+
- 4	| P |   |   |   | p |   |   |   |
+ | P |   |   |   | p |   |   |   | 4
  +---+---+---+---+---+---+---+---+
- 3	| q | p |   |   |   |   | R |   |
+ | q | p |   |   |   |   | R |   | 3
  +---+---+---+---+---+---+---+---+
- 2	|   |   |   |   | Q | P |   |   |
+ |   |   |   |   | Q | P |   |   | 2
  +---+---+---+---+---+---+---+---+
- 1	|   |[K]|   |   |   |   |   |   |
+ |   |[K]|   |   |   |   |   |   | 1
  +---+---+---+---+---+---+---+---+
- a   b   c   d   e   f   g   h
- 8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1
- d7d1
- e2d1
- a3a2
- b1c1
- c5a3
- e5b2
- a2b2
- c1d2
-- ```
+   a   b   c   d   e   f   g   h
+
+FEN: 8/k2r4/p7/2b1Bp2/P3p3/qp4R1/4QP2/1K6 b - - 0 1
+```
+
+**Principal variation:**
+```
+d7d1  e2d1  a3a2  b1c1  c5a3  e5b2  a2b2  c1d2
+```

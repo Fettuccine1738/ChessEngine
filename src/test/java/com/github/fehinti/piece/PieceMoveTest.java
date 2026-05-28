@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import static com.github.fehinti.piece.MoveGenerator.generateLegal;
+import static com.github.fehinti.piece.MoveGenerator.generatePseudoLegal;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -207,9 +209,8 @@ class PieceMoveTest {
     @ParameterizedTest
     @MethodSource("getsPerftResultFromStockfish")
     void testsMoveListAgainstStockFishResult(MoveList movelist) {
-        Board b = FENParser.parseFENotation(movelist.getFen());
-        List<Integer> pseudoMoves = generatePseudoLegal(b);
-        List<Integer> legalmoves = generateLegalMoves(b, pseudoMoves);
+        com.github.fehinti.board.Board120 b = FENParser.parseFENotation(movelist.getFen());
+        List<Integer> legalmoves = generateLegal(b);
 
 
         assertEquals(movelist.getMoves().size(), legalmoves.size(), "Move count mismatch");
